@@ -1,0 +1,1293 @@
+kotlin version: 2.2.10
+error message: org.jetbrains.kotlin.codegen.CompilationException: Back-end (JVM) Internal error: Couldn't transform method node:
+runUploadedCoverAutomationStep (Lcom/eteditor/EditorController;Lcom/eteditor/AutomationChain;Lcom/eteditor/AutomationConfirmationRequest;Lcom/eteditor/AutomationStep;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;:
+    // annotable parameter count: 6 (visible)
+    // annotable parameter count: 6 (invisible)
+   L0
+    ALOAD 5
+    INSTANCEOF com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1
+    IFEQ L1
+    ALOAD 5
+    CHECKCAST com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1
+    ASTORE 10
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.label : I
+    LDC -2147483648
+    IAND
+    IFEQ L1
+    ALOAD 10
+    DUP
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.label : I
+    LDC -2147483648
+    ISUB
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.label : I
+    GOTO L2
+   L1
+    NEW com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1
+    DUP
+    ALOAD 5
+    INVOKESPECIAL com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.<init> (Lkotlin/coroutines/Continuation;)V
+    ASTORE 10
+   L2
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.result : Ljava/lang/Object;
+    ASTORE 9
+   L3
+    INVOKESTATIC kotlin/coroutines/intrinsics/IntrinsicsKt.getCOROUTINE_SUSPENDED ()Ljava/lang/Object;
+   L4
+    LINENUMBER 374 L4
+    ASTORE 11
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.label : I
+    TABLESWITCH
+      0: L5
+      1: L6
+      2: L7
+      3: L8
+      4: L9
+      default: L10
+   L5
+    ALOAD 9
+    INVOKESTATIC kotlin/ResultKt.throwOnFailure (Ljava/lang/Object;)V
+   L11
+   L12
+    LINENUMBER 380 L12
+    ALOAD 1
+    ALOAD 2
+    INVOKESTATIC com/eteditor/AutomationStepStateUtilsKt.isAutomationConfirmationStepCurrent (Lcom/eteditor/AutomationChain;Lcom/eteditor/AutomationConfirmationRequest;)Z
+    IFNE L13
+   L14
+    LINENUMBER 381 L14
+    ALOAD 0
+    ACONST_NULL
+    INVOKEVIRTUAL com/eteditor/EditorController.setAutomationConfirmationRequest$app (Lcom/eteditor/AutomationConfirmationRequest;)V
+   L15
+    LINENUMBER 382 L15
+    ALOAD 0
+    LDC "\u6267\u884c\u6b65\u9aa4\u5df2\u5931\u6548"
+    INVOKEVIRTUAL com/eteditor/EditorController.setStatusMessage$app (Ljava/lang/String;)V
+   L16
+    LINENUMBER 383 L16
+    ALOAD 0
+    LDC "\u6267\u884c\u6b65\u9aa4\u5df2\u5931\u6548"
+    INVOKESTATIC com/eteditor/ControllerRuntimeHelpersKt.appendAutomationLog (Lcom/eteditor/EditorController;Ljava/lang/String;)V
+   L17
+    LINENUMBER 384 L17
+    NOP
+    ICONST_0
+    INVOKESTATIC kotlin/coroutines/jvm/internal/Boxing.boxBoolean (Z)Ljava/lang/Boolean;
+    ARETURN
+   L18
+   L13
+   L19
+   L20
+    LINENUMBER 386 L20
+    ALOAD 0
+    ALOAD 3
+    INVOKESTATIC com/eteditor/ToolControllerQueriesKt.automationStepToolForRun (Lcom/eteditor/EditorController;Lcom/eteditor/AutomationStep;)Lcom/eteditor/EditorTool;
+    ASTORE 6
+   L21
+   L22
+    LINENUMBER 387 L22
+    ALOAD 6
+    IFNULL L23
+    ALOAD 6
+    INVOKEVIRTUAL com/eteditor/EditorTool.getToolId ()Ljava/lang/String;
+    GOTO L24
+   L23
+    NOP
+    ACONST_NULL
+   L24
+    LDC "generate_cover"
+    INVOKESTATIC kotlin/jvm/internal/Intrinsics.areEqual (Ljava/lang/Object;Ljava/lang/Object;)Z
+    IFEQ L25
+    ALOAD 4
+    CHECKCAST java/lang/CharSequence
+    INVOKESTATIC kotlin/text/StringsKt.isBlank (Ljava/lang/CharSequence;)Z
+    IFEQ L26
+   L25
+   L27
+    LINENUMBER 388 L27
+    ALOAD 0
+    ACONST_NULL
+    INVOKEVIRTUAL com/eteditor/EditorController.setAutomationConfirmationRequest$app (Lcom/eteditor/AutomationConfirmationRequest;)V
+   L28
+    LINENUMBER 389 L28
+    ALOAD 0
+    LDC "\u6267\u884c\u6b65\u9aa4\u5df2\u5931\u6548"
+    INVOKEVIRTUAL com/eteditor/EditorController.setStatusMessage$app (Ljava/lang/String;)V
+   L29
+    LINENUMBER 390 L29
+    ALOAD 0
+    LDC "\u6267\u884c\u6b65\u9aa4\u5df2\u5931\u6548"
+    INVOKESTATIC com/eteditor/ControllerRuntimeHelpersKt.appendAutomationLog (Lcom/eteditor/EditorController;Ljava/lang/String;)V
+   L30
+    LINENUMBER 391 L30
+    NOP
+    ICONST_0
+    INVOKESTATIC kotlin/coroutines/jvm/internal/Boxing.boxBoolean (Z)Ljava/lang/Boolean;
+    ARETURN
+   L31
+   L26
+   L32
+   L33
+    LINENUMBER 393 L33
+    ALOAD 0
+    ALOAD 3
+    GETSTATIC com/eteditor/AutomationRunStepState.Running : Lcom/eteditor/AutomationRunStepState;
+    ACONST_NULL
+    ICONST_4
+    ACONST_NULL
+    INVOKESTATIC com/eteditor/AutomationRunStateControllerKt.setAutomationRunStepState$default (Lcom/eteditor/EditorController;Lcom/eteditor/AutomationStep;Lcom/eteditor/AutomationRunStepState;Ljava/lang/String;ILjava/lang/Object;)V
+   L34
+    LINENUMBER 394 L34
+    ALOAD 0
+    ALOAD 3
+    LDC "\u6267\u884c"
+    ALOAD 10
+    ALOAD 10
+    ALOAD 0
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$0 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 1
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$1 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 2
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$2 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 3
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$3 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 4
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$4 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 6
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$5 : Ljava/lang/Object;
+    ALOAD 10
+    ICONST_1
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.label : I
+    INVOKESTATIC com/eteditor/AutomationRunControllerKt.startAutomationStepSingleProgress (Lcom/eteditor/EditorController;Lcom/eteditor/AutomationStep;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+   L35
+    DUP
+    ALOAD 11
+    IF_ACMPNE L36
+   L37
+    LINENUMBER 374 L37
+    ALOAD 11
+    ARETURN
+   L6
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$5 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/EditorTool
+    ASTORE 6
+   L38
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$4 : Ljava/lang/Object;
+    CHECKCAST java/lang/String
+    ASTORE 4
+   L39
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$3 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationStep
+    ASTORE 3
+   L40
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$2 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationConfirmationRequest
+    ASTORE 2
+   L41
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$1 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationChain
+    ASTORE 1
+   L42
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$0 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/EditorController
+    ASTORE 0
+   L43
+   L44
+    NOP
+    ALOAD 9
+    INVOKESTATIC kotlin/ResultKt.throwOnFailure (Ljava/lang/Object;)V
+    ALOAD 9
+   L36
+    LINENUMBER 395 L36
+    POP
+   L45
+    ALOAD 0
+    ALOAD 6
+    ALOAD 4
+    INVOKESTATIC com/eteditor/AutomationRunControllerKt.coverToolWithUploadedImage (Lcom/eteditor/EditorTool;Ljava/lang/String;)Lcom/eteditor/EditorTool;
+    NOP
+    ICONST_0
+    ALOAD 10
+    ALOAD 10
+    ALOAD 0
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$0 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 1
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$1 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 2
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$2 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 3
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$3 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 4
+    INVOKESTATIC kotlin/coroutines/jvm/internal/SpillingKt.nullOutSpilledVariable (Ljava/lang/Object;)Ljava/lang/Object;
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$4 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 6
+    INVOKESTATIC kotlin/coroutines/jvm/internal/SpillingKt.nullOutSpilledVariable (Ljava/lang/Object;)Ljava/lang/Object;
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$5 : Ljava/lang/Object;
+    ALOAD 10
+    ICONST_2
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.label : I
+    INVOKESTATIC com/eteditor/ToolRunControllerKt.runConfiguredToolAsync (Lcom/eteditor/EditorController;Lcom/eteditor/EditorTool;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+   L46
+    DUP
+    ALOAD 11
+    IF_ACMPNE L47
+   L48
+    LINENUMBER 374 L48
+    ALOAD 11
+    ARETURN
+   L7
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$5 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/EditorTool
+    ASTORE 6
+   L49
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$4 : Ljava/lang/Object;
+    CHECKCAST java/lang/String
+    ASTORE 4
+   L50
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$3 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationStep
+    ASTORE 3
+   L51
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$2 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationConfirmationRequest
+    ASTORE 2
+   L52
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$1 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationChain
+    ASTORE 1
+   L53
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$0 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/EditorController
+    ASTORE 0
+   L54
+   L55
+    NOP
+    ALOAD 9
+    INVOKESTATIC kotlin/ResultKt.throwOnFailure (Ljava/lang/Object;)V
+    ALOAD 9
+   L47
+    LINENUMBER 395 L47
+    CHECKCAST java/lang/Boolean
+    INVOKEVIRTUAL java/lang/Boolean.booleanValue ()Z
+    ISTORE 7
+   L56
+   L57
+    LINENUMBER 396 L57
+    ALOAD 0
+    ACONST_NULL
+    INVOKEVIRTUAL com/eteditor/EditorController.setAutomationConfirmationRequest$app (Lcom/eteditor/AutomationConfirmationRequest;)V
+   L58
+    LINENUMBER 397 L58
+    ILOAD 7
+    IFEQ L59
+   L60
+    LINENUMBER 398 L60
+    ALOAD 0
+    ALOAD 3
+    LDC "\u6267\u884c"
+    ALOAD 10
+    ALOAD 10
+    ALOAD 0
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$0 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 1
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$1 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 2
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$2 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 3
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$3 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 4
+    INVOKESTATIC kotlin/coroutines/jvm/internal/SpillingKt.nullOutSpilledVariable (Ljava/lang/Object;)Ljava/lang/Object;
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$4 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 6
+    INVOKESTATIC kotlin/coroutines/jvm/internal/SpillingKt.nullOutSpilledVariable (Ljava/lang/Object;)Ljava/lang/Object;
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$5 : Ljava/lang/Object;
+    ALOAD 10
+    ILOAD 7
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.Z$0 : Z
+    ALOAD 10
+    ICONST_3
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.label : I
+    INVOKESTATIC com/eteditor/AutomationRunControllerKt.finishAutomationStepSingleProgress (Lcom/eteditor/EditorController;Lcom/eteditor/AutomationStep;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+   L61
+    DUP
+    ALOAD 11
+    IF_ACMPNE L62
+   L63
+    LINENUMBER 374 L63
+    ALOAD 11
+    ARETURN
+   L8
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.Z$0 : Z
+    ISTORE 7
+   L64
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$5 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/EditorTool
+    ASTORE 6
+   L65
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$4 : Ljava/lang/Object;
+    CHECKCAST java/lang/String
+    ASTORE 4
+   L66
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$3 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationStep
+    ASTORE 3
+   L67
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$2 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationConfirmationRequest
+    ASTORE 2
+   L68
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$1 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationChain
+    ASTORE 1
+   L69
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$0 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/EditorController
+    ASTORE 0
+   L70
+   L71
+    NOP
+    ALOAD 9
+    INVOKESTATIC kotlin/ResultKt.throwOnFailure (Ljava/lang/Object;)V
+    ALOAD 9
+   L62
+    LINENUMBER 399 L62
+    POP
+   L72
+    ALOAD 0
+    INVOKESTATIC com/eteditor/AutomationRunStateControllerKt.automationRunTerminalStateForSuccess (Lcom/eteditor/EditorController;)Lcom/eteditor/AutomationRunStepState;
+    ASTORE 8
+   L73
+   L74
+    LINENUMBER 400 L74
+    ALOAD 0
+    ALOAD 8
+    INVOKESTATIC com/eteditor/AutomationRunStateControllerKt.countAutomationRunTerminalState (Lcom/eteditor/EditorController;Lcom/eteditor/AutomationRunStepState;)V
+   L75
+    LINENUMBER 401 L75
+    ALOAD 0
+    ALOAD 3
+    ALOAD 8
+    ALOAD 0
+    INVOKEVIRTUAL com/eteditor/EditorController.getStatusMessage ()Ljava/lang/String;
+    INVOKESTATIC com/eteditor/AutomationRunStateControllerKt.setAutomationRunStepState (Lcom/eteditor/EditorController;Lcom/eteditor/AutomationStep;Lcom/eteditor/AutomationRunStepState;Ljava/lang/String;)V
+   L76
+    LINENUMBER 402 L76
+    ALOAD 0
+   L77
+    LINENUMBER 403 L77
+    ALOAD 8
+    INVOKESTATIC com/eteditor/AutomationRunStatusUtilsKt.automationRunTerminalLogPrefix (Lcom/eteditor/AutomationRunStepState;)Ljava/lang/String;
+    ALOAD 0
+    INVOKESTATIC com/eteditor/ControllerRuntimeHelpersKt.automationStepResultSuffix (Lcom/eteditor/EditorController;)Ljava/lang/String;
+    INVOKEDYNAMIC makeConcatWithConstants(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String; [
+      // handle kind 0x6 : INVOKESTATIC
+      java/lang/invoke/StringConcatFactory.makeConcatWithConstants(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/invoke/CallSite;
+      // arguments:
+      "\u0001\u0001"
+    ]
+   L78
+    LINENUMBER 402 L78
+    INVOKESTATIC com/eteditor/ControllerRuntimeHelpersKt.appendAutomationLog (Lcom/eteditor/EditorController;Ljava/lang/String;)V
+   L79
+    LINENUMBER 405 L79
+    ALOAD 0
+    ALOAD 1
+    ALOAD 2
+    INVOKEVIRTUAL com/eteditor/AutomationConfirmationRequest.getStepIndex ()I
+    ICONST_1
+    IADD
+    ALOAD 10
+    ALOAD 10
+    ALOAD 0
+    INVOKESTATIC kotlin/coroutines/jvm/internal/SpillingKt.nullOutSpilledVariable (Ljava/lang/Object;)Ljava/lang/Object;
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$0 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 1
+    INVOKESTATIC kotlin/coroutines/jvm/internal/SpillingKt.nullOutSpilledVariable (Ljava/lang/Object;)Ljava/lang/Object;
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$1 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 2
+    INVOKESTATIC kotlin/coroutines/jvm/internal/SpillingKt.nullOutSpilledVariable (Ljava/lang/Object;)Ljava/lang/Object;
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$2 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 3
+    INVOKESTATIC kotlin/coroutines/jvm/internal/SpillingKt.nullOutSpilledVariable (Ljava/lang/Object;)Ljava/lang/Object;
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$3 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 4
+    INVOKESTATIC kotlin/coroutines/jvm/internal/SpillingKt.nullOutSpilledVariable (Ljava/lang/Object;)Ljava/lang/Object;
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$4 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 6
+    INVOKESTATIC kotlin/coroutines/jvm/internal/SpillingKt.nullOutSpilledVariable (Ljava/lang/Object;)Ljava/lang/Object;
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$5 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 8
+    INVOKESTATIC kotlin/coroutines/jvm/internal/SpillingKt.nullOutSpilledVariable (Ljava/lang/Object;)Ljava/lang/Object;
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$6 : Ljava/lang/Object;
+    ALOAD 10
+    ILOAD 7
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.Z$0 : Z
+    ALOAD 10
+    ICONST_4
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.label : I
+    INVOKESTATIC com/eteditor/AutomationRunControllerKt.runAutomationChainFrom (Lcom/eteditor/EditorController;Lcom/eteditor/AutomationChain;ILkotlin/coroutines/Continuation;)Ljava/lang/Object;
+   L80
+    DUP
+    ALOAD 11
+    IF_ACMPNE L81
+   L82
+    LINENUMBER 374 L82
+    ALOAD 11
+    ARETURN
+   L9
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.Z$0 : Z
+    ISTORE 7
+   L83
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$6 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationRunStepState
+    ASTORE 8
+   L84
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$5 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/EditorTool
+    ASTORE 6
+   L85
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$4 : Ljava/lang/Object;
+    CHECKCAST java/lang/String
+    ASTORE 4
+   L86
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$3 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationStep
+    ASTORE 3
+   L87
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$2 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationConfirmationRequest
+    ASTORE 2
+   L88
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$1 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationChain
+    ASTORE 1
+   L89
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$0 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/EditorController
+    ASTORE 0
+   L90
+   L91
+    NOP
+    ALOAD 9
+    INVOKESTATIC kotlin/ResultKt.throwOnFailure (Ljava/lang/Object;)V
+    ALOAD 9
+   L81
+    LINENUMBER 406 L81
+    POP
+   L92
+    NOP
+    ICONST_1
+    INVOKESTATIC kotlin/coroutines/jvm/internal/Boxing.boxBoolean (Z)Ljava/lang/Boolean;
+    ARETURN
+   L93
+   L94
+   L59
+   L95
+   L96
+    LINENUMBER 409 L96
+    ALOAD 0
+    INVOKESTATIC com/eteditor/AutomationRunStateControllerKt.automationRunTerminalStateForFailure (Lcom/eteditor/EditorController;)Lcom/eteditor/AutomationRunStepState;
+    ASTORE 8
+   L97
+   L98
+    LINENUMBER 410 L98
+    ALOAD 0
+    ALOAD 8
+    INVOKESTATIC com/eteditor/AutomationRunStateControllerKt.countAutomationRunTerminalState (Lcom/eteditor/EditorController;Lcom/eteditor/AutomationRunStepState;)V
+   L99
+    LINENUMBER 411 L99
+    ALOAD 0
+    ALOAD 3
+    ALOAD 8
+    ALOAD 0
+    INVOKEVIRTUAL com/eteditor/EditorController.getStatusMessage ()Ljava/lang/String;
+    INVOKESTATIC com/eteditor/AutomationRunStateControllerKt.setAutomationRunStepState (Lcom/eteditor/EditorController;Lcom/eteditor/AutomationStep;Lcom/eteditor/AutomationRunStepState;Ljava/lang/String;)V
+   L100
+    LINENUMBER 412 L100
+    ALOAD 0
+   L101
+    LINENUMBER 413 L101
+    ALOAD 8
+    INVOKESTATIC com/eteditor/AutomationRunStatusUtilsKt.automationRunTerminalLogPrefix (Lcom/eteditor/AutomationRunStepState;)Ljava/lang/String;
+    ALOAD 0
+    INVOKEVIRTUAL com/eteditor/EditorController.getStatusMessage ()Ljava/lang/String;
+    INVOKESTATIC com/eteditor/AutomationRunControllerKt.automationFailureSuffix (Ljava/lang/String;)Ljava/lang/String;
+    INVOKEDYNAMIC makeConcatWithConstants(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String; [
+      // handle kind 0x6 : INVOKESTATIC
+      java/lang/invoke/StringConcatFactory.makeConcatWithConstants(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/invoke/CallSite;
+      // arguments:
+      "\u0001\u0001"
+    ]
+   L102
+    LINENUMBER 412 L102
+    INVOKESTATIC com/eteditor/ControllerRuntimeHelpersKt.appendAutomationLog (Lcom/eteditor/EditorController;Ljava/lang/String;)V
+   L103
+    LINENUMBER 415 L103
+    NOP
+    ICONST_0
+    INVOKESTATIC kotlin/coroutines/jvm/internal/Boxing.boxBoolean (Z)Ljava/lang/Boolean;
+    ARETURN
+   L104
+   L105
+   L106
+   L10
+    LINENUMBER 374 L10
+    NEW java/lang/IllegalStateException
+    DUP
+    LDC "call to 'resume' before 'invoke' with coroutine"
+    INVOKESPECIAL java/lang/IllegalStateException.<init> (Ljava/lang/String;)V
+    ATHROW
+    RETURN
+   L107
+    LOCALVARIABLE terminalState Lcom/eteditor/AutomationRunStepState; L73 L9 8
+    LOCALVARIABLE tool Lcom/eteditor/EditorTool; L21 L6 6
+    LOCALVARIABLE success Z L56 L8 7
+    LOCALVARIABLE terminalState Lcom/eteditor/AutomationRunStepState; L97 L105 8
+    LOCALVARIABLE $this$runUploadedCoverAutomationStep Lcom/eteditor/EditorController; L0 L107 0
+    LOCALVARIABLE chain Lcom/eteditor/AutomationChain; L0 L107 1
+    LOCALVARIABLE request Lcom/eteditor/AutomationConfirmationRequest; L0 L107 2
+    LOCALVARIABLE step Lcom/eteditor/AutomationStep; L0 L107 3
+    LOCALVARIABLE imageUri Ljava/lang/String; L0 L107 4
+    LOCALVARIABLE $completion Lkotlin/coroutines/Continuation; L0 L107 5
+    LOCALVARIABLE $continuation Lkotlin/coroutines/Continuation; L2 L106 10
+    LOCALVARIABLE $result Ljava/lang/Object; L3 L106 9
+    LOCALVARIABLE tool Lcom/eteditor/EditorTool; L38 L7 6
+    LOCALVARIABLE tool Lcom/eteditor/EditorTool; L49 L8 6
+    LOCALVARIABLE tool Lcom/eteditor/EditorTool; L65 L9 6
+    LOCALVARIABLE success Z L64 L9 7
+    LOCALVARIABLE tool Lcom/eteditor/EditorTool; L85 L105 6
+    LOCALVARIABLE terminalState Lcom/eteditor/AutomationRunStepState; L84 L94 8
+    LOCALVARIABLE success Z L83 L105 7
+    MAXSTACK = 6
+    MAXLOCALS = 12
+
+File is unknown
+The root cause org.jetbrains.kotlin.codegen.CompilationException was thrown at: org.jetbrains.kotlin.codegen.TransformationMethodVisitor.visitEnd(TransformationMethodVisitor.kt:89)
+	at org.jetbrains.kotlin.codegen.TransformationMethodVisitor.visitEnd(TransformationMethodVisitor.kt:89)
+	at org.jetbrains.org.objectweb.asm.tree.MethodNode.accept(MethodNode.java:770)
+	at org.jetbrains.kotlin.backend.jvm.codegen.CoroutineCodegenKt.acceptWithStateMachine(CoroutineCodegen.kt:73)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generateMethod(ClassCodegen.kt:456)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generate(ClassCodegen.kt:164)
+	at org.jetbrains.kotlin.backend.jvm.JvmIrCodegenFactory.generateFile(JvmIrCodegenFactory.kt:419)
+	at org.jetbrains.kotlin.backend.jvm.JvmIrCodegenFactory.invokeCodegen(JvmIrCodegenFactory.kt:388)
+	at org.jetbrains.kotlin.cli.jvm.compiler.KotlinToJVMBytecodeCompiler.runCodegen$cli(KotlinToJVMBytecodeCompiler.kt:431)
+	at org.jetbrains.kotlin.cli.pipeline.jvm.JvmBackendPipelinePhase.executePhase(JvmBackendPipelinePhase.kt:95)
+	at org.jetbrains.kotlin.cli.pipeline.jvm.JvmBackendPipelinePhase.executePhase(JvmBackendPipelinePhase.kt:36)
+	at org.jetbrains.kotlin.cli.pipeline.jvm.JvmBackendPipelinePhase.executePhase(JvmBackendPipelinePhase.kt:29)
+	at org.jetbrains.kotlin.cli.pipeline.PipelinePhase.phaseBody(PipelinePhase.kt:68)
+	at org.jetbrains.kotlin.cli.pipeline.PipelinePhase.phaseBody(PipelinePhase.kt:58)
+	at org.jetbrains.kotlin.config.phaser.NamedCompilerPhase.invoke(CompilerPhase.kt:102)
+	at org.jetbrains.kotlin.backend.common.phaser.CompositePhase.invoke(PhaseBuilders.kt:22)
+	at org.jetbrains.kotlin.config.phaser.CompilerPhaseKt.invokeToplevel(CompilerPhase.kt:53)
+	at org.jetbrains.kotlin.cli.pipeline.AbstractCliPipeline.runPhasedPipeline(AbstractCliPipeline.kt:109)
+	at org.jetbrains.kotlin.cli.pipeline.AbstractCliPipeline.execute(AbstractCliPipeline.kt:68)
+	at org.jetbrains.kotlin.cli.jvm.K2JVMCompiler.doExecutePhased(K2JVMCompiler.kt:78)
+	at org.jetbrains.kotlin.cli.jvm.K2JVMCompiler.doExecutePhased(K2JVMCompiler.kt:44)
+	at org.jetbrains.kotlin.cli.common.CLICompiler.execImpl(CLICompiler.kt:90)
+	at org.jetbrains.kotlin.cli.common.CLICompiler.exec(CLICompiler.kt:352)
+	at org.jetbrains.kotlin.incremental.IncrementalJvmCompilerRunnerBase.runCompiler(IncrementalJvmCompilerRunnerBase.kt:175)
+	at org.jetbrains.kotlin.incremental.IncrementalJvmCompilerRunnerBase.runCompiler(IncrementalJvmCompilerRunnerBase.kt:38)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.doCompile(IncrementalCompilerRunner.kt:504)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compileImpl(IncrementalCompilerRunner.kt:421)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compileNonIncrementally(IncrementalCompilerRunner.kt:306)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compile(IncrementalCompilerRunner.kt:133)
+	at org.jetbrains.kotlin.daemon.CompileServiceImplBase.execIncrementalCompiler(CompileServiceImpl.kt:679)
+	at org.jetbrains.kotlin.daemon.CompileServiceImplBase.access$execIncrementalCompiler(CompileServiceImpl.kt:93)
+	at org.jetbrains.kotlin.daemon.CompileServiceImpl.compile(CompileServiceImpl.kt:1806)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(Unknown Source)
+	at java.base/java.lang.reflect.Method.invoke(Unknown Source)
+	at java.rmi/sun.rmi.server.UnicastServerRef.dispatch(Unknown Source)
+	at java.rmi/sun.rmi.transport.Transport$1.run(Unknown Source)
+	at java.rmi/sun.rmi.transport.Transport$1.run(Unknown Source)
+	at java.base/java.security.AccessController.doPrivileged(Unknown Source)
+	at java.rmi/sun.rmi.transport.Transport.serviceCall(Unknown Source)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport.handleMessages(Unknown Source)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run0(Unknown Source)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.lambda$run$0(Unknown Source)
+	at java.base/java.security.AccessController.doPrivileged(Unknown Source)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run(Unknown Source)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(Unknown Source)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)
+	at java.base/java.lang.Thread.run(Unknown Source)
+Caused by: org.jetbrains.kotlin.codegen.CompilationException: Back-end (JVM) Internal error: Couldn't transform method node:
+runUploadedCoverAutomationStep (Lcom/eteditor/EditorController;Lcom/eteditor/AutomationChain;Lcom/eteditor/AutomationConfirmationRequest;Lcom/eteditor/AutomationStep;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;:
+    // annotable parameter count: 6 (visible)
+    // annotable parameter count: 6 (invisible)
+   L0
+    ALOAD 5
+    INSTANCEOF com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1
+    IFEQ L1
+    ALOAD 5
+    CHECKCAST com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1
+    ASTORE 10
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.label : I
+    LDC -2147483648
+    IAND
+    IFEQ L1
+    ALOAD 10
+    DUP
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.label : I
+    LDC -2147483648
+    ISUB
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.label : I
+    GOTO L2
+   L1
+    NEW com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1
+    DUP
+    ALOAD 5
+    INVOKESPECIAL com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.<init> (Lkotlin/coroutines/Continuation;)V
+    ASTORE 10
+   L2
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.result : Ljava/lang/Object;
+    ASTORE 9
+   L3
+    INVOKESTATIC kotlin/coroutines/intrinsics/IntrinsicsKt.getCOROUTINE_SUSPENDED ()Ljava/lang/Object;
+   L4
+    LINENUMBER 374 L4
+    ASTORE 11
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.label : I
+    TABLESWITCH
+      0: L5
+      1: L6
+      2: L7
+      3: L8
+      4: L9
+      default: L10
+   L5
+    ALOAD 9
+    INVOKESTATIC kotlin/ResultKt.throwOnFailure (Ljava/lang/Object;)V
+   L11
+    LINENUMBER 380 L11
+    ALOAD 1
+    ALOAD 2
+    INVOKESTATIC com/eteditor/AutomationStepStateUtilsKt.isAutomationConfirmationStepCurrent (Lcom/eteditor/AutomationChain;Lcom/eteditor/AutomationConfirmationRequest;)Z
+    IFNE L12
+   L13
+    LINENUMBER 381 L13
+    ALOAD 0
+    ACONST_NULL
+    INVOKEVIRTUAL com/eteditor/EditorController.setAutomationConfirmationRequest$app (Lcom/eteditor/AutomationConfirmationRequest;)V
+   L14
+    LINENUMBER 382 L14
+    ALOAD 0
+    LDC "\u6267\u884c\u6b65\u9aa4\u5df2\u5931\u6548"
+    INVOKEVIRTUAL com/eteditor/EditorController.setStatusMessage$app (Ljava/lang/String;)V
+   L15
+    LINENUMBER 383 L15
+    ALOAD 0
+    LDC "\u6267\u884c\u6b65\u9aa4\u5df2\u5931\u6548"
+    INVOKESTATIC com/eteditor/ControllerRuntimeHelpersKt.appendAutomationLog (Lcom/eteditor/EditorController;Ljava/lang/String;)V
+   L16
+    LINENUMBER 384 L16
+    NOP
+    ICONST_0
+    INVOKESTATIC kotlin/coroutines/jvm/internal/Boxing.boxBoolean (Z)Ljava/lang/Boolean;
+    ARETURN
+   L12
+    LINENUMBER 386 L12
+    ALOAD 0
+    ALOAD 3
+    INVOKESTATIC com/eteditor/ToolControllerQueriesKt.automationStepToolForRun (Lcom/eteditor/EditorController;Lcom/eteditor/AutomationStep;)Lcom/eteditor/EditorTool;
+    ASTORE 6
+   L17
+    LINENUMBER 387 L17
+    ALOAD 6
+    IFNULL L18
+    ALOAD 6
+    INVOKEVIRTUAL com/eteditor/EditorTool.getToolId ()Ljava/lang/String;
+    GOTO L19
+   L18
+    NOP
+    ACONST_NULL
+   L19
+    LDC "generate_cover"
+    INVOKESTATIC kotlin/jvm/internal/Intrinsics.areEqual (Ljava/lang/Object;Ljava/lang/Object;)Z
+    IFEQ L20
+    ALOAD 4
+    CHECKCAST java/lang/CharSequence
+    INVOKESTATIC kotlin/text/StringsKt.isBlank (Ljava/lang/CharSequence;)Z
+    IFEQ L21
+   L20
+    LINENUMBER 388 L20
+    ALOAD 0
+    ACONST_NULL
+    INVOKEVIRTUAL com/eteditor/EditorController.setAutomationConfirmationRequest$app (Lcom/eteditor/AutomationConfirmationRequest;)V
+   L22
+    LINENUMBER 389 L22
+    ALOAD 0
+    LDC "\u6267\u884c\u6b65\u9aa4\u5df2\u5931\u6548"
+    INVOKEVIRTUAL com/eteditor/EditorController.setStatusMessage$app (Ljava/lang/String;)V
+   L23
+    LINENUMBER 390 L23
+    ALOAD 0
+    LDC "\u6267\u884c\u6b65\u9aa4\u5df2\u5931\u6548"
+    INVOKESTATIC com/eteditor/ControllerRuntimeHelpersKt.appendAutomationLog (Lcom/eteditor/EditorController;Ljava/lang/String;)V
+   L24
+    LINENUMBER 391 L24
+    NOP
+    ICONST_0
+    INVOKESTATIC kotlin/coroutines/jvm/internal/Boxing.boxBoolean (Z)Ljava/lang/Boolean;
+    ARETURN
+   L21
+    LINENUMBER 393 L21
+    ALOAD 0
+    ALOAD 3
+    GETSTATIC com/eteditor/AutomationRunStepState.Running : Lcom/eteditor/AutomationRunStepState;
+    ACONST_NULL
+    ICONST_4
+    ACONST_NULL
+    INVOKESTATIC com/eteditor/AutomationRunStateControllerKt.setAutomationRunStepState$default (Lcom/eteditor/EditorController;Lcom/eteditor/AutomationStep;Lcom/eteditor/AutomationRunStepState;Ljava/lang/String;ILjava/lang/Object;)V
+   L25
+    LINENUMBER 394 L25
+    ALOAD 0
+    ALOAD 3
+    LDC "\u6267\u884c"
+    ALOAD 10
+    ALOAD 10
+    ALOAD 0
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$0 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 1
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$1 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 2
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$2 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 3
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$3 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 4
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$4 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 6
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$5 : Ljava/lang/Object;
+    ALOAD 10
+    ICONST_1
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.label : I
+    INVOKESTATIC com/eteditor/AutomationRunControllerKt.startAutomationStepSingleProgress (Lcom/eteditor/EditorController;Lcom/eteditor/AutomationStep;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+   L26
+    DUP
+    ALOAD 11
+    IF_ACMPNE L27
+   L28
+    LINENUMBER 374 L28
+    ALOAD 11
+    ARETURN
+   L6
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$5 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/EditorTool
+    ASTORE 6
+   L29
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$4 : Ljava/lang/Object;
+    CHECKCAST java/lang/String
+    ASTORE 4
+   L30
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$3 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationStep
+    ASTORE 3
+   L31
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$2 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationConfirmationRequest
+    ASTORE 2
+   L32
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$1 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationChain
+    ASTORE 1
+   L33
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$0 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/EditorController
+    ASTORE 0
+   L34
+    NOP
+    ALOAD 9
+    INVOKESTATIC kotlin/ResultKt.throwOnFailure (Ljava/lang/Object;)V
+    ALOAD 9
+   L27
+    LINENUMBER 395 L27
+    POP
+   L35
+    ALOAD 0
+    ALOAD 6
+    ALOAD 4
+    INVOKESTATIC com/eteditor/AutomationRunControllerKt.coverToolWithUploadedImage (Lcom/eteditor/EditorTool;Ljava/lang/String;)Lcom/eteditor/EditorTool;
+    NOP
+    ICONST_0
+    ALOAD 10
+    ALOAD 10
+    ALOAD 0
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$0 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 1
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$1 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 2
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$2 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 3
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$3 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 4
+    INVOKESTATIC kotlin/coroutines/jvm/internal/SpillingKt.nullOutSpilledVariable (Ljava/lang/Object;)Ljava/lang/Object;
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$4 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 6
+    INVOKESTATIC kotlin/coroutines/jvm/internal/SpillingKt.nullOutSpilledVariable (Ljava/lang/Object;)Ljava/lang/Object;
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$5 : Ljava/lang/Object;
+    ALOAD 10
+    ICONST_2
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.label : I
+    INVOKESTATIC com/eteditor/ToolRunControllerKt.runConfiguredToolAsync (Lcom/eteditor/EditorController;Lcom/eteditor/EditorTool;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+   L36
+    DUP
+    ALOAD 11
+    IF_ACMPNE L37
+   L38
+    LINENUMBER 374 L38
+    ALOAD 11
+    ARETURN
+   L7
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$5 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/EditorTool
+    ASTORE 6
+   L39
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$4 : Ljava/lang/Object;
+    CHECKCAST java/lang/String
+    ASTORE 4
+   L40
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$3 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationStep
+    ASTORE 3
+   L41
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$2 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationConfirmationRequest
+    ASTORE 2
+   L42
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$1 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationChain
+    ASTORE 1
+   L43
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$0 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/EditorController
+    ASTORE 0
+   L44
+    NOP
+    ALOAD 9
+    INVOKESTATIC kotlin/ResultKt.throwOnFailure (Ljava/lang/Object;)V
+    ALOAD 9
+   L37
+    LINENUMBER 395 L37
+    CHECKCAST java/lang/Boolean
+    INVOKEVIRTUAL java/lang/Boolean.booleanValue ()Z
+    ISTORE 7
+   L45
+    LINENUMBER 396 L45
+    ALOAD 0
+    ACONST_NULL
+    INVOKEVIRTUAL com/eteditor/EditorController.setAutomationConfirmationRequest$app (Lcom/eteditor/AutomationConfirmationRequest;)V
+   L46
+    LINENUMBER 397 L46
+    ILOAD 7
+    IFEQ L47
+   L48
+    LINENUMBER 398 L48
+    ALOAD 0
+    ALOAD 3
+    LDC "\u6267\u884c"
+    ALOAD 10
+    ALOAD 10
+    ALOAD 0
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$0 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 1
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$1 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 2
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$2 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 3
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$3 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 4
+    INVOKESTATIC kotlin/coroutines/jvm/internal/SpillingKt.nullOutSpilledVariable (Ljava/lang/Object;)Ljava/lang/Object;
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$4 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 6
+    INVOKESTATIC kotlin/coroutines/jvm/internal/SpillingKt.nullOutSpilledVariable (Ljava/lang/Object;)Ljava/lang/Object;
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$5 : Ljava/lang/Object;
+    ALOAD 10
+    ILOAD 7
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.Z$0 : Z
+    ALOAD 10
+    ICONST_3
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.label : I
+    INVOKESTATIC com/eteditor/AutomationRunControllerKt.finishAutomationStepSingleProgress (Lcom/eteditor/EditorController;Lcom/eteditor/AutomationStep;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+   L49
+    DUP
+    ALOAD 11
+    IF_ACMPNE L50
+   L51
+    LINENUMBER 374 L51
+    ALOAD 11
+    ARETURN
+   L8
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.Z$0 : Z
+    ISTORE 7
+   L52
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$5 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/EditorTool
+    ASTORE 6
+   L53
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$4 : Ljava/lang/Object;
+    CHECKCAST java/lang/String
+    ASTORE 4
+   L54
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$3 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationStep
+    ASTORE 3
+   L55
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$2 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationConfirmationRequest
+    ASTORE 2
+   L56
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$1 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationChain
+    ASTORE 1
+   L57
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$0 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/EditorController
+    ASTORE 0
+   L58
+    NOP
+    ALOAD 9
+    INVOKESTATIC kotlin/ResultKt.throwOnFailure (Ljava/lang/Object;)V
+    ALOAD 9
+   L50
+    LINENUMBER 399 L50
+    POP
+   L59
+    ALOAD 0
+    INVOKESTATIC com/eteditor/AutomationRunStateControllerKt.automationRunTerminalStateForSuccess (Lcom/eteditor/EditorController;)Lcom/eteditor/AutomationRunStepState;
+    ASTORE 8
+   L60
+    LINENUMBER 400 L60
+    ALOAD 0
+    ALOAD 8
+    INVOKESTATIC com/eteditor/AutomationRunStateControllerKt.countAutomationRunTerminalState (Lcom/eteditor/EditorController;Lcom/eteditor/AutomationRunStepState;)V
+   L61
+    LINENUMBER 401 L61
+    ALOAD 0
+    ALOAD 3
+    ALOAD 8
+    ALOAD 0
+    INVOKEVIRTUAL com/eteditor/EditorController.getStatusMessage ()Ljava/lang/String;
+    INVOKESTATIC com/eteditor/AutomationRunStateControllerKt.setAutomationRunStepState (Lcom/eteditor/EditorController;Lcom/eteditor/AutomationStep;Lcom/eteditor/AutomationRunStepState;Ljava/lang/String;)V
+   L62
+    LINENUMBER 402 L62
+    ALOAD 0
+   L63
+    LINENUMBER 403 L63
+    ALOAD 8
+    INVOKESTATIC com/eteditor/AutomationRunStatusUtilsKt.automationRunTerminalLogPrefix (Lcom/eteditor/AutomationRunStepState;)Ljava/lang/String;
+    ALOAD 0
+    INVOKESTATIC com/eteditor/ControllerRuntimeHelpersKt.automationStepResultSuffix (Lcom/eteditor/EditorController;)Ljava/lang/String;
+    INVOKEDYNAMIC makeConcatWithConstants(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String; [
+      // handle kind 0x6 : INVOKESTATIC
+      java/lang/invoke/StringConcatFactory.makeConcatWithConstants(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/invoke/CallSite;
+      // arguments:
+      "\u0001\u0001"
+    ]
+   L64
+    LINENUMBER 402 L64
+    INVOKESTATIC com/eteditor/ControllerRuntimeHelpersKt.appendAutomationLog (Lcom/eteditor/EditorController;Ljava/lang/String;)V
+   L65
+    LINENUMBER 405 L65
+    ALOAD 0
+    ALOAD 1
+    ALOAD 2
+    INVOKEVIRTUAL com/eteditor/AutomationConfirmationRequest.getStepIndex ()I
+    ICONST_1
+    IADD
+    ALOAD 10
+    ALOAD 10
+    ALOAD 0
+    INVOKESTATIC kotlin/coroutines/jvm/internal/SpillingKt.nullOutSpilledVariable (Ljava/lang/Object;)Ljava/lang/Object;
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$0 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 1
+    INVOKESTATIC kotlin/coroutines/jvm/internal/SpillingKt.nullOutSpilledVariable (Ljava/lang/Object;)Ljava/lang/Object;
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$1 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 2
+    INVOKESTATIC kotlin/coroutines/jvm/internal/SpillingKt.nullOutSpilledVariable (Ljava/lang/Object;)Ljava/lang/Object;
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$2 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 3
+    INVOKESTATIC kotlin/coroutines/jvm/internal/SpillingKt.nullOutSpilledVariable (Ljava/lang/Object;)Ljava/lang/Object;
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$3 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 4
+    INVOKESTATIC kotlin/coroutines/jvm/internal/SpillingKt.nullOutSpilledVariable (Ljava/lang/Object;)Ljava/lang/Object;
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$4 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 6
+    INVOKESTATIC kotlin/coroutines/jvm/internal/SpillingKt.nullOutSpilledVariable (Ljava/lang/Object;)Ljava/lang/Object;
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$5 : Ljava/lang/Object;
+    ALOAD 10
+    ALOAD 8
+    INVOKESTATIC kotlin/coroutines/jvm/internal/SpillingKt.nullOutSpilledVariable (Ljava/lang/Object;)Ljava/lang/Object;
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$6 : Ljava/lang/Object;
+    ALOAD 10
+    ILOAD 7
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.Z$0 : Z
+    ALOAD 10
+    ICONST_4
+    PUTFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.label : I
+    INVOKESTATIC com/eteditor/AutomationRunControllerKt.runAutomationChainFrom (Lcom/eteditor/EditorController;Lcom/eteditor/AutomationChain;ILkotlin/coroutines/Continuation;)Ljava/lang/Object;
+   L66
+    DUP
+    ALOAD 11
+    IF_ACMPNE L67
+   L68
+    LINENUMBER 374 L68
+    ALOAD 11
+    ARETURN
+   L9
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.Z$0 : Z
+    ISTORE 7
+   L69
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$6 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationRunStepState
+    ASTORE 8
+   L70
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$5 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/EditorTool
+    ASTORE 6
+   L71
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$4 : Ljava/lang/Object;
+    CHECKCAST java/lang/String
+    ASTORE 4
+   L72
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$3 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationStep
+    ASTORE 3
+   L73
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$2 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationConfirmationRequest
+    ASTORE 2
+   L74
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$1 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/AutomationChain
+    ASTORE 1
+   L75
+    ALOAD 10
+    GETFIELD com/eteditor/AutomationRunControllerKt$runUploadedCoverAutomationStep$1.L$0 : Ljava/lang/Object;
+    CHECKCAST com/eteditor/EditorController
+    ASTORE 0
+   L76
+    NOP
+    ALOAD 9
+    INVOKESTATIC kotlin/ResultKt.throwOnFailure (Ljava/lang/Object;)V
+    ALOAD 9
+   L67
+    LINENUMBER 406 L67
+    POP
+   L77
+    NOP
+    ICONST_1
+    INVOKESTATIC kotlin/coroutines/jvm/internal/Boxing.boxBoolean (Z)Ljava/lang/Boolean;
+    ARETURN
+   L47
+    LINENUMBER 409 L47
+    ALOAD 0
+    INVOKESTATIC com/eteditor/AutomationRunStateControllerKt.automationRunTerminalStateForFailure (Lcom/eteditor/EditorController;)Lcom/eteditor/AutomationRunStepState;
+    ASTORE 8
+   L78
+    LINENUMBER 410 L78
+    ALOAD 0
+    ALOAD 8
+    INVOKESTATIC com/eteditor/AutomationRunStateControllerKt.countAutomationRunTerminalState (Lcom/eteditor/EditorController;Lcom/eteditor/AutomationRunStepState;)V
+   L79
+    LINENUMBER 411 L79
+    ALOAD 0
+    ALOAD 3
+    ALOAD 8
+    ALOAD 0
+    INVOKEVIRTUAL com/eteditor/EditorController.getStatusMessage ()Ljava/lang/String;
+    INVOKESTATIC com/eteditor/AutomationRunStateControllerKt.setAutomationRunStepState (Lcom/eteditor/EditorController;Lcom/eteditor/AutomationStep;Lcom/eteditor/AutomationRunStepState;Ljava/lang/String;)V
+   L80
+    LINENUMBER 412 L80
+    ALOAD 0
+   L81
+    LINENUMBER 413 L81
+    ALOAD 8
+    INVOKESTATIC com/eteditor/AutomationRunStatusUtilsKt.automationRunTerminalLogPrefix (Lcom/eteditor/AutomationRunStepState;)Ljava/lang/String;
+    ALOAD 0
+    INVOKEVIRTUAL com/eteditor/EditorController.getStatusMessage ()Ljava/lang/String;
+    INVOKESTATIC com/eteditor/AutomationRunControllerKt.automationFailureSuffix (Ljava/lang/String;)Ljava/lang/String;
+    INVOKEDYNAMIC makeConcatWithConstants(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String; [
+      // handle kind 0x6 : INVOKESTATIC
+      java/lang/invoke/StringConcatFactory.makeConcatWithConstants(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/invoke/CallSite;
+      // arguments:
+      "\u0001\u0001"
+    ]
+   L82
+    LINENUMBER 412 L82
+    INVOKESTATIC com/eteditor/ControllerRuntimeHelpersKt.appendAutomationLog (Lcom/eteditor/EditorController;Ljava/lang/String;)V
+   L83
+    LINENUMBER 415 L83
+    NOP
+    ICONST_0
+    INVOKESTATIC kotlin/coroutines/jvm/internal/Boxing.boxBoolean (Z)Ljava/lang/Boolean;
+    ARETURN
+   L10
+    LINENUMBER 374 L10
+    NEW java/lang/IllegalStateException
+    DUP
+    LDC "call to 'resume' before 'invoke' with coroutine"
+    INVOKESPECIAL java/lang/IllegalStateException.<init> (Ljava/lang/String;)V
+    ATHROW
+    RETURN
+   L84
+    LOCALVARIABLE terminalState Lcom/eteditor/AutomationRunStepState; L60 L9 8
+    LOCALVARIABLE tool Lcom/eteditor/EditorTool; L17 L6 6
+    LOCALVARIABLE success Z L45 L8 7
+    LOCALVARIABLE terminalState Lcom/eteditor/AutomationRunStepState; L78 L10 8
+    LOCALVARIABLE $this$runUploadedCoverAutomationStep Lcom/eteditor/EditorController; L0 L84 0
+    LOCALVARIABLE chain Lcom/eteditor/AutomationChain; L0 L84 1
+    LOCALVARIABLE request Lcom/eteditor/AutomationConfirmationRequest; L0 L84 2
+    LOCALVARIABLE step Lcom/eteditor/AutomationStep; L0 L84 3
+    LOCALVARIABLE imageUri Ljava/lang/String; L0 L84 4
+    LOCALVARIABLE $completion Lkotlin/coroutines/Continuation; L0 L84 5
+    LOCALVARIABLE $continuation Lkotlin/coroutines/Continuation; L2 L10 10
+    LOCALVARIABLE $result Ljava/lang/Object; L3 L10 9
+    LOCALVARIABLE tool Lcom/eteditor/EditorTool; L29 L7 6
+    LOCALVARIABLE tool Lcom/eteditor/EditorTool; L39 L8 6
+    LOCALVARIABLE tool Lcom/eteditor/EditorTool; L53 L9 6
+    LOCALVARIABLE success Z L52 L9 7
+    LOCALVARIABLE tool Lcom/eteditor/EditorTool; L71 L10 6
+    LOCALVARIABLE terminalState Lcom/eteditor/AutomationRunStepState; L70 L47 8
+    LOCALVARIABLE success Z L69 L10 7
+    MAXSTACK = 6
+    MAXLOCALS = 12
+
+File is unknown
+The root cause java.lang.OutOfMemoryError was thrown at: org.jetbrains.org.objectweb.asm.tree.analysis.Frame.<init>(Frame.java:96)
+	at org.jetbrains.kotlin.codegen.TransformationMethodVisitor.visitEnd(TransformationMethodVisitor.kt:89)
+	at org.jetbrains.org.objectweb.asm.MethodVisitor.visitEnd(MethodVisitor.java:796)
+	at org.jetbrains.kotlin.codegen.TransformationMethodVisitor.visitEnd(TransformationMethodVisitor.kt:87)
+	... 45 more
+Caused by: java.lang.OutOfMemoryError: GC overhead limit exceeded
+	at org.jetbrains.org.objectweb.asm.tree.analysis.Frame.<init>(Frame.java:96)
+	at org.jetbrains.kotlin.codegen.coroutines.UninitializedStoresProcessor$UninitializedNewValueFrame.<init>(processUninitializedStores.kt:133)
+	at org.jetbrains.kotlin.codegen.coroutines.UninitializedStoresProcessor.run$lambda$1(processUninitializedStores.kt:91)
+	at org.jetbrains.kotlin.codegen.coroutines.UninitializedStoresProcessor$$Lambda/0x0000000100b8bb60.invoke(Unknown Source)
+	at org.jetbrains.kotlin.codegen.optimization.common.FastAnalyzer.fullMergeControlFlowEdge(FastAnalyzer.kt:233)
+	at org.jetbrains.kotlin.codegen.optimization.common.FastAnalyzer.mergeControlFlowEdge(FastAnalyzer.kt:216)
+	at org.jetbrains.kotlin.codegen.optimization.common.FastAnalyzer.processControlFlowEdge(FastAnalyzer.kt:208)
+	at org.jetbrains.kotlin.codegen.optimization.common.FastAnalyzer.processControlFlowEdge$default(FastAnalyzer.kt:206)
+	at org.jetbrains.kotlin.codegen.optimization.common.FastAnalyzer.visitJumpInsnNode(FastAnalyzer.kt:318)
+	at org.jetbrains.kotlin.codegen.optimization.common.FastAnalyzer.visitMeaningfulInstruction(FastAnalyzer.kt:275)
+	at org.jetbrains.kotlin.codegen.optimization.common.FastAnalyzer.analyzeInstruction(FastAnalyzer.kt:113)
+	at org.jetbrains.kotlin.codegen.optimization.common.FastAnalyzer.analyzeMainLoop(FastAnalyzer.kt:74)
+	at org.jetbrains.kotlin.codegen.optimization.common.FastAnalyzer.analyze(FastAnalyzer.kt:53)
+	at org.jetbrains.kotlin.codegen.coroutines.UninitializedStoresProcessor.run(processUninitializedStores.kt:92)
+	at org.jetbrains.kotlin.codegen.optimization.OptimizationMethodVisitor.performTransformations(OptimizationMethodVisitor.kt:71)
+	at org.jetbrains.kotlin.codegen.TransformationMethodVisitor.visitEnd(TransformationMethodVisitor.kt:67)
+	at org.jetbrains.org.objectweb.asm.MethodVisitor.visitEnd(MethodVisitor.java:796)
+	at org.jetbrains.kotlin.codegen.TransformationMethodVisitor.visitEnd(TransformationMethodVisitor.kt:87)
+	at org.jetbrains.org.objectweb.asm.tree.MethodNode.accept(MethodNode.java:770)
+	at org.jetbrains.kotlin.backend.jvm.codegen.CoroutineCodegenKt.acceptWithStateMachine(CoroutineCodegen.kt:73)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generateMethod(ClassCodegen.kt:456)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generate(ClassCodegen.kt:164)
+	at org.jetbrains.kotlin.backend.jvm.JvmIrCodegenFactory.generateFile(JvmIrCodegenFactory.kt:419)
+	at org.jetbrains.kotlin.backend.jvm.JvmIrCodegenFactory.invokeCodegen(JvmIrCodegenFactory.kt:388)
+	at org.jetbrains.kotlin.cli.jvm.compiler.KotlinToJVMBytecodeCompiler.runCodegen$cli(KotlinToJVMBytecodeCompiler.kt:431)
+	at org.jetbrains.kotlin.cli.pipeline.jvm.JvmBackendPipelinePhase.executePhase(JvmBackendPipelinePhase.kt:95)
+	at org.jetbrains.kotlin.cli.pipeline.jvm.JvmBackendPipelinePhase.executePhase(JvmBackendPipelinePhase.kt:36)
+	at org.jetbrains.kotlin.cli.pipeline.jvm.JvmBackendPipelinePhase.executePhase(JvmBackendPipelinePhase.kt:29)
+	at org.jetbrains.kotlin.cli.pipeline.PipelinePhase.phaseBody(PipelinePhase.kt:68)
+	at org.jetbrains.kotlin.cli.pipeline.PipelinePhase.phaseBody(PipelinePhase.kt:58)
+	at org.jetbrains.kotlin.config.phaser.NamedCompilerPhase.invoke(CompilerPhase.kt:102)
+	at org.jetbrains.kotlin.backend.common.phaser.CompositePhase.invoke(PhaseBuilders.kt:22)
+
+

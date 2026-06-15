@@ -1,0 +1,293 @@
+﻿package com.eteditor
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+@Composable
+fun TitleFormatPlanPane(
+    controller: EditorController,
+    toolId: String,
+    onDismiss: () -> Unit,
+    onApplied: (() -> Unit)? = null,
+    onApplyStarted: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    val plan = controller.titleFormatPlan
+    if (controller.titleFormatPlanToolId != toolId) return
+    if (plan.isEmpty()) return
+    val scope = rememberCoroutineScope()
+    var executing by remember(toolId) { mutableStateOf(false) }
+    var executionProgress by remember(toolId) { mutableStateOf(0f) }
+    var executionLabel by remember(toolId) { mutableStateOf("执行标题格式") }
+    var executionJob by remember(toolId) { mutableStateOf<Job?>(null) }
+    val automationStep = controller.automationConfirmationRequest
+        ?.takeIf { it.stepId == toolId }
+        ?.let(controller::automationConfirmationStep)
+    val changedCount = plan.count { it.changed }
+    fun updateExecutionProgress(completed: Int, total: Int) {
+        executionProgress = if (total > 0) completed.toFloat() / total.toFloat() else 0f
+        executionLabel = "执行标题格式 $completed/$total"
+        automationStep?.let { step ->
+            controller.setAutomationRunStepProgress(step, executionProgress, executionLabel)
+        }
+    }
+    fun startExecutionAfterClosing() {
+        val total = plan.size.coerceAtLeast(1)
+        executionJob?.cancel()
+        executionProgress = 0f
+        executionLabel = "执行标题格式 0/$total"
+        automationStep?.let { step ->
+            controller.setAutomationRunStepState(step, AutomationRunStepState.Running)
+            controller.setAutomationRunStepProgress(step, 0f, executionLabel)
+        }
+        onApplyStarted?.invoke()
+        executionJob = controller.controllerScope.launch {
+            delay(16)
+            yieldToAppUiBeforeHeavyWork()
+            val applied = controller.applyPreparedTitleFormatPlanWithProgress(toolId, ::updateExecutionProgress)
+            if (applied) {
+                onApplied?.invoke() ?: onDismiss()
+            } else {
+                automationStep?.let { step -> controller.failAutomationConfirmationStep(step) }
+            }
+        }
+    }
+    Surface(
+        shape = PreviewShape,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = modifier.fillMaxSize()
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = "格式预览",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (controller.titleFormatPlanLogicText.isNotBlank()) {
+                        Text(
+                            text = controller.titleFormatPlanLogicText,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+                Text(
+                    text = "$changedCount/${plan.size}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                IconButton(
+                    onClick = onDismiss,
+                    enabled = !executing,
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(Icons.Outlined.Close, contentDescription = "关闭", modifier = Modifier.size(19.dp))
+                }
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            if (executing) {
+                ToolRunProgress(
+                    toolName = executionLabel,
+                    progress = executionProgress
+                )
+            }
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                items(plan, key = { "${it.chapterIndex}-${it.sequenceNumber}-${it.newTitle}" }) { item ->
+                    TitleFormatPlanRow(
+                        item = item,
+                        styleOptions = if (controller.titleFormatPlanAllowsStyleEdit && !executing) {
+                            controller.titleFormatStyleOptions()
+                        } else {
+                            emptyList()
+                        },
+                        onStyleChange = { style ->
+                            controller.updateTitleFormatPlanStyle(toolId, item.chapterIndex, style)
+                        }
+                    )
+                }
+            }
+            ButtonRow {
+                Button(
+                    enabled = !executing,
+                    onClick = {
+                        executionJob?.cancel()
+                        if (onApplyStarted != null || automationStep != null) {
+                            startExecutionAfterClosing()
+                        } else {
+                            executing = true
+                            executionProgress = 0f
+                            executionLabel = "执行标题格式 0/${plan.size}"
+                            executionJob = scope.launch {
+                                yieldToAppUiBeforeHeavyWork()
+                                val applied = controller.applyPreparedTitleFormatPlanWithProgress(toolId) { completed, total ->
+                                    updateExecutionProgress(completed, total)
+                                }
+                                executing = false
+                                if (applied) {
+                                    onApplied?.invoke() ?: onDismiss()
+                                }
+                            }
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    shape = ControlShape,
+                    contentPadding = CompactButtonPadding
+                ) {
+                    Icon(Icons.Outlined.PlayArrow, contentDescription = null, modifier = Modifier.size(17.dp))
+                    Spacer(Modifier.width(5.dp))
+                    Text("预览")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TitleFormatPlanRow(
+    item: TitleFormatPlanItem,
+    styleOptions: List<Pair<String, String>>,
+    onStyleChange: (String) -> Unit
+) {
+    Surface(
+        shape = RowShape,
+        color = if (item.changed) {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f)
+        } else {
+            MaterialTheme.colorScheme.surface
+        },
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.72f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = item.sequenceNumber.toString(),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.width(34.dp)
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = item.oldTitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (styleOptions.isEmpty()) {
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement = Arrangement.spacedBy(1.dp),
+                            modifier = Modifier.widthIn(max = 150.dp)
+                        ) {
+                            Text(
+                                text = item.styleName,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                maxLines = 1
+                            )
+                            Text(
+                                text = item.reason,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    } else {
+                        PanelDropdownField(
+                            value = item.styleName,
+                            options = styleOptions,
+                            onSelect = onStyleChange,
+                            height = 34.dp,
+                            modifier = Modifier.width(112.dp)
+                        )
+                    }
+                }
+                Text(
+                    text = item.newTitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (item.changed) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = if (item.changed) FontWeight.Medium else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}

@@ -1,0 +1,562 @@
+package com.eteditor
+
+import com.eteditor.core.DocumentKind
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.yield
+
+suspend fun EditorController.prepareFetchInfoPreviewForEditorTool(editorToolId: String): Boolean {
+    val tool = selectedEditorTool?.takeIf { it.id == editorToolId }
+        ?: editorTools.firstOrNull { it.id == editorToolId }
+        ?: return false
+    if (tool.toolId != "fetch_info") return false
+    return prepareFetchInfoPreview(tool)
+}
+
+suspend fun EditorController.prepareFetchInfoPreviewForBuiltIn(toolId: String): Boolean {
+    if (toolId != "fetch_info") return false
+    return prepareFetchInfoPreview(builtInEditorTool(toolId))
+}
+
+suspend fun EditorController.prepareFetchInfoPreviewForAutomationStep(stepId: String): Boolean {
+    val tool = automationStepToolForPreview(stepId) ?: return false
+    if (tool.toolId != "fetch_info") return false
+    return prepareFetchInfoPreview(tool)
+}
+
+fun EditorController.fetchInfoInitialProgressTextForEditorTool(editorToolId: String): String {
+    val tool = selectedEditorTool?.takeIf { it.id == editorToolId }
+        ?: editorTools.firstOrNull { it.id == editorToolId }
+        ?: return ""
+    return fetchInfoInitialProgressText(tool)
+}
+
+fun EditorController.fetchInfoInitialProgressTextForBuiltIn(toolId: String): String {
+    if (toolId != "fetch_info") return ""
+    return fetchInfoInitialProgressText(builtInEditorTool(toolId))
+}
+
+fun EditorController.clearFetchInfoPreview(toolId: String? = null) {
+    if (toolId == null || fetchInfoPreview?.toolId == toolId) {
+        fetchInfoPreview = null
+        fetchInfoSearchChoiceRequest = null
+        fetchInfoRetryRequest = null
+        fetchInfoProgress = 0f
+    }
+    clearFetchInfoSearchChoiceRequest(toolId)
+    clearFetchInfoRetryRequest(toolId)
+}
+
+fun EditorController.clearFetchInfoSearchChoiceRequest(toolId: String? = null) {
+    if (toolId == null || fetchInfoSearchChoiceRequest?.toolId == toolId) {
+        fetchInfoSearchChoiceRequest = null
+        if (fetchInfoPreview == null) fetchInfoProgress = 0f
+    }
+}
+
+fun EditorController.clearFetchInfoRetryRequest(toolId: String? = null) {
+    if (toolId == null || fetchInfoRetryRequest?.toolId == toolId) {
+        fetchInfoRetryRequest = null
+        if (fetchInfoPreview == null && fetchInfoSearchChoiceRequest == null) fetchInfoProgress = 0f
+    }
+}
+
+internal fun EditorController.fetchInfoParameters(tool: EditorTool? = null): FetchInfoParameters {
+    val values = if (tool == null) {
+        defaultToolParameters("fetch_info")
+    } else {
+        mergedToolParameters(tool)
+    }
+    return buildFetchInfoParameters(
+        values = values,
+        sourceOptions = FETCH_INFO_SOURCE_OPTIONS,
+        contentOptionsForSource = { source -> this.fetchInfoContentOptions(source) },
+        defaultQuery = defaultFetchInfoQuery(FETCH_INFO_SEARCH_TITLE),
+        expectedAuthor = epub?.metadataAuthor.orEmpty(),
+        sosadLoginCookie = sosadLoginCookie(),
+        introTargetPath = resolveFetchInfoIntroTarget(values[FETCH_INFO_PARAM_INTRO_TARGET].orEmpty(), epub),
+        trueValue = BOOL_TRUE
+    )
+}
+
+fun EditorController.defaultFetchInfoQuery(): String {
+    return defaultFetchInfoQuery(FETCH_INFO_SEARCH_TITLE)
+}
+
+fun EditorController.defaultFetchInfoQuery(searchMode: String): String {
+    return defaultFetchInfoQueryForDocument(
+        kind = kind,
+        searchMode = searchMode,
+        epubMetadataTitle = epub?.metadataTitle.orEmpty(),
+        epubMetadataAuthor = epub?.metadataAuthor.orEmpty(),
+        title = title,
+        authorSearchMode = FETCH_INFO_SEARCH_AUTHOR,
+        keywordSearchMode = FETCH_INFO_SEARCH_KEYWORD
+    )
+}
+
+fun EditorController.fetchInfoWritableChapterCount(): Int {
+    val book = epub ?: return 0
+    return fetchInfoCatalogTargetChapters(book).size
+}
+
+fun EditorController.fetchInfoCatalogSummary(preview: FetchInfoPreview): String {
+    return buildFetchInfoCatalogSummary(fetchInfoWritableChapterCount(), preview)
+}
+
+fun EditorController.fetchInfoCatalogPreviewRows(preview: FetchInfoPreview, filtered: Boolean): List<FetchInfoCatalogPreviewRow> {
+    val book = epub ?: return emptyList()
+    return buildFetchInfoCatalogPreviewRows(
+        book = book,
+        preview = preview,
+        filtered = filtered,
+        fallbackChapterIndex = previewChapterIndex
+    )
+}
+
+internal fun EditorController.preferredSearchChoiceByMetadata(
+    choices: List<FetchInfoSearchChoice>,
+    query: String
+): FetchInfoSearchChoice? {
+    return preferredSearchChoiceByMetadata(
+        choices = choices,
+        query = query,
+        metadataTitle = epub?.metadataTitle.orEmpty(),
+        metadataAuthor = epub?.metadataAuthor.orEmpty()
+    )
+}
+
+private fun EditorController.resolveFetchInfoSearchChoiceByMetadata(
+    choices: List<FetchInfoSearchChoice>,
+    query: String
+): SearchChoiceResolution {
+    return resolveFetchInfoSearchChoiceByMetadata(
+        choices = choices,
+        query = query,
+        metadataTitle = epub?.metadataTitle.orEmpty(),
+        metadataAuthor = epub?.metadataAuthor.orEmpty()
+    )
+}
+
+private suspend fun EditorController.updateFetchInfoProgress(message: String, progress: Float? = null) {
+    withContext(Dispatchers.Main.immediate) {
+        statusMessage = message
+        progress?.let { fetchInfoProgress = it.coerceIn(0f, 1f) }
+    }
+}
+
+private suspend fun EditorController.updateFetchInfoProgress(source: String, message: String, progress: Float? = null) {
+    val sourceLabel = FetchInfoSources.label(source)
+    val cleanMessage = message.trim()
+    updateFetchInfoProgress(
+        if (cleanMessage.startsWith("\u3010")) cleanMessage else "\u3010$sourceLabel\u3011$cleanMessage",
+        progress
+    )
+}
+
+private fun EditorController.fetchInfoProgressForSource(source: String): FetchInfoProgress {
+    return { message -> updateFetchInfoProgress(source, message) }
+}
+
+private fun EditorController.fetchInfoProgressForAutoSource(
+    source: String,
+    sourceIndex: Int,
+    sourceTotal: Int
+): FetchInfoProgress {
+    return { message ->
+        val cleanMessage = message.trim()
+        val displayMessage = if (cleanMessage.startsWith("\u6b63\u5728\u5c1d\u8bd5\u641c\u7d22\u6e90")) {
+            "\u6b63\u5728\u5c1d\u8bd5\u641c\u7d22\u6e90 ${sourceIndex + 1}/$sourceTotal"
+        } else {
+            cleanMessage
+        }
+        updateFetchInfoProgress(
+            source,
+            displayMessage,
+            fetchInfoSourceProgress(sourceIndex, sourceTotal, fetchInfoProgressPhase(cleanMessage))
+        )
+    }
+}
+
+private fun EditorController.fetchInfoInitialProgressText(tool: EditorTool): String {
+    if (tool.toolId != "fetch_info") return ""
+    val parameters = fetchInfoParameters(tool)
+    val source = fetchInfoAutoSources(parameters.content).firstOrNull() ?: parameters.source
+    return "【${FetchInfoSources.label(source)}】搜索中..."
+}
+
+private fun EditorController.fetchInfoParametersForSource(base: FetchInfoParameters, source: String): FetchInfoParameters {
+    return fetchInfoParametersForSourceModel(
+        base = base,
+        source = source,
+        defaultTitleQuery = defaultFetchInfoQuery(FETCH_INFO_SEARCH_TITLE),
+        sosadLoginCookie = sosadLoginCookie()
+    )
+}
+
+private suspend fun EditorController.prepareFetchInfoPreview(tool: EditorTool): Boolean {
+    return prepareFetchInfoPreviewFromParameters(tool.id, fetchInfoParameters(tool))
+}
+
+private suspend fun EditorController.prepareFetchInfoPreviewFromParameters(
+    toolId: String,
+    baseParameters: FetchInfoParameters,
+    clearRetryRequestOnStart: Boolean = true
+): Boolean {
+    if (kind != DocumentKind.Epub) {
+        statusMessage = "抓取信息仅支持 EPUB"
+        return false
+    }
+    if (!baseParameters.fetchCatalog && !baseParameters.fetchIntro && !baseParameters.fetchCover) {
+        statusMessage = "请选择抓取内容"
+        return false
+    }
+    networkUnavailableMessageForContext(appContext, "抓取失败")?.let { message ->
+        statusMessage = message
+        return false
+    }
+    fetchInfoProgress = 0f
+    fetchInfoPreview = null
+    fetchInfoSearchChoiceRequest = null
+    if (clearRetryRequestOnStart) fetchInfoRetryRequest = null
+    val sources = fetchInfoAutoSources(baseParameters.content)
+    val contentLabel = fetchInfoContentLabel(baseParameters.content)
+    var lastFailure = ""
+    for (sourceIndex in sources.indices) {
+        val source = sources[sourceIndex]
+        val parameters = fetchInfoParametersForSource(baseParameters, source)
+        val sourceLabel = FetchInfoSources.label(source)
+        if (parameters.query.isBlank()) {
+            statusMessage = "没有可用于搜索的书名"
+            fetchInfoRetryRequest = FetchInfoRetryRequest(
+                toolId = toolId,
+                parameters = baseParameters,
+                message = statusMessage
+            )
+            return false
+        }
+        try {
+            val fetcher = FetchInfoFetcherFactory.create(parameters.source)
+            val sourceProgress = fetchInfoProgressForAutoSource(parameters.source, sourceIndex, sources.size)
+            updateFetchInfoProgress(
+                parameters.source,
+                "搜索中...",
+                fetchInfoSourceProgress(sourceIndex, sources.size, 0.12f)
+            )
+            val choices = distinctVisibleSearchChoices(fetcher.searchChoices(parameters, sourceProgress))
+            val choiceResolution = resolveFetchInfoSearchChoiceByMetadata(choices, parameters.query)
+            if (choiceResolution.skipReason != null) {
+                lastFailure = "${sourceLabel}${choiceResolution.skipReason}"
+                fetchInfoPreview = null
+                fetchInfoSearchChoiceRequest = null
+                continue
+            }
+            if (choiceResolution.promptChoices.isNotEmpty()) {
+                fetchInfoRetryRequest = null
+                fetchInfoSearchChoiceRequest = FetchInfoSearchChoiceRequest(
+                    toolId = toolId,
+                    parameters = parameters,
+                    choices = choiceResolution.promptChoices
+                )
+                statusMessage = "请选择${sourceLabel}搜索结果"
+                return false
+            }
+            val resolvedParameters = choiceResolution.choice?.let { choice ->
+                parameters.copy(query = choice.detailUrl)
+            } ?: parameters
+            if (prepareFetchInfoPreviewWithParameters(
+                    toolId,
+                    resolvedParameters,
+                    requireRequestedContent = true,
+                    sourceIndex = sourceIndex,
+                    sourceTotal = sources.size
+                )
+            ) {
+                return true
+            }
+            lastFailure = statusMessage.ifBlank { "${sourceLabel}没有抓到$contentLabel" }
+            fetchInfoPreview = null
+            fetchInfoSearchChoiceRequest = null
+        } catch (error: Throwable) {
+            fetchInfoPreview = null
+            fetchInfoSearchChoiceRequest = null
+            lastFailure = networkAwareErrorMessage("${sourceLabel}抓取失败", error)
+            if (parameters.source == FETCH_INFO_SOURCE_SOSAD) {
+                markSosadLoginInvalidIfNeeded(lastFailure, error)
+            }
+        }
+    }
+    val failureMessage = lastFailure.ifBlank { "没有抓到$contentLabel" }
+    statusMessage = failureMessage
+    fetchInfoRetryRequest = FetchInfoRetryRequest(
+        toolId = toolId,
+        parameters = baseParameters,
+        message = failureMessage
+    )
+    return false
+}
+
+suspend fun EditorController.selectFetchInfoSearchChoice(toolId: String, choice: FetchInfoSearchChoice): Boolean {
+    val request = fetchInfoSearchChoiceRequest ?: run {
+        statusMessage = "没有可选择的搜索结果"
+        return false
+    }
+    if (request.toolId != toolId) {
+        statusMessage = "搜索结果已变化"
+        return false
+    }
+    if (request.choices.none { it.detailUrl == choice.detailUrl }) {
+        statusMessage = "搜索结果已失效"
+        return false
+    }
+    fetchInfoSearchChoiceRequest = null
+    fetchInfoRetryRequest = null
+    return prepareFetchInfoPreviewWithParameters(
+        toolId = toolId,
+        parameters = request.parameters.copy(query = choice.detailUrl),
+        requireRequestedContent = true
+    )
+}
+
+suspend fun EditorController.retryFetchInfoAfterFailure(toolId: String, urlText: String): Boolean {
+    val request = fetchInfoRetryRequest ?: run {
+        statusMessage = "没有可重试的抓取任务"
+        return false
+    }
+    if (request.toolId != toolId) {
+        statusMessage = "抓取任务已变化"
+        return false
+    }
+    val cleanUrl = urlText.trim()
+    if (cleanUrl.isBlank()) {
+        return prepareFetchInfoPreviewFromParameters(
+            toolId = toolId,
+            baseParameters = request.parameters,
+            clearRetryRequestOnStart = false
+        )
+    }
+    val source = fetchInfoSourceForRetryUrl(cleanUrl)
+    if (source == null) {
+        statusMessage = "无法识别网址来源，请输入晋江、长佩或废文详情页网址"
+        fetchInfoRetryRequest = request.copy(message = statusMessage)
+        return false
+    }
+    val parameters = fetchInfoParametersForSource(request.parameters, source).copy(
+        searchMode = FETCH_INFO_SEARCH_KEYWORD,
+        query = cleanUrl
+    )
+    val ok = prepareFetchInfoPreviewWithParameters(
+        toolId = toolId,
+        parameters = parameters,
+        requireRequestedContent = true
+    )
+    if (!ok) {
+        fetchInfoRetryRequest = request.copy(message = statusMessage.ifBlank { "抓取失败" })
+    }
+    return ok
+}
+
+private fun fetchInfoSourceForRetryUrl(urlText: String): String? {
+    return resolveFetchInfoSourceForRetryUrl(
+        urlText = urlText,
+        gongziSource = FETCH_INFO_SOURCE_GONGZICP,
+        sosadSource = FETCH_INFO_SOURCE_SOSAD,
+        jjwxcSource = FETCH_INFO_SOURCE_JJWXC
+    )
+}
+
+private suspend fun EditorController.prepareFetchInfoPreviewWithParameters(
+    toolId: String,
+    parameters: FetchInfoParameters,
+    requireRequestedContent: Boolean = false,
+    sourceIndex: Int? = null,
+    sourceTotal: Int? = null
+): Boolean {
+    networkUnavailableMessageForContext(appContext, "抓取失败")?.let { message ->
+        statusMessage = message
+        return false
+    }
+    val autoProgress = if (sourceIndex != null && sourceTotal != null) {
+        fetchInfoSourceProgress(sourceIndex, sourceTotal, 0.5f)
+    } else {
+        0.42f
+    }
+    updateFetchInfoProgress(parameters.source, "\u6b63\u5728\u8bfb\u53d6\u8be6\u60c5\u9875", autoProgress)
+    return try {
+        val progress = if (sourceIndex != null && sourceTotal != null) {
+            fetchInfoProgressForAutoSource(parameters.source, sourceIndex, sourceTotal)
+        } else {
+            fetchInfoProgressForSource(parameters.source)
+        }
+        val raw = FetchInfoFetcherFactory.create(parameters.source).fetch(
+            parameters,
+            progress
+        )
+        if (requireRequestedContent && !fetchedInfoHasRequestedContent(raw, parameters)) {
+            statusMessage = "${FetchInfoSources.label(parameters.source)}没有抓到${fetchInfoContentLabel(parameters.content)}"
+            return false
+        }
+        val (filtered, issues) = FetchInfoFilter.apply(raw, parameters)
+        fetchInfoPreview = FetchInfoPreview(
+            toolId = toolId,
+            parameters = parameters,
+            raw = raw,
+            filtered = filtered,
+            filterIssues = issues
+        )
+        fetchInfoSearchChoiceRequest = null
+        fetchInfoRetryRequest = null
+        clearTextSearchState()
+        clearFileRenamePlan()
+        val catalogCount = filtered.catalog.size.takeIf { parameters.fetchCatalog } ?: 0
+        val introReady = parameters.fetchIntro && filtered.intro.isNotBlank()
+        val coverReady = parameters.fetchCover && filtered.coverUrl.isNotBlank()
+        fetchInfoProgress = 1f
+        statusMessage = "抓取预览：目录 $catalogCount，简介 ${if (introReady) "有" else "无"}，封面 ${if (coverReady) "有" else "无"}"
+        true
+    } catch (error: Throwable) {
+        fetchInfoPreview = null
+        fetchInfoSearchChoiceRequest = null
+        statusMessage = networkAwareErrorMessage("抓取失败", error)
+        if (parameters.source == FETCH_INFO_SOURCE_SOSAD) {
+            markSosadLoginInvalidIfNeeded(statusMessage, error)
+        }
+        false
+    }
+}
+
+suspend fun EditorController.applyFetchInfoPreview(toolId: String): Boolean {
+    return applyFetchInfoPreviewWithProgress(toolId) { _, _, _ -> }
+}
+
+suspend fun EditorController.applyFetchInfoPreviewWithProgress(
+    toolId: String,
+    onProgress: (phase: String, completed: Int, total: Int) -> Unit
+): Boolean {
+    val preview = fetchInfoPreview ?: run {
+        statusMessage = "没有可应用的抓取预览"
+        return false
+    }
+    if (preview.toolId != toolId) {
+        statusMessage = "抓取预览已变化"
+        return false
+    }
+    if (kind != DocumentKind.Epub) {
+        statusMessage = "抓取信息应用仅支持 EPUB"
+        return false
+    }
+    statusMessage = "正在应用抓取信息..."
+    return try {
+        val result = applyFetchedInfoToEpub(preview, onProgress)
+        val parts = buildList {
+            if (preview.parameters.writeCatalog) add("标题 ${result.catalogChanged}")
+            if (preview.parameters.writeIntro) add(if (result.introWritten) "简介 1" else "简介 0")
+            if (preview.parameters.writeCover) add(if (result.coverWritten) "封面 1" else "封面 0")
+        }
+        checkReport = null
+        markDocumentChanged()
+        refreshChapters()
+        fetchInfoPreview = null
+        fetchInfoSearchChoiceRequest = null
+        statusMessage = "抓取信息已应用：${parts.joinToString("；").ifBlank { "无变更" }}".let { message ->
+            if (result.coverError.isBlank()) message else "$message；封面失败：${result.coverError}"
+        }
+        true
+    } catch (error: Throwable) {
+        statusMessage = "应用失败：${error.message ?: error.javaClass.simpleName}"
+        false
+    }
+}
+
+private suspend fun EditorController.applyFetchedInfoToEpub(
+    preview: FetchInfoPreview,
+    onProgress: (phase: String, completed: Int, total: Int) -> Unit = { _, _, _ -> }
+): FetchInfoWriteResult {
+    val book = epub ?: error("没有 EPUB 可应用")
+    val parameters = preview.parameters
+    val info = preview.filtered
+    var catalogChanged = 0
+    var introWritten = false
+    var coverWritten = false
+    var coverError = ""
+    val total = listOf(
+        parameters.writeCatalog && info.catalog.isNotEmpty(),
+        parameters.writeIntro && info.intro.isNotBlank(),
+        parameters.writeCover && info.coverUrl.isNotBlank()
+    ).count { it }.coerceAtLeast(1)
+    var completed = 0
+    onProgress("应用抓取信息", completed, total)
+    yield()
+
+    if (parameters.writeCatalog && info.catalog.isNotEmpty()) {
+        val catalogResult = applyFetchedCatalogToEpub(
+            book = book,
+            parameters = parameters,
+            catalog = info.catalog,
+            currentChapterIndex = previewChapterIndex,
+            onError = { message -> statusMessage = message }
+        )
+        catalogChanged = catalogResult.changed
+        if (catalogResult.touchedCurrentChapter) refreshPreview()
+        completed += 1
+        onProgress("应用目录", completed, total)
+        yield()
+    }
+
+    if (parameters.writeIntro && info.intro.isNotBlank()) {
+        writeFetchInfoIntroFileToEpub(book, parameters.introTargetPath, info, parameters.source)
+        introWritten = true
+        completed += 1
+        onProgress("应用简介", completed, total)
+        yield()
+    }
+
+    if (parameters.writeCover && info.coverUrl.isNotBlank()) {
+        val coverResult = withContext(Dispatchers.IO) {
+            runCatching {
+                val coverUrl = if (parameters.source == FETCH_INFO_SOURCE_SOSAD) {
+                    requireSosadAllowedHttpsUrl(info.coverUrl, "废文封面链接")
+                } else {
+                    info.coverUrl
+                }
+                val headers = if (parameters.source == FETCH_INFO_SOURCE_SOSAD) {
+                    buildSosadRequestHeaders(parameters.authCookie, coverUrl)
+                } else {
+                    emptyMap()
+                }
+                if (parameters.source == FETCH_INFO_SOURCE_SOSAD) {
+                    FetchHttpClient.getBytes(
+                        coverUrl,
+                        headers,
+                        ::isSosadSameHostHttpsRedirect,
+                        maxBytes = HTTP_IMAGE_RESPONSE_MAX_BYTES
+                    )
+                } else {
+                    FetchHttpClient.getBytes(
+                        coverUrl,
+                        headers,
+                        maxBytes = HTTP_IMAGE_RESPONSE_MAX_BYTES
+                    )
+                }
+            }
+        }
+        coverResult
+            .onSuccess { response ->
+                writeCoverToEpub(book, info.coverUrl, response.bytes, response.contentType)
+                coverWritten = true
+            }
+            .onFailure { error ->
+                coverError = networkAwareErrorMessage("封面下载失败", error)
+            }
+        completed += 1
+        onProgress("应用封面", completed, total)
+        yield()
+    }
+
+    return FetchInfoWriteResult(
+        catalogChanged = catalogChanged,
+        introWritten = introWritten,
+        coverWritten = coverWritten,
+        coverError = coverError
+    )
+}
