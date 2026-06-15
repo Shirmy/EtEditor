@@ -37,41 +37,28 @@ import androidx.compose.ui.unit.dp
 internal fun ReplacementPreviewStats(
     preview: ReplacementFilePreview,
     selectedSection: ReplacementPreviewSection,
-    onSelectSection: (ReplacementPreviewSection) -> Unit,
-    onShowInvalidRules: () -> Unit
+    onSelectSection: (ReplacementPreviewSection) -> Unit
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-            ReplacementStatChip("有效", "${preview.validRules}/${preview.totalRules}", Modifier.weight(1f))
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+        if (preview.multiRules.isNotEmpty()) {
             ReplacementStatChip(
-                "无效",
-                "${preview.skippedRules.size}/${preview.totalRules}",
+                "多处",
+                preview.multiRules.size.toString(),
                 Modifier.weight(1f),
-                onClick = onShowInvalidRules.takeIf { preview.skippedRules.isNotEmpty() }
+                selected = selectedSection == ReplacementPreviewSection.Multi,
+                onClick = { onSelectSection(ReplacementPreviewSection.Multi) }
             )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-            if (preview.multiRules.isNotEmpty()) {
-                ReplacementStatChip(
-                    "多处",
-                    preview.multiRules.size.toString(),
-                    Modifier.weight(1f),
-                    selected = selectedSection == ReplacementPreviewSection.Multi,
-                    onClick = { onSelectSection(ReplacementPreviewSection.Multi) }
-                )
-            }
-            if (preview.singleRules.isNotEmpty()) {
-                ReplacementStatChip(
-                    "单处",
-                    preview.singleRules.size.toString(),
-                    Modifier.weight(1f),
-                    selected = selectedSection == ReplacementPreviewSection.Single,
-                    onClick = { onSelectSection(ReplacementPreviewSection.Single) }
-                )
-            }
+        if (preview.singleRules.isNotEmpty()) {
+            ReplacementStatChip(
+                "单处",
+                preview.singleRules.size.toString(),
+                Modifier.weight(1f),
+                selected = selectedSection == ReplacementPreviewSection.Single,
+                onClick = { onSelectSection(ReplacementPreviewSection.Single) }
+            )
+        }
+        if (preview.zeroRules.isNotEmpty()) {
             ReplacementStatChip(
                 "无匹配",
                 preview.zeroRules.size.toString(),

@@ -5,7 +5,9 @@ internal data class TextReplaceRule(
     val replacement: String,
     val regex: Boolean,
     val textOnly: Boolean = false,
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
+    // 静读专用(.replacement)规则区分大小写；单条/批量沿用默认忽略大小写
+    val caseSensitive: Boolean = false
 )
 
 internal data class ParsedReplacementRule(

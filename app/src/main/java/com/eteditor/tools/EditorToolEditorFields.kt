@@ -365,25 +365,6 @@ internal fun EditorToolEditor(
                 controller.clearTextReplaceRuntimeFile(toolId)
                 textReplacePreviewToolId = null
             },
-            onSearchAgain = { showError, onProgress, onFinished ->
-                scope.launch {
-                    try {
-                        onProgress("加载预览", 0, 1)
-                        yieldToAppUiBeforeHeavyWork()
-                        if (!controller.prepareReplacementFilePreviewForEditorToolAsync(
-                                toolId,
-                                { phase, completed, total ->
-                                    updateReplacementPreviewProgress(phase, completed, total)
-                                    onProgress(phase, completed, total)
-                                }
-                            )) {
-                            showError(controller.statusMessage.ifBlank { "未生成替换预览" })
-                        }
-                    } finally {
-                        onFinished()
-                    }
-                }
-            },
             onApplyStarted = { textReplacePreviewToolId = null },
             modifier = modifier
         )

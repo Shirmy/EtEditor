@@ -406,34 +406,6 @@ private fun ToolsPanel(
                     controller.clearTextReplaceRuntimeFile(activeTextReplacePreviewToolId)
                     textReplacePreviewToolId = null
                 },
-                onSearchAgain = if (previewTool?.toolId == "text_replace") {
-                    { showError, onProgress, onFinished ->
-                        scope.launch {
-                            try {
-                                onProgress("加载预览", 0, 1)
-                                yieldToAppUiBeforeHeavyWork()
-                                if (!controller.prepareReplacementFilePreviewForEditorToolAsync(
-                                        activeTextReplacePreviewToolId,
-                                        { phase, completed, total ->
-                                            updateReplacementPreviewProgress(
-                                                activeTextReplacePreviewToolId,
-                                                phase,
-                                                completed,
-                                                total
-                                            )
-                                            onProgress(phase, completed, total)
-                                        }
-                                    )) {
-                                    showError(controller.statusMessage.ifBlank { "未生成替换预览" })
-                                }
-                            } finally {
-                                onFinished()
-                            }
-                        }
-                    }
-                } else {
-                    null
-                },
                 onApplyStarted = { textReplacePreviewToolId = null },
                 modifier = Modifier.weight(1f)
             )

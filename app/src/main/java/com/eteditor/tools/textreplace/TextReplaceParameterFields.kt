@@ -508,7 +508,7 @@ private fun TextReplaceBatchRuleEditorDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 ToolSwitchField(
-                    label = "仅文件",
+                    label = if (textOnly) "正文" else "源码",
                     checked = textOnly,
                     onCheckedChange = { textOnly = it },
                     modifier = Modifier.fillMaxWidth()

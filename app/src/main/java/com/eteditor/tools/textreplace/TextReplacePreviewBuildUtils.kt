@@ -126,7 +126,8 @@ internal fun buildReplacementPreviewRule(
         matches = buildReplacementPreviewMatches(
             sources = sources,
             rule = rule,
-            caseSensitive = false,
+            // 静读专用对齐网页版/静读/Sigil 语义：区分大小写匹配
+            caseSensitive = true,
             idPrefix = "replacement-$index",
             resolveLocation = resolveLocation,
             maxMatches = maxMatches

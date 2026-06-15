@@ -1,6 +1,7 @@
 package com.eteditor
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -60,19 +61,12 @@ internal enum class ReplacementPreviewSection {
     Zero
 }
 
-typealias TextReplaceSearchAgainHandler = (
-    showError: (String) -> Unit,
-    onProgress: (String, Int, Int) -> Unit,
-    onFinished: () -> Unit
-) -> Unit
-
 @Composable
 fun TextSearchResultsPane(
     controller: EditorController,
     toolId: String,
     onDismiss: () -> Unit,
     onApplied: (() -> Unit)? = null,
-    onSearchAgain: TextReplaceSearchAgainHandler? = null,
     onApplyStarted: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -83,8 +77,6 @@ fun TextSearchResultsPane(
             preview = replacementPreview,
             onDismiss = onDismiss,
             onApplied = onApplied,
-            onSearchAgain = onSearchAgain,
-            onApplyStarted = onApplyStarted,
             modifier = modifier
         )
         return
@@ -360,8 +352,6 @@ private fun ReplacementFilePreviewPane(
     preview: ReplacementFilePreview,
     onDismiss: () -> Unit,
     onApplied: (() -> Unit)? = null,
-    onSearchAgain: TextReplaceSearchAgainHandler? = null,
-    onApplyStarted: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
@@ -375,8 +365,6 @@ private fun ReplacementFilePreviewPane(
     var executing by remember(preview) { mutableStateOf(false) }
     var executionProgress by remember(preview) { mutableStateOf(0f) }
     var executionLabel by remember(preview) { mutableStateOf("执行替换") }
-    var preparingProgress by remember(preview) { mutableStateOf<Float?>(null) }
-    var preparingProgressText by remember(preview) { mutableStateOf("加载预览") }
     val listState = rememberLazyListState()
     val automationStep = controller.automationConfirmationRequest
         ?.takeIf { it.stepId == preview.toolId }
@@ -394,52 +382,6 @@ private fun ReplacementFilePreviewPane(
         executionLabel = "执行替换 $completed/$total"
         automationStep?.let { step ->
             controller.setAutomationRunStepProgress(step, executionProgress, executionLabel)
-        }
-    }
-    fun updatePreparingProgress(phase: String, completed: Int, total: Int) {
-        preparingProgress = countProgressFraction(completed, total)
-        preparingProgressText = countProgressLabel(phase, completed, total)
-    }
-    fun startExecutionAfterClosing(matchIds: Set<String>) {
-        val total = matchIds.size.coerceAtLeast(1)
-        executionProgress = 0f
-        executionLabel = "执行替换 0/$total"
-        automationStep?.let { step ->
-            controller.setAutomationRunStepState(step, AutomationRunStepState.Running)
-            controller.setAutomationRunStepProgress(step, 0f, executionLabel)
-        }
-        onApplyStarted?.invoke()
-        controller.controllerScope.launch {
-            delay(16)
-            yieldToAppUiBeforeHeavyWork()
-            val applied = controller.applyReplacementPreviewMatchesWithProgress(matchIds, ::updateExecutionProgress)
-            if (!applied) {
-                automationStep?.let { step -> controller.failAutomationConfirmationStep(step) }
-            } else {
-                if (onApplied != null) controller.clearReplacementFilePreview(preview.toolId)
-                completeWithDeferredRefresh()
-            }
-        }
-    }
-    fun applyReplacementMatchesInPane(matchIds: Set<String>, ruleId: String? = null) {
-        if (matchIds.isEmpty()) return
-        ruleId?.let { currentRuleId ->
-            expandedRuleIds = expandedRuleIds - currentRuleId
-            dimmedRuleIds = dimmedRuleIds + currentRuleId
-        }
-        executing = true
-        executionProgress = 0f
-        executionLabel = "执行替换 0/${matchIds.size}"
-        scope.launch {
-            yieldToAppUiBeforeHeavyWork()
-            val applied = controller.applyReplacementPreviewMatchesWithProgress(matchIds) { completed, total ->
-                updateExecutionProgress(completed, total)
-            }
-            executing = false
-            if (!applied) {
-                ruleId?.let { currentRuleId -> dimmedRuleIds = dimmedRuleIds - currentRuleId }
-                paneMessage = controller.statusMessage.ifBlank { "执行替换失败" }
-            }
         }
     }
     var selectedSection by remember(preview) {
@@ -476,33 +418,43 @@ private fun ReplacementFilePreviewPane(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                val hasInvalidRules = preview.skippedRules.isNotEmpty()
+                val previewCountLabel = if (hasInvalidRules) {
+                    "${preview.validRules}/${preview.totalRules}"
+                } else {
+                    preview.totalRules.toString()
+                }
                 Text(
-                    text = ".replacement 预览",
+                    text = ".replacement 预览（$previewCountLabel）",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f),
+                    color = if (hasInvalidRules) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .weight(1f)
+                        .then(
+                            if (hasInvalidRules) {
+                                Modifier.clickable(enabled = !executing) {
+                                    invalidRulesMessage = replacementInvalidRulesMessage(preview.skippedRules)
+                                }
+                            } else {
+                                Modifier
+                            }
+                        ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (onSearchAgain != null) {
+                if (automationStep != null) {
                     Button(
                         onClick = {
-                            onSearchAgain(
-                                { message ->
-                                    preparingProgress = null
-                                    paneMessage = message
-                                },
-                                ::updatePreparingProgress,
-                                { preparingProgress = null }
-                            )
+                            if (onApplied != null) controller.clearReplacementFilePreview(preview.toolId)
+                            completeWithDeferredRefresh()
                         },
-                        enabled = !executing && preparingProgress == null,
+                        enabled = !executing,
                         shape = ControlShape,
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                         modifier = Modifier.height(32.dp)
                     ) {
-                        Text("重新搜索", style = MaterialTheme.typography.labelMedium)
+                        Text("完成", style = MaterialTheme.typography.labelMedium)
                     }
                 }
                 IconButton(
@@ -517,22 +469,13 @@ private fun ReplacementFilePreviewPane(
             ReplacementPreviewStats(
                 preview = preview,
                 selectedSection = selectedSection,
-                onSelectSection = { section -> if (!executing) selectedSection = section },
-                onShowInvalidRules = {
-                    invalidRulesMessage = replacementInvalidRulesMessage(preview.skippedRules)
-                }
+                onSelectSection = { section -> if (!executing) selectedSection = section }
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            val currentPreparingProgress = preparingProgress
             if (executing) {
                 ToolRunProgress(
                     toolName = executionLabel,
                     progress = executionProgress
-                )
-            } else if (currentPreparingProgress != null) {
-                ToolRunProgress(
-                    toolName = preparingProgressText,
-                    progress = currentPreparingProgress
                 )
             }
             Box(
@@ -580,13 +523,10 @@ private fun ReplacementFilePreviewPane(
                                             .filter { it in selectedMatchIds }
                                             .toSet()
                                         if (matchIds.isNotEmpty()) {
-                                            if (automationStep != null) {
-                                                expandedRuleIds = expandedRuleIds - rule.id
-                                                dimmedRuleIds = dimmedRuleIds + rule.id
-                                                startExecutionAfterClosing(matchIds)
-                                            } else {
-                                                applyReplacementMatchesInPane(matchIds, rule.id)
-                                            }
+                                            // 仅标记为「待应用」：收缩 + 变淡，保留在列表，不立即写入；
+                                            // 实际替换交给底部「执行替换」统一执行
+                                            expandedRuleIds = expandedRuleIds - rule.id
+                                            dimmedRuleIds = dimmedRuleIds + rule.id
                                         }
                                     },
                                     dimmed = rule.id in dimmedRuleIds,
@@ -644,24 +584,19 @@ private fun ReplacementFilePreviewPane(
                     enabled = selectedMatchIds.isNotEmpty() && !executing,
                     onClick = {
                         val matchIds = selectedMatchIds
-                        if (onApplyStarted != null || automationStep != null) {
-                            startExecutionAfterClosing(matchIds)
-                        } else {
-                            executing = true
-                            executionProgress = 0f
-                            executionLabel = "执行替换 0/${matchIds.size}"
-                            scope.launch {
-                                yieldToAppUiBeforeHeavyWork()
-                                val applied = controller.applyReplacementPreviewMatchesWithProgress(matchIds) { completed, total ->
-                                    updateExecutionProgress(completed, total)
-                                }
-                                executing = false
-                                if (!applied) {
-                                    paneMessage = controller.statusMessage.ifBlank { "执行替换失败" }
-                                } else {
-                                    if (onApplied != null) controller.clearReplacementFilePreview(preview.toolId)
-                                    completeWithDeferredRefresh()
-                                }
+                        executing = true
+                        executionProgress = 0f
+                        executionLabel = "执行替换 0/${matchIds.size}"
+                        scope.launch {
+                            yieldToAppUiBeforeHeavyWork()
+                            // 只应用替换并停留在面板：控制器会用替换后的文本重建预览刷新本面板，
+                            // 用户可继续逐条勾选替换或「重新搜索」；automation 由标题栏「完成」推进链。
+                            val applied = controller.applySelectedReplacementPreviewWithProgress(matchIds) { completed, total ->
+                                updateExecutionProgress(completed, total)
+                            }
+                            executing = false
+                            if (!applied) {
+                                paneMessage = controller.statusMessage.ifBlank { "执行替换失败" }
                             }
                         }
                     },

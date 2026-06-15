@@ -147,10 +147,6 @@ fun EditorController.applyPreparedTextReplace(toolId: String): Boolean {
         return false
     }
     val rules = textReplaceRules(parameters) ?: return false
-    if (!validateTextReplaceRegexCost(parameters, rules)) {
-        clearTextSearchState()
-        return false
-    }
     applyDeferredTxtTextReplacementRefresh()
     val result = try {
         replaceWithParameters(parameters, rules)

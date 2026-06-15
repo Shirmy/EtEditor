@@ -80,21 +80,6 @@ internal fun AutomationRunView(
                         controller.continueSelectedAutomationChainAfterConfirmation()
                     }
                 },
-                onSearchAgain = { showError, onProgress, onFinished ->
-                    scope.launch {
-                        try {
-                            onProgress("加载预览", 0, 1)
-                            yieldToAppUiBeforeHeavyWork()
-                            val step = controller.automationConfirmationStep(textReplaceConfirmationRequest)
-                            val tool = step?.let(controller::automationStepToolForRun)
-                            if (tool == null || !controller.prepareReplacementFilePreviewAsync(tool, onProgress)) {
-                                showError(controller.statusMessage.ifBlank { "未生成替换预览" })
-                            }
-                        } finally {
-                            onFinished()
-                        }
-                    }
-                },
                 modifier = modifier
                     .fillMaxSize()
                     .padding(start = 10.dp, top = 8.dp, end = 10.dp, bottom = 8.dp)

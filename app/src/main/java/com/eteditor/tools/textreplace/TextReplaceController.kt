@@ -4,6 +4,8 @@ import com.eteditor.core.DocumentKind
 import com.eteditor.core.ReplaceResult
 import com.eteditor.core.TxtDocument
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -32,7 +34,6 @@ fun EditorController.applySelectedTextSearchResult(toolId: String): Boolean {
     val activeRules = textReplaceRules(parameters)
         ?.filter { it.enabled && it.find.isNotEmpty() }
         ?: return false
-    if (!validateTextReplaceRegexCost(parameters, activeRules)) return false
     val rule = activeRules.getOrNull(result.ruleIndex) ?: run {
         statusMessage = "替换规则已变化，请重新预览"
         return false
@@ -119,7 +120,6 @@ fun EditorController.applySelectedTextSearchResults(toolId: String, resultIds: S
     val activeRules = textReplaceRules(parameters)
         ?.filter { it.enabled && it.find.isNotEmpty() }
         ?: return false
-    if (!validateTextReplaceRegexCost(parameters, activeRules)) return false
     val plans = try {
         textSearchResults
             .filter { result -> result.id in resultIds }
@@ -178,7 +178,6 @@ suspend fun EditorController.applySelectedTextSearchResultsWithProgress(
     val activeRules = textReplaceRules(parameters)
         ?.filter { it.enabled && it.find.isNotEmpty() }
         ?: return false
-    if (!validateTextReplaceRegexCost(parameters, activeRules)) return false
     val selectedResults = textSearchResults.filter { result -> result.id in resultIds }
     val total = (selectedResults.size + 1).coerceAtLeast(1)
     onProgress(0, total)
@@ -298,7 +297,7 @@ fun EditorController.applyReplacementPreviewMatches(matchIds: Set<String>): Bool
     return true
 }
 
-suspend fun EditorController.applyReplacementPreviewMatchesWithProgress(
+suspend fun EditorController.applySelectedReplacementPreviewWithProgress(
     matchIds: Set<String>,
     onProgress: (completed: Int, total: Int) -> Unit
 ): Boolean {
@@ -311,31 +310,66 @@ suspend fun EditorController.applyReplacementPreviewMatchesWithProgress(
         return false
     }
     val sourceRules = (preview.multiRules + preview.singleRules + preview.zeroRules).sortedBy { it.lineNo }
-    val selectedMatches = (preview.multiRules + preview.singleRules)
-        .flatMap { rule -> rule.matches }
-        .filter { it.id in matchIds }
-    val total = (selectedMatches.size + 1).coerceAtLeast(1)
-    onProgress(0, total)
-    yield()
+    // 勾选意图按「规则」判定：
+    // - 规则已达预览上限(未展示全)且展示出来的匹配全部勾选 -> 视为整条规则全要，交引擎全量替换以覆盖未展示部分
+    // - 其余(未达上限，或仅勾选部分) -> 只按预览快照里被勾选的位置精确替换，不误碰未展示内容
+    val engineRules = mutableListOf<TextReplaceRule>()
     val plans = mutableListOf<ReplacementMatchPlan>()
-    for ((index, match) in selectedMatches.withIndex()) {
-        plans += ReplacementMatchPlan(
-            chapterIndex = match.chapterIndex,
-            sourceStart = match.sourceStart,
-            sourceEnd = match.sourceEnd,
-            replacementText = match.replacementText
-        )
-        onProgress(index + 1, total)
-        yield()
+    for (rule in preview.multiRules + preview.singleRules) {
+        val selectedMatches = rule.matches.filter { it.id in matchIds }
+        if (selectedMatches.isEmpty()) continue
+        val fullySelected = selectedMatches.size == rule.matches.size
+        val reachedPreviewLimit = rule.matches.size >= REPLACEMENT_PREVIEW_MAX_MATCHES_PER_RULE
+        if (fullySelected && reachedPreviewLimit && rule.pattern.isNotEmpty()) {
+            engineRules += TextReplaceRule(
+                find = rule.pattern,
+                replacement = rule.replacement,
+                regex = rule.regex,
+                textOnly = false,
+                caseSensitive = true
+            )
+        } else {
+            selectedMatches.forEach { match ->
+                plans += ReplacementMatchPlan(
+                    chapterIndex = match.chapterIndex,
+                    sourceStart = match.sourceStart,
+                    sourceEnd = match.sourceEnd,
+                    replacementText = match.replacementText
+                )
+            }
+        }
     }
-    if (plans.isEmpty()) {
+    if (plans.isEmpty() && engineRules.isEmpty()) {
         statusMessage = "没有勾选可替换内容"
         return false
     }
     val tool = textReplaceToolForPreview(preview.toolId) ?: return false
     val parameters = effectiveTextReplaceParameters(tool)
+    val total = (plans.size + engineRules.size + 1).coerceAtLeast(1)
+    var completed = 0
+    onProgress(completed, total)
+    yield()
     applyDeferredTxtTextReplacementRefresh()
-    val applied = applyReplacementMatchPlans(plans)
+    var applied = 0
+    // 先按快照位置替换(从后往前互不影响)，再让引擎在替换后的文本上全量补齐超限规则
+    if (plans.isNotEmpty()) {
+        applied += applyReplacementMatchPlans(plans)
+        completed += plans.size
+        onProgress(completed.coerceAtMost(total), total)
+        yield()
+    }
+    if (engineRules.isNotEmpty()) {
+        val result = try {
+            replaceWithParametersAsync(parameters, engineRules)
+        } catch (error: IllegalArgumentException) {
+            statusMessage = textReplaceRegexErrorMessage(error)
+            return false
+        }
+        applied += result.replacements
+        completed += engineRules.size
+        onProgress(completed.coerceAtMost(total), total)
+        yield()
+    }
     if (applied <= 0) {
         statusMessage = "选中内容已无法替换，请重新预览"
         return false
@@ -384,7 +418,6 @@ internal fun EditorController.rebuildCurrentTextSearchPreviewAfterDocumentChange
         ?.filter { it.enabled && it.find.isNotEmpty() }
         ?: return false
     if (activeRules.isEmpty()) return false
-    if (!validateTextReplaceRegexCost(parameters, activeRules)) return false
     val rebuiltResults = try {
         buildTextSearchResults(activeRules, parameters)
     } catch (error: IllegalArgumentException) {
@@ -430,11 +463,6 @@ internal fun EditorController.runTextReplaceTool(tool: EditorTool, manual: Boole
         statusMessage = "请输入查找内容"
         return false
     }
-    if (!validateTextReplaceRegexCost(parameters, activeRules)) {
-        if (parameters.preview) clearTextSearchState()
-        return false
-    }
-
     if (parameters.preview) {
         val results = try {
             buildTextSearchResults(activeRules, parameters)
@@ -507,11 +535,6 @@ internal suspend fun EditorController.runTextReplaceToolAsync(tool: EditorTool, 
         statusMessage = "请输入查找内容"
         return false
     }
-    if (!validateTextReplaceRegexCost(parameters, activeRules)) {
-        if (parameters.preview) clearTextSearchState()
-        return false
-    }
-
     if (parameters.preview) {
         val results = try {
             buildTextSearchResultsWithProgress(activeRules, parameters) { _, _, _ -> }
@@ -585,11 +608,6 @@ internal suspend fun EditorController.runTextReplaceToolForAutomationPreview(
         statusMessage = "请输入查找内容"
         return false
     }
-    if (!validateTextReplaceRegexCost(parameters, activeRules)) {
-        clearTextSearchState()
-        return false
-    }
-
     val results = try {
         buildTextSearchResultsWithProgress(activeRules, parameters, onProgress)
     } catch (error: IllegalArgumentException) {
@@ -624,9 +642,6 @@ internal fun EditorController.prepareReplacementFilePreview(tool: EditorTool): B
     val ruleText = readTextReplaceRuleFile(parameters.batchFile) ?: return false
     val preview = try {
         val (parsedRules, skippedRules) = parseReplacementRules(ruleText)
-        if (!validateTextReplaceRegexCost(parameters, textReplaceRulesFromParsedReplacementRules(parsedRules))) {
-            return false
-        }
         buildReplacementFilePreview(tool.id, parameters, parsedRules, skippedRules)
     } catch (error: IllegalArgumentException) {
         statusMessage = error.message
@@ -677,9 +692,6 @@ internal suspend fun EditorController.prepareReplacementFilePreviewAsync(
             ?: textReplaceRegexErrorMessage(error)
         return false
     }
-    if (!validateTextReplaceRegexCost(parameters, textReplaceRulesFromParsedReplacementRules(parsed.first))) {
-        return false
-    }
     val sources = searchSources(parameters)
     val resolveLocation = textSearchResultLocationResolverSnapshot()
     val preview = try {
@@ -724,34 +736,6 @@ private fun replacementFilePreviewStatusMessage(preview: ReplacementFilePreview)
 
 private fun EditorController.effectiveTextReplaceParameters(tool: EditorTool): TextReplaceParameters {
     return effectiveTextReplaceParametersForRun(textReplaceParameters(tool))
-}
-
-internal fun EditorController.validateTextReplaceRegexCost(
-    parameters: TextReplaceParameters,
-    rules: List<TextReplaceRule>
-): Boolean {
-    rules.forEach { rule ->
-        if (!rule.enabled || !rule.regex || rule.find.isEmpty()) return@forEach
-        val sources = searchSources(
-            parameters.copy(
-                target = if (rule.textOnly) {
-                    TEXT_REPLACE_TARGET_VISIBLE
-                } else {
-                    TEXT_REPLACE_TARGET_SOURCE
-                }
-            )
-        )
-        val warning = if (kind == DocumentKind.Epub && rule.textOnly) {
-            visibleTextRegexCostWarningForSources(listOf(rule), sources)
-        } else {
-            textRegexCostWarningForSources(listOf(rule), sources)
-        }
-        if (warning != null) {
-            statusMessage = warning
-            return false
-        }
-    }
-    return true
 }
 
 internal fun EditorController.textReplaceRules(parameters: TextReplaceParameters): List<TextReplaceRule>? {
@@ -867,33 +851,43 @@ private suspend fun buildReplacementFilePreviewWithProgress(
     onProgress: (phase: String, completed: Int, total: Int) -> Unit
 ): ReplacementFilePreview {
     val total = parsedRules.size.coerceAtLeast(1)
-    val rules = mutableListOf<ReplacementPreviewRule>()
-    var limitReached = false
     onProgress("加载预览", 0, total)
     yield()
     if (parsedRules.isEmpty()) {
         onProgress("加载预览", 1, total)
         yield()
+        return replacementFilePreviewFromRules(
+            toolId = toolId,
+            totalRules = skippedRules.size,
+            validRuleCount = 0,
+            skippedRules = skippedRules,
+            rules = emptyList(),
+            previewLimitReached = false
+        )
     }
-    for ((index, rule) in parsedRules.withIndex()) {
-        currentCoroutineContext().ensureActive()
-        val previewRule = withContext(Dispatchers.Default) {
-            currentCoroutineContext().ensureActive()
-            buildReplacementPreviewRule(
-                index = index,
-                rule = rule,
-                sources = sources,
-                maxMatches = REPLACEMENT_PREVIEW_MAX_MATCHES_PER_RULE,
-                resolveLocation = resolveLocation
-            )
+    // 多条规则并行扫描（每条一个 Default 协程），按 index 顺序汇总并增量上报进度
+    val rules = coroutineScope {
+        val deferred = parsedRules.mapIndexed { index, rule ->
+            async(Dispatchers.Default) {
+                currentCoroutineContext().ensureActive()
+                buildReplacementPreviewRule(
+                    index = index,
+                    rule = rule,
+                    sources = sources,
+                    maxMatches = REPLACEMENT_PREVIEW_MAX_MATCHES_PER_RULE,
+                    resolveLocation = resolveLocation
+                )
+            }
         }
-        rules += previewRule
-        if (previewRule.matches.size >= REPLACEMENT_PREVIEW_MAX_MATCHES_PER_RULE) {
-            limitReached = true
+        val collected = ArrayList<ReplacementPreviewRule>(deferred.size)
+        for ((index, job) in deferred.withIndex()) {
+            collected += job.await()
+            onProgress("加载预览", index + 1, total)
+            yield()
         }
-        onProgress("加载预览", index + 1, total)
-        yield()
+        collected
     }
+    val limitReached = rules.any { it.matches.size >= REPLACEMENT_PREVIEW_MAX_MATCHES_PER_RULE }
     return replacementFilePreviewFromRules(
         toolId = toolId,
         totalRules = parsedRules.size + skippedRules.size,

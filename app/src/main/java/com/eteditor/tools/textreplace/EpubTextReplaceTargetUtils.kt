@@ -109,9 +109,9 @@ internal fun replaceInEpubPackageText(
         rules.filter { it.enabled && it.find.isNotEmpty() }.forEach { rule ->
             ensureActive()
             val replaced = if (rule.textOnly) {
-                replaceVisibleTextInMarkup(nextBody, rule, false)
+                replaceVisibleTextInMarkup(nextBody, rule, rule.caseSensitive)
             } else {
-                replaceInString(nextBody, rule, false)
+                replaceInString(nextBody, rule, rule.caseSensitive)
             }
             nextBody = replaced.first
             changed += replaced.second

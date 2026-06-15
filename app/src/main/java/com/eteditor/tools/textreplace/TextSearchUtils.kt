@@ -45,11 +45,17 @@ internal fun buildTextSearchResults(
     idPrefix: String = "rule-0",
     resolveLocation: (Int, Int, Int, String) -> TextSearchResultLocation
 ): List<TextSearchResult> {
+    // 每条规则的正则只编译一次，复用到所有 source（不改匹配结果，只省掉逐章重复编译）
+    val regex = if (rule.regex) {
+        val options = if (caseSensitive) emptySet<RegexOption>() else setOf(RegexOption.IGNORE_CASE)
+        Regex(rule.find, options)
+    } else {
+        null
+    }
     val results = mutableListOf<TextSearchResult>()
     sources.forEach { source ->
-        val matches = if (rule.regex) {
-            val options = if (caseSensitive) emptySet<RegexOption>() else setOf(RegexOption.IGNORE_CASE)
-            regexSearchRanges(source.text, Regex(rule.find, options))
+        val matches = if (regex != null) {
+            regexSearchRanges(source.text, regex)
         } else {
             plainSearchRanges(source.text, rule.find, caseSensitive)
         }
@@ -175,10 +181,12 @@ internal fun buildReplacementPreviewMatches(
             replacementText = replacementText
         )
     }
+    // 每条规则的正则只编译一次，复用到所有 source（不改匹配结果，只省掉逐章重复编译）
+    val regex = if (rule.regex) Regex(rule.pattern, options) else null
     for (source in sources) {
         if (results.size >= maxMatches) break
-        if (rule.regex) {
-            val matches = Regex(rule.pattern, options).findAll(source.text).iterator()
+        if (regex != null) {
+            val matches = regex.findAll(source.text).iterator()
             var matchIndex = 0
             while (matches.hasNext() && results.size < maxMatches) {
                 val match = matches.next()
@@ -372,7 +380,7 @@ internal fun replaceInTxtDocumentText(
         var changed = 0
         activeRules.forEach { rule ->
             ensureActive()
-            val replaced = replaceInString(sourceText, rule, false)
+            val replaced = replaceInString(sourceText, rule, rule.caseSensitive)
             sourceText = replaced.first
             changed += replaced.second
         }

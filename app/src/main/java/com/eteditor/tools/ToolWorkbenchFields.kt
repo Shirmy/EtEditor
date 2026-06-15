@@ -110,26 +110,6 @@ internal fun ToolWorkbench(
                 controller.clearReplacementFilePreview(toolId)
                 textReplacePreviewToolId = null
             },
-            onSearchAgain = if (tool.id == "text_replace" && textReplaceMode == TEXT_REPLACE_MODE_REPLACEMENT) {
-                { showError, onProgress, onFinished ->
-                    scope.launch {
-                        try {
-                            onProgress("加载预览", 0, 1)
-                            yieldToAppUiBeforeHeavyWork()
-                            if (!controller.prepareReplacementFilePreviewForBuiltInAsync(
-                                    tool.id,
-                                    onProgress
-                                )) {
-                                showError(controller.statusMessage.ifBlank { "未生成替换预览" })
-                            }
-                        } finally {
-                            onFinished()
-                        }
-                    }
-                }
-            } else {
-                null
-            },
             onApplyStarted = { textReplacePreviewToolId = null },
             modifier = modifier
         )

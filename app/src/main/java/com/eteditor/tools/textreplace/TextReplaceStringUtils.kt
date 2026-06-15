@@ -88,7 +88,9 @@ internal fun textReplaceRulesFromParsedReplacementRules(
             find = rule.pattern,
             replacement = rule.replacement,
             regex = rule.regex,
-            textOnly = false
+            textOnly = false,
+            // .replacement 规则区分大小写，与预览及网页版一致
+            caseSensitive = true
         )
     }
 }
