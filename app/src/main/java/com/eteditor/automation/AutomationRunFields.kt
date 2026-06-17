@@ -99,6 +99,7 @@ internal fun AutomationRunView(
     val fullPageConfirmationRequest = confirmationRequest
         ?.takeIf { request ->
             request.toolId != "text_replace" &&
+                request.toolId != "fetch_info" &&
                 request.toolId != "insert_chapter" &&
                 confirmationState == AutomationRunStepState.NeedsConfirmation
         }
@@ -202,6 +203,17 @@ internal fun AutomationRunView(
     confirmationRequest
         ?.takeIf { request ->
             request.toolId == "insert_chapter" &&
+                confirmationState == AutomationRunStepState.NeedsConfirmation
+        }
+        ?.let { request ->
+            AutomationConfirmationPreviewPane(
+                controller = controller,
+                request = request
+            )
+        }
+    confirmationRequest
+        ?.takeIf { request ->
+            request.toolId == "fetch_info" &&
                 confirmationState == AutomationRunStepState.NeedsConfirmation
         }
         ?.let { request ->

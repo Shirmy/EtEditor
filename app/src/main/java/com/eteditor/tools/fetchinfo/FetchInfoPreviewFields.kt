@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -520,7 +522,6 @@ private fun FetchCatalogComparePane(
                 ContentScrollbar(
                     state = listState,
                     itemCount = itemCount,
-                    fixedItemHeight = 42.dp,
                     directDrag = true,
                     thumbFollowsDrag = true,
                     modifier = Modifier
@@ -601,21 +602,22 @@ private fun CatalogCompareLine(
     rightError: Boolean = false
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min),
+        verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
             text = left,
             style = MaterialTheme.typography.bodySmall,
             color = if (leftError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )
         Box(
             modifier = Modifier
-                .height(18.dp)
+                .fillMaxHeight()
+                .defaultMinSize(minHeight = 18.dp)
                 .width(1.dp)
                 .background(MaterialTheme.colorScheme.outlineVariant)
         )
@@ -628,8 +630,6 @@ private fun CatalogCompareLine(
                 right.isBlank() -> MaterialTheme.colorScheme.onSurfaceVariant
                 else -> MaterialTheme.colorScheme.onSurface
             },
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )
     }

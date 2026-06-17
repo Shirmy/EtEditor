@@ -14,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -372,6 +371,8 @@ private fun AutomationFetchInfoConfirmation(
     val step = controller.automationConfirmationStep(request)
     var preparing by remember(request.stepId) { mutableStateOf(false) }
     var attempted by remember(request.stepId) { mutableStateOf(false) }
+    var applying by remember(request.stepId) { mutableStateOf(false) }
+    var errorMessage by remember(request.stepId) { mutableStateOf<String?>(null) }
     val previewReady = controller.fetchInfoPreview?.toolId == request.stepId
     val choiceRequest = controller.fetchInfoSearchChoiceRequest?.takeIf { it.toolId == request.stepId }
 
@@ -398,30 +399,25 @@ private fun AutomationFetchInfoConfirmation(
             attempted = true
             preparing = true
             yieldToAppUiBeforeHeavyWork()
-            controller.prepareFetchInfoPreviewForAutomationStep(request.stepId)
+            val prepared = controller.prepareFetchInfoPreviewForAutomationStep(request.stepId)
             preparing = false
+            if (
+                !prepared &&
+                controller.fetchInfoSearchChoiceRequest?.toolId != request.stepId &&
+                controller.fetchInfoRetryRequest?.toolId != request.stepId
+            ) {
+                errorMessage = controller.statusMessage.ifBlank { "没有可用的抓取预览" }
+            }
         }
     }
 
-    if (previewReady) {
-        FetchInfoPreviewPane(
+    if (previewReady && !applying) {
+        FetchInfoPreviewDialog(
             controller = controller,
             toolId = request.stepId,
             onDismiss = onDismiss,
             onApplied = onApplied,
-            modifier = modifier
-        )
-    } else if (preparing) {
-        AutomationFetchInfoLoadingPane(
-            progress = controller.fetchInfoProgress.takeIf { it > 0f } ?: 0.08f,
-            modifier = modifier
-        )
-    } else {
-        AutomationConfirmationFallback(
-            request = request,
-            message = controller.statusMessage.ifBlank { "没有可用的抓取预览" },
-            onDismiss = onDismiss,
-            modifier = modifier
+            onApplyStarted = { applying = true }
         )
     }
 
@@ -430,7 +426,7 @@ private fun AutomationFetchInfoConfirmation(
             controller = controller,
             toolId = pendingChoice.toolId,
             onDismiss = { controller.clearFetchInfoSearchChoiceRequest(pendingChoice.toolId) },
-            onPrepared = {}
+            onPrepared = { errorMessage = null }
         )
     }
     controller.fetchInfoRetryRequest
@@ -440,9 +436,16 @@ private fun AutomationFetchInfoConfirmation(
                 controller = controller,
                 toolId = retryRequest.toolId,
                 onDismiss = { controller.clearFetchInfoRetryRequest(retryRequest.toolId) },
-                onPrepared = {}
+                onPrepared = { errorMessage = null }
             )
         }
+    errorMessage?.let { message ->
+        ToolRunMessageDialog(
+            title = request.label,
+            message = message,
+            onDismiss = { errorMessage = null }
+        )
+    }
 }
 
 @Composable
@@ -696,34 +699,6 @@ private fun AutomationInsertChapterConfirmation(
             message = message,
             onDismiss = { paneMessage = null }
         )
-    }
-}
-
-@Composable
-private fun AutomationFetchInfoLoadingPane(
-    progress: Float,
-    modifier: Modifier = Modifier
-) {
-    val safeProgress = progress.coerceIn(0f, 1f)
-    Surface(
-        shape = PreviewShape,
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = modifier.fillMaxSize()
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            LinearProgressIndicator(
-                progress = { safeProgress },
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
     }
 }
 

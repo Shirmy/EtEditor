@@ -70,6 +70,14 @@ fun TextSearchResultsPane(
     onApplyStarted: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val dismissWithDeferredRefresh: () -> Unit = {
+        controller.applyDeferredTxtTextReplacementRefresh()
+        onDismiss()
+    }
+    val completeWithDeferredRefresh: () -> Unit = {
+        controller.applyDeferredTxtTextReplacementRefresh()
+        onApplied?.invoke() ?: onDismiss()
+    }
     val replacementPreview = controller.replacementFilePreview
     if (replacementPreview?.toolId == toolId) {
         ReplacementFilePreviewPane(
@@ -82,8 +90,20 @@ fun TextSearchResultsPane(
         return
     }
     val results = controller.textSearchResults
-    if (controller.textSearchToolId != toolId) return
-    if (results.isEmpty()) return
+    if (
+        shouldAutoDismissTextSearchPreview(
+            toolId = toolId,
+            textSearchToolId = controller.textSearchToolId,
+            resultCount = results.size,
+            replacementPreviewToolId = replacementPreview?.toolId,
+            hasAppliedCallback = onApplied != null
+        )
+    ) {
+        LaunchedEffect(toolId, controller.textSearchToolId, results.size, replacementPreview?.toolId) {
+            dismissWithDeferredRefresh()
+        }
+        return
+    }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     var executing by remember(toolId) { mutableStateOf(false) }
@@ -103,14 +123,6 @@ fun TextSearchResultsPane(
         val newResultIds = currentResultIds - knownResultIds
         checkedResultIds = existingChecked + newResultIds
         knownResultIds = currentResultIds
-    }
-    val dismissWithDeferredRefresh: () -> Unit = {
-        controller.applyDeferredTxtTextReplacementRefresh()
-        onDismiss()
-    }
-    val completeWithDeferredRefresh: () -> Unit = {
-        controller.applyDeferredTxtTextReplacementRefresh()
-        onApplied?.invoke() ?: onDismiss()
     }
     fun updateExecutionProgress(completed: Int, total: Int) {
         executionProgress = if (total > 0) completed.toFloat() / total.toFloat() else 0f
@@ -649,6 +661,18 @@ internal fun shouldKeepTextSearchPreviewOpenAfterSelectedApply(
     remainingResults: Int
 ): Boolean {
     return !hasAutomationStep && !hasAppliedCallback && remainingResults > 0
+}
+
+internal fun shouldAutoDismissTextSearchPreview(
+    toolId: String,
+    textSearchToolId: String?,
+    resultCount: Int,
+    replacementPreviewToolId: String?,
+    hasAppliedCallback: Boolean
+): Boolean {
+    if (replacementPreviewToolId == toolId) return false
+    if (hasAppliedCallback) return false
+    return textSearchToolId != toolId || resultCount <= 0
 }
 
 internal fun displayLineBreakEscapes(text: String): String {

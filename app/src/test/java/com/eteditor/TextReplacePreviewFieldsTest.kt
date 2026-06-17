@@ -156,4 +156,58 @@ class TextReplacePreviewFieldsTest {
             )
         )
     }
+
+    @Test
+    fun shouldAutoDismissTextSearchPreviewWhenUnderlyingPreviewStateIsGone() {
+        assertEquals(
+            false,
+            shouldAutoDismissTextSearchPreview(
+                toolId = "tool-1",
+                textSearchToolId = "tool-1",
+                resultCount = 1,
+                replacementPreviewToolId = null,
+                hasAppliedCallback = false
+            )
+        )
+        assertEquals(
+            true,
+            shouldAutoDismissTextSearchPreview(
+                toolId = "tool-1",
+                textSearchToolId = "tool-1",
+                resultCount = 0,
+                replacementPreviewToolId = null,
+                hasAppliedCallback = false
+            )
+        )
+        assertEquals(
+            true,
+            shouldAutoDismissTextSearchPreview(
+                toolId = "tool-1",
+                textSearchToolId = null,
+                resultCount = 1,
+                replacementPreviewToolId = null,
+                hasAppliedCallback = false
+            )
+        )
+        assertEquals(
+            false,
+            shouldAutoDismissTextSearchPreview(
+                toolId = "tool-1",
+                textSearchToolId = null,
+                resultCount = 0,
+                replacementPreviewToolId = "tool-1",
+                hasAppliedCallback = false
+            )
+        )
+        assertEquals(
+            false,
+            shouldAutoDismissTextSearchPreview(
+                toolId = "tool-1",
+                textSearchToolId = "tool-1",
+                resultCount = 0,
+                replacementPreviewToolId = null,
+                hasAppliedCallback = true
+            )
+        )
+    }
 }
