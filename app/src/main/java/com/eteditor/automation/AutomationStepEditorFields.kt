@@ -1,8 +1,5 @@
 ﻿package com.eteditor
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,17 +9,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,20 +31,17 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
-import kotlin.math.roundToInt
 
 @Composable
 internal fun AutomationStepCreatorButton(
@@ -176,17 +172,15 @@ internal fun AutomationStepList(
     onEditStep: (String) -> Unit,
     onOpenPresets: () -> Unit
 ) {
-    val density = LocalDensity.current
-    val reorderStepPx = with(density) { 40.dp.toPx() }
-    var draggingPosition by remember { mutableStateOf<Int?>(null) }
-    var draggingOffsetPx by remember { mutableStateOf(0f) }
-    val dragTargetPosition = draggingPosition?.let { position ->
-        ruleDragTargetPosition(position, draggingOffsetPx, steps.size, reorderStepPx)
+    var sortMode by remember { mutableStateOf(false) }
+    LaunchedEffect(steps.size) {
+        if (steps.size < 2) sortMode = false
     }
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
                 text = "执行步骤",
@@ -194,6 +188,17 @@ internal fun AutomationStepList(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f)
             )
+            if (steps.size >= 2) {
+                IconButton(
+                    onClick = { sortMode = !sortMode },
+                    colors = IconButtonDefaults.iconButtonColors(
+                        contentColor = if (sortMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    modifier = Modifier.size(30.dp)
+                ) {
+                    Icon(Icons.Outlined.SwapVert, contentDescription = if (sortMode) "退出排序" else "排序", modifier = Modifier.size(18.dp))
+                }
+            }
             IconButton(
                 onClick = onOpenPresets,
                 colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
@@ -225,23 +230,12 @@ internal fun AutomationStepList(
                         AutomationStepRow(
                             index = index + 1,
                             title = controller.automationStepLabel(step),
-                            canEdit = step.presetId.isBlank(),
-                            position = index,
+                            isPreset = step.presetId.isNotBlank(),
+                            sortMode = sortMode,
                             itemCount = steps.size,
-                            reorderStepPx = reorderStepPx,
-                            displacedOffsetPx = displacedRuleOffsetPx(
-                                position = index,
-                                draggingPosition = draggingPosition,
-                                targetPosition = dragTargetPosition,
-                                stepPx = reorderStepPx
-                            ),
                             onEdit = { onEditStep(step.id) },
                             onRemove = { controller.removeAutomationStepFromSelected(index) },
-                            onMove = { targetIndex -> controller.moveAutomationStepFromSelected(index, targetIndex) },
-                            onDragVisualChange = { nextPosition, offset ->
-                                draggingPosition = nextPosition
-                                draggingOffsetPx = offset
-                            }
+                            onMove = { targetIndex -> controller.moveAutomationStepFromSelected(index, targetIndex) }
                         )
                     }
                 }
@@ -254,48 +248,20 @@ internal fun AutomationStepList(
 private fun AutomationStepRow(
     index: Int,
     title: String,
-    canEdit: Boolean,
-    position: Int,
+    isPreset: Boolean,
+    sortMode: Boolean,
     itemCount: Int,
-    reorderStepPx: Float,
-    displacedOffsetPx: Float,
     onEdit: () -> Unit,
     onRemove: () -> Unit,
-    onMove: (Int) -> Unit,
-    onDragVisualChange: (Int?, Float) -> Unit
+    onMove: (Int) -> Unit
 ) {
     var deleteConfirm by remember(index, title) { mutableStateOf<DeleteConfirmRequest?>(null) }
-    var dragOffset by remember(index, itemCount) { mutableStateOf(0f) }
-    var dragging by remember(index, itemCount) { mutableStateOf(false) }
-    val rowColor by animateColorAsState(
-        targetValue = if (dragging) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.28f) else MaterialTheme.colorScheme.surface,
-        animationSpec = tween(durationMillis = 90),
-        label = "automationStepDragColor"
-    )
-    val borderColor by animateColorAsState(
-        targetValue = if (dragging) MaterialTheme.colorScheme.primary.copy(alpha = 0.62f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f),
-        animationSpec = tween(durationMillis = 90),
-        label = "automationStepDragBorder"
-    )
-    val settleOffsetPx by animateFloatAsState(
-        targetValue = if (dragging) 0f else displacedOffsetPx,
-        animationSpec = tween(durationMillis = 90),
-        label = "automationStepSettleOffset"
-    )
     Surface(
         shape = RowShape,
-        color = rowColor,
-        border = BorderStroke(1.dp, borderColor),
-        shadowElevation = if (dragging) 4.dp else 0.dp,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)),
         modifier = Modifier
             .fillMaxWidth()
-            .zIndex(if (dragging) 1f else 0f)
-            .offset {
-                IntOffset(
-                    0,
-                    if (dragging) dragOffset.roundToInt() else settleOffsetPx.roundToInt()
-                )
-            }
             .padding(vertical = 1.dp)
     ) {
         Row(
@@ -318,7 +284,35 @@ private fun AutomationStepRow(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
-            if (canEdit) {
+            if (isPreset) {
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                ) {
+                    Text(
+                        text = "预设",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                    )
+                }
+            }
+            if (sortMode) {
+                IconButton(
+                    onClick = { if (index > 1) onMove(index - 2) },
+                    enabled = index > 1,
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(Icons.Outlined.KeyboardArrowUp, contentDescription = "上移", modifier = Modifier.size(18.dp))
+                }
+                IconButton(
+                    onClick = { if (index < itemCount) onMove(index) },
+                    enabled = index < itemCount,
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "下移", modifier = Modifier.size(18.dp))
+                }
+            } else {
                 IconButton(
                     onClick = onEdit,
                     colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
@@ -326,31 +320,20 @@ private fun AutomationStepRow(
                 ) {
                     Icon(Icons.Outlined.Edit, contentDescription = "编辑步骤", modifier = Modifier.size(17.dp))
                 }
+                IconButton(
+                    onClick = {
+                        deleteConfirm = DeleteConfirmRequest(
+                            title = "确认移除步骤",
+                            message = "确定从执行链中移除第 ${index} 步“$title”吗？",
+                            onConfirm = onRemove
+                        )
+                    },
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(Icons.Outlined.Delete, contentDescription = "移除步骤", modifier = Modifier.size(17.dp))
+                }
             }
-            IconButton(
-                onClick = {
-                    deleteConfirm = DeleteConfirmRequest(
-                        title = "确认移除步骤",
-                        message = "确定从执行链中移除第 ${index} 步“$title”吗？",
-                        onConfirm = onRemove
-                    )
-                },
-                colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                modifier = Modifier.size(28.dp)
-            ) {
-                Icon(Icons.Outlined.Delete, contentDescription = "移除步骤", modifier = Modifier.size(17.dp))
-            }
-            RuleListDragHandle(
-                rowKey = "automation-step-$index-$title",
-                position = position,
-                itemCount = itemCount,
-                reorderStepPx = reorderStepPx,
-                dragging = dragging,
-                onDragOffsetChange = { dragOffset = it },
-                onDraggingChange = { dragging = it },
-                onDragVisualChange = onDragVisualChange,
-                onMove = onMove
-            )
         }
     }
     deleteConfirm?.let { request ->

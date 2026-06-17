@@ -2,6 +2,7 @@ package com.eteditor
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -390,6 +391,10 @@ private fun AutomationChainRow(
                                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
                             },
                             RoundedCornerShape(10.dp)
+                        )
+                        .then(
+                            if (selected) Modifier
+                            else Modifier.border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(10.dp))
                         ),
                     contentAlignment = Alignment.Center
                 ) {
