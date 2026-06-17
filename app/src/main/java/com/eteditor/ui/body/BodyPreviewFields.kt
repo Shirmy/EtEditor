@@ -424,11 +424,26 @@ internal fun BodyPreview(
     }
     LaunchedEffect(editing, useNativeFullTextEditor, showBodyKeyboardOnEditStart, nativeBodyEditor) {
         if (!editing || !showBodyKeyboardOnEditStart) return@LaunchedEffect
-        delay(120)
         if (useNativeFullTextEditor) {
             val editor = nativeBodyEditor ?: return@LaunchedEffect
+            // 开着替换预览(分屏)时原生编辑器排版较慢,原本固定等 120ms 只试一次,
+            // 会在编辑器就绪前抢焦点,导致进了编辑态却没有光标。改为等编辑器完成排版并可见后再要焦点,
+            // 最多等约 1.5 秒兜底,拿到焦点即收手。
+            var waited = 0
+            while (
+                waited < 1500 &&
+                !(editor.isAttachedToWindow &&
+                    editor.isLaidOut &&
+                    editor.width > 0 &&
+                    editor.height > 0 &&
+                    editor.alpha >= 1f)
+            ) {
+                delay(32)
+                waited += 32
+            }
             editor.requestFocusAndShowKeyboard()
         } else {
+            delay(120)
             runCatching { bodyFocusRequester.requestFocus() }
             hostView.showSoftKeyboard()
         }
