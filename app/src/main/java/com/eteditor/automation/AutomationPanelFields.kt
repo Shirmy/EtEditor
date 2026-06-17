@@ -425,9 +425,12 @@ private fun AutomationEditView(
             steps = selectedChain.steps,
             modifier = Modifier.fillMaxWidth(),
             onEditStep = { stepId ->
-                val step = selectedChain.steps.firstOrNull { it.id == stepId }
-                if (step?.presetId.isNullOrBlank()) {
+                val step = selectedChain.steps.firstOrNull { it.id == stepId } ?: return@AutomationStepList
+                if (step.presetId.isBlank()) {
                     editingStepId = stepId
+                } else {
+                    controller.selectEditorTool(step.presetId)
+                    editingPresetId = step.presetId
                 }
             },
             onOpenPresets = { showPresetPicker = true }
