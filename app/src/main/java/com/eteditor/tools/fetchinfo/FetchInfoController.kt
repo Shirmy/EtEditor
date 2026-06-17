@@ -104,13 +104,20 @@ fun EditorController.fetchInfoCatalogSummary(preview: FetchInfoPreview): String 
     return buildFetchInfoCatalogSummary(fetchInfoWritableChapterCount(), preview)
 }
 
-fun EditorController.fetchInfoCatalogPreviewRows(preview: FetchInfoPreview, filtered: Boolean): List<FetchInfoCatalogPreviewRow> {
+fun EditorController.fetchInfoCatalogPreviewRows(
+    preview: FetchInfoPreview,
+    filtered: Boolean,
+    renames: Map<Int, String> = emptyMap(),
+    deletes: Set<Int> = emptySet()
+): List<FetchInfoCatalogPreviewRow> {
     val book = epub ?: return emptyList()
     return buildFetchInfoCatalogPreviewRows(
         book = book,
         preview = preview,
         filtered = filtered,
-        fallbackChapterIndex = previewChapterIndex
+        fallbackChapterIndex = previewChapterIndex,
+        renames = renames,
+        deletes = deletes
     )
 }
 
@@ -431,6 +438,9 @@ suspend fun EditorController.applyFetchInfoPreview(toolId: String): Boolean {
 
 suspend fun EditorController.applyFetchInfoPreviewWithProgress(
     toolId: String,
+    filterActive: Boolean = true,
+    renames: Map<Int, String> = emptyMap(),
+    deletes: Set<Int> = emptySet(),
     onProgress: (phase: String, completed: Int, total: Int) -> Unit
 ): Boolean {
     val preview = fetchInfoPreview ?: run {
@@ -447,7 +457,7 @@ suspend fun EditorController.applyFetchInfoPreviewWithProgress(
     }
     statusMessage = "正在应用抓取信息..."
     return try {
-        val result = applyFetchedInfoToEpub(preview, onProgress)
+        val result = applyFetchedInfoToEpub(preview, filterActive, renames, deletes, onProgress)
         val parts = buildList {
             if (preview.parameters.writeCatalog) add("标题 ${result.catalogChanged}")
             if (preview.parameters.writeIntro) add(if (result.introWritten) "简介 1" else "简介 0")
@@ -470,11 +480,14 @@ suspend fun EditorController.applyFetchInfoPreviewWithProgress(
 
 private suspend fun EditorController.applyFetchedInfoToEpub(
     preview: FetchInfoPreview,
+    filterActive: Boolean = true,
+    renames: Map<Int, String> = emptyMap(),
+    deletes: Set<Int> = emptySet(),
     onProgress: (phase: String, completed: Int, total: Int) -> Unit = { _, _, _ -> }
 ): FetchInfoWriteResult {
     val book = epub ?: error("没有 EPUB 可应用")
     val parameters = preview.parameters
-    val info = preview.filtered
+    val info = if (filterActive) preview.filtered else preview.raw
     var catalogChanged = 0
     var introWritten = false
     var coverWritten = false
@@ -494,6 +507,8 @@ private suspend fun EditorController.applyFetchedInfoToEpub(
             parameters = parameters,
             catalog = info.catalog,
             currentChapterIndex = previewChapterIndex,
+            renames = renames,
+            deletes = deletes,
             onError = { message -> statusMessage = message }
         )
         catalogChanged = catalogResult.changed

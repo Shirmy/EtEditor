@@ -21,13 +21,39 @@ class FetchInfoEpubWriteUtilsTest {
         val result = applyFetchedCatalogToEpub(
             book = book,
             parameters = fetchParameters(autoTitleFormat = false),
-            catalog = listOf(FetchedCatalogItem(index = 1, title = "001 | 第九章 - 新标题", sequence = "001")),
+            catalog = listOf(FetchedCatalogItem(index = 1, title = "新标题", sequence = "001")),
             currentChapterIndex = 0
         )
 
         assertEquals(FetchInfoCatalogWriteResult(changed = 1, touchedCurrentChapter = true), result)
         assertEquals("第1章 新标题", book.chapters[0].title)
         assertTrue(book.chapters[0].html.contains("<h1>第1章 新标题</h1>"))
+        assertEquals("第2章 旧标题", book.chapters[1].title)
+    }
+
+    @Test
+    fun applyFetchedCatalogToEpubHonorsRenameAndDeleteByChapterPosition() {
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章 旧标题"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章 旧标题")
+            )
+        )
+
+        val result = applyFetchedCatalogToEpub(
+            book = book,
+            parameters = fetchParameters(autoTitleFormat = false),
+            catalog = listOf(
+                FetchedCatalogItem(index = 1, title = "新一", sequence = "1"),
+                FetchedCatalogItem(index = 2, title = "新二", sequence = "2")
+            ),
+            currentChapterIndex = 0,
+            renames = mapOf(0 to "第1章 手改"),
+            deletes = setOf(1)
+        )
+
+        assertEquals(FetchInfoCatalogWriteResult(changed = 1, touchedCurrentChapter = true), result)
+        assertEquals("第1章 手改", book.chapters[0].title)
         assertEquals("第2章 旧标题", book.chapters[1].title)
     }
 
@@ -45,15 +71,15 @@ class FetchInfoEpubWriteUtilsTest {
             parameters = fetchParameters(autoTitleFormat = false),
             catalog = listOf(
                 FetchedCatalogItem(index = 1, title = "第一卷", isVolume = true),
-                FetchedCatalogItem(index = 2, title = "第1章 新标题"),
+                FetchedCatalogItem(index = 2, title = "新一"),
                 FetchedCatalogItem(index = 3, title = "第二卷", isVolume = true),
-                FetchedCatalogItem(index = 4, title = "第2章 新标题")
+                FetchedCatalogItem(index = 4, title = "新二")
             ),
             currentChapterIndex = 1
         )
 
         assertEquals(FetchInfoCatalogWriteResult(changed = 4, touchedCurrentChapter = true), result)
-        assertEquals(listOf("第一卷", "第1章 新标题", "第二卷", "第2章 新标题"), book.chapters.map { it.title })
+        assertEquals(listOf("第一卷", "第1章 新一", "第二卷", "第2章 新二"), book.chapters.map { it.title })
         assertEquals(listOf(0, 1, 0, 1), book.chapters.map { it.tocLevel })
         assertEquals(listOf("Vol01.xhtml", "Chapter0001.xhtml", "Vol02.xhtml", "Chapter0002.xhtml"), book.chapters.map { it.path.substringAfterLast('/') })
         assertEquals(book.chapters.map { it.id }, book.spineIds)
@@ -75,13 +101,13 @@ class FetchInfoEpubWriteUtilsTest {
             parameters = fetchParameters(autoTitleFormat = false),
             catalog = listOf(
                 FetchedCatalogItem(index = 1, title = "新卷", isVolume = true),
-                FetchedCatalogItem(index = 2, title = "第1章 新标题")
+                FetchedCatalogItem(index = 2, title = "新一")
             ),
             currentChapterIndex = 0
         )
 
         assertEquals(FetchInfoCatalogWriteResult(changed = 2, touchedCurrentChapter = true), result)
-        assertEquals(listOf("新卷", "第1章 新标题"), book.chapters.map { it.title })
+        assertEquals(listOf("新卷", "第1章 新一"), book.chapters.map { it.title })
         assertEquals(listOf("OEBPS/Text/Vol01.xhtml", "OEBPS/Text/Chapter0001.xhtml"), book.chapters.map { it.path })
         assertEquals(2, book.entries.size)
         assertTrue(book.chapters[0].html.contains("<h1>新卷</h1>"))
@@ -100,8 +126,8 @@ class FetchInfoEpubWriteUtilsTest {
             book = book,
             parameters = fetchParameters(autoTitleFormat = true),
             catalog = listOf(
-                FetchedCatalogItem(index = 1, title = "第1章 非常非常长的新标题", sequence = "1"),
-                FetchedCatalogItem(index = 2, title = "第2章 另一段非常长的新标题", sequence = "2")
+                FetchedCatalogItem(index = 1, title = "非常非常长的新标题", sequence = "1"),
+                FetchedCatalogItem(index = 2, title = "另一段非常长的新标题", sequence = "2")
             ),
             currentChapterIndex = 1
         )
@@ -129,8 +155,8 @@ class FetchInfoEpubWriteUtilsTest {
             parameters = fetchParameters(autoTitleFormat = false),
             catalog = listOf(
                 FetchedCatalogItem(index = 1, title = " ", isVolume = true),
-                FetchedCatalogItem(index = 2, title = "第1章 新标题"),
-                FetchedCatalogItem(index = 3, title = "第2章 新标题"),
+                FetchedCatalogItem(index = 2, title = "新一"),
+                FetchedCatalogItem(index = 3, title = "新二"),
                 FetchedCatalogItem(index = 4, title = "第3章 超出")
             ),
             currentChapterIndex = 1
@@ -138,7 +164,7 @@ class FetchInfoEpubWriteUtilsTest {
 
         assertEquals(FetchInfoCatalogWriteResult(changed = 2, touchedCurrentChapter = false), result)
         assertEquals(originalPaths, book.chapters.map { it.path })
-        assertEquals(listOf("封面", "第一卷", "第1章 新标题", "第2章 新标题"), book.chapters.map { it.title })
+        assertEquals(listOf("封面", "第一卷", "第1章 新一", "第2章 新二"), book.chapters.map { it.title })
         assertTrue(book.chapters[0].html.contains("<h1>封面</h1>"))
         assertTrue(book.chapters[1].html.contains("<h1>第一卷</h1>"))
     }

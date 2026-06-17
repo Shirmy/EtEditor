@@ -13,6 +13,7 @@ data class FetchInfoParameters(
     val bodyRangeStart: Int,
     val bodyRangeEnd: Int,
     val catalogFilter: String,
+    val catalogFilterEnabled: Boolean = true,
     val autoTitleFormat: Boolean,
     val introFilter: String,
     val writeCatalog: Boolean,
@@ -82,7 +83,9 @@ data class FetchInfoCatalogPreviewRow(
     val fetchedTitle: String,
     val isVolume: Boolean,
     val willCreateVolume: Boolean = false,
-    val skipped: Boolean = false
+    val skipped: Boolean = false,
+    val deleted: Boolean = false,
+    val chapterPosition: Int = -1
 )
 
 internal data class FetchInfoWriteResult(

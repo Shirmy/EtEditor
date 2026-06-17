@@ -203,6 +203,7 @@ internal fun buildFetchInfoParameters(
         bodyRangeStart = 1,
         bodyRangeEnd = 0,
         catalogFilter = values[FETCH_INFO_PARAM_CATALOG_FILTER].orEmpty(),
+        catalogFilterEnabled = values[FETCH_INFO_PARAM_CATALOG_FILTER_ENABLED]?.let { it == trueValue } ?: true,
         autoTitleFormat = values[FETCH_INFO_PARAM_AUTO_TITLE_FORMAT] == trueValue,
         introFilter = values[FETCH_INFO_PARAM_INTRO_FILTER].orEmpty(),
         writeCatalog = content == FETCH_INFO_CONTENT_CATALOG,

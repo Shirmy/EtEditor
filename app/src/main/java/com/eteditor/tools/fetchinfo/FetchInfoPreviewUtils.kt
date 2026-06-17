@@ -51,7 +51,9 @@ internal fun buildFetchInfoCatalogPreviewRows(
     book: EpubBook,
     preview: FetchInfoPreview,
     filtered: Boolean,
-    fallbackChapterIndex: Int
+    fallbackChapterIndex: Int,
+    renames: Map<Int, String> = emptyMap(),
+    deletes: Set<Int> = emptySet()
 ): List<FetchInfoCatalogPreviewRow> {
     val catalog = if (filtered) preview.filtered.catalog else preview.raw.catalog
     val targets = fetchInfoCatalogTargetChapters(book).map { it.second }
@@ -78,17 +80,27 @@ internal fun buildFetchInfoCatalogPreviewRows(
                     )
                 )
             } else {
+                val position = targetCursor
                 val chapter = targets.getOrNull(targetCursor)
                 targetCursor += 1
+                val deleted = position in deletes
+                val baseTitle = chapter
+                    ?.let { fetchInfoCatalogWriteBackTitle(it.title, fetched, autoStyle) }
+                    ?: fetched.previewText()
+                val fetchedTitle = when {
+                    deleted -> ""
+                    renames.containsKey(position) -> renames.getValue(position)
+                    else -> baseTitle
+                }
                 add(
                     FetchInfoCatalogPreviewRow(
                         fileName = chapter?.path?.substringAfterLast('/').orEmpty(),
                         originalTitle = chapter?.title.orEmpty(),
-                        fetchedTitle = chapter
-                            ?.let { fetchInfoCatalogWriteBackTitle(it.title, fetched, autoStyle) }
-                            ?: fetched.previewText(),
+                        fetchedTitle = fetchedTitle,
                         isVolume = false,
-                        skipped = chapter == null
+                        skipped = chapter == null,
+                        deleted = deleted,
+                        chapterPosition = position
                     )
                 )
             }

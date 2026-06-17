@@ -84,57 +84,58 @@ class FetchInfoTextUtilsTest {
     }
 
     @Test
-    fun fetchInfoCatalogWriteBackTitleKeepsOriginalChapterNumberAndFetchedSuffix() {
+    fun writeBackKeepsOriginalPrefixAndAppendsFetchedTitleVerbatim() {
         val item = FetchedCatalogItem(
             index = 1,
-            title = "001 | 第十章 - 新标题",
-            sequence = "001"
+            title = "第01章 01aa",
+            sequence = "1",
+            chapterTitle = "第01章 01aa"
         )
 
-        val plain = fetchInfoCatalogWriteBackTitle(
-            originalTitle = "第9章 旧标题",
-            item = item
-        )
+        // 无规则清理时：原章号「第01章」+ 抓取标题原样「第01章 01aa」（不再自动砍前缀）
+        assertEquals("第01章 第01章 01aa", fetchInfoCatalogWriteBackTitle("第01章 bb", item))
+    }
+
+    @Test
+    fun writeBackUsesCleanedFetchedNameWhenAlreadyFiltered() {
+        val item = FetchedCatalogItem(index = 1, title = "aa", sequence = "1", chapterTitle = "aa")
+
+        assertEquals("第01章 aa", fetchInfoCatalogWriteBackTitle("第01章 bb", item))
+    }
+
+    @Test
+    fun writeBackUsesFetchedNameWhenOriginalHasNoPrefix() {
+        val item = FetchedCatalogItem(index = 1, title = "aa", sequence = "1", chapterTitle = "aa")
+
+        assertEquals("aa", fetchInfoCatalogWriteBackTitle("楔子", item))
+    }
+
+    @Test
+    fun writeBackRenderedKeepsPrefixAndUsesFetchedNameForAutoStyle() {
+        val item = FetchedCatalogItem(index = 1, title = "新标题", sequence = "1", chapterTitle = "新标题")
+
         val rendered = fetchInfoCatalogWriteBackRenderedTitle(
             originalTitle = "第9章 旧标题",
             item = item,
             autoStyle = TITLE_FORMAT_STYLE_LEFT
         )
 
-        assertEquals("第9章 新标题", plain)
         assertEquals("第9章 新标题", rendered.plainTitle)
         assertEquals("第9章<br/>新标题", rendered.headingHtml)
         assertEquals(TITLE_FORMAT_STYLE_LEFT, rendered.styleCode)
     }
 
     @Test
-    fun fetchInfoCatalogWriteBackTitleStripsFullWidthSeparatorsFromFetchedTitle() {
-        val item = FetchedCatalogItem(
-            index = 3,
-            title = "003｜第三章：新标题",
-            sequence = "003"
-        )
-
-        assertEquals("第3章 新标题", fetchInfoCatalogWriteBackTitle("第3章 旧标题", item))
-    }
-
-    @Test
-    fun fetchInfoCatalogWriteBackTitleUsesChapterTitleFallbackAndKeepsNumberWhenSuffixBlank() {
+    fun writeBackUsesChapterTitleFallbackWhenTitleBlank() {
         val chapterTitleItem = FetchedCatalogItem(
             index = 1,
             title = "",
             sequence = "",
-            chapterTitle = "第3章 - 新标题"
-        )
-        val sequenceOnlyItem = FetchedCatalogItem(
-            index = 2,
-            title = "002",
-            sequence = "002"
+            chapterTitle = "新标题"
         )
 
         assertEquals("新标题", fetchInfoCatalogWriteBackTitle("旧标题", chapterTitleItem))
-        assertEquals("第2章", fetchInfoCatalogWriteBackTitle("第2章 旧标题", sequenceOnlyItem))
-        assertEquals("002", fetchInfoCatalogWriteBackTitle("旧标题", sequenceOnlyItem))
+        assertEquals("第3章 新标题", fetchInfoCatalogWriteBackTitle("第3章 旧标题", chapterTitleItem))
     }
 
     @Test
@@ -150,7 +151,7 @@ class FetchInfoTextUtilsTest {
             )
         )
         assertEquals(
-            TITLE_FORMAT_STYLE_DOUBLE,
+            TITLE_FORMAT_STYLE_LEFT,
             fetchInfoCatalogAutoTitleStyle(
                 parameters = fetchParameters(autoTitleFormat = true),
                 targetChapters = target,
@@ -169,7 +170,7 @@ class FetchInfoTextUtilsTest {
         )
 
         assertEquals(
-            TITLE_FORMAT_STYLE_NONE,
+            TITLE_FORMAT_STYLE_DOUBLE,
             fetchInfoCatalogAutoTitleStyle(
                 parameters = fetchParameters(autoTitleFormat = true),
                 targetChapters = target,

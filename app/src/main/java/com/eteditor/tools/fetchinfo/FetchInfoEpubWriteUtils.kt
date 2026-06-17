@@ -18,6 +18,8 @@ internal fun applyFetchedCatalogToEpub(
     parameters: FetchInfoParameters,
     catalog: List<FetchedCatalogItem>,
     currentChapterIndex: Int,
+    renames: Map<Int, String> = emptyMap(),
+    deletes: Set<Int> = emptySet(),
     onError: (String) -> Unit = {}
 ): FetchInfoCatalogWriteResult {
     val targetChapters = fetchInfoCatalogTargetChapters(book).map { it.second }
@@ -50,8 +52,19 @@ internal fun applyFetchedCatalogToEpub(
                 changed += 1
             }
         } else {
+            val position = targetCursor
             val chapter = targetChapters.getOrNull(targetCursor) ?: return@forEach
             targetCursor += 1
+            if (position in deletes) return@forEach
+            val renamed = renames[position]
+            if (renamed != null) {
+                val cleanRenamed = ChapterDetector.cleanTitle(renamed)
+                if (cleanRenamed.isBlank()) return@forEach
+                updateFetchedCatalogChapterTitle(chapter, cleanRenamed)
+                if (chapter === currentChapter) touchedCurrent = true
+                changed += 1
+                return@forEach
+            }
             val rendered = fetchInfoCatalogWriteBackRenderedTitle(chapter.title, item, autoStyle)
             val title = rendered.plainTitle
             if (title.isBlank()) return@forEach

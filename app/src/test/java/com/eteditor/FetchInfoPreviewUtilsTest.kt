@@ -284,15 +284,65 @@ class FetchInfoPreviewUtilsTest {
 
         assertEquals(
             listOf(
-                FetchInfoCatalogPreviewRow("Chapter0001.xhtml", "第1章 旧", "第1章 新", isVolume = false),
+                FetchInfoCatalogPreviewRow("Chapter0001.xhtml", "第1章 旧", "第1章 第1章 新", isVolume = false, chapterPosition = 0),
                 FetchInfoCatalogPreviewRow("Vol01.xhtml", "第一卷", "第一卷", isVolume = true, willCreateVolume = false),
-                FetchInfoCatalogPreviewRow("Chapter0002.xhtml", "第2章 旧", "第2章 新", isVolume = false),
+                FetchInfoCatalogPreviewRow("Chapter0002.xhtml", "第2章 旧", "第2章 第2章 新", isVolume = false, chapterPosition = 1),
                 FetchInfoCatalogPreviewRow("", "", "第二卷", isVolume = true, willCreateVolume = true),
-                FetchInfoCatalogPreviewRow("Chapter0003.xhtml", "第3章 旧", "第3章 新", isVolume = false),
-                FetchInfoCatalogPreviewRow("", "", "4", isVolume = false, skipped = true)
+                FetchInfoCatalogPreviewRow("Chapter0003.xhtml", "第3章 旧", "第3章 第3章 新", isVolume = false, chapterPosition = 2),
+                FetchInfoCatalogPreviewRow("", "", "4", isVolume = false, skipped = true, chapterPosition = 3)
             ),
             rows
         )
+    }
+
+    @Test
+    fun buildFetchInfoCatalogPreviewRowsAppliesRenameAndDeleteByChapterPosition() {
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章 旧"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章 旧"),
+                chapter("c3", "OEBPS/Text/Chapter0003.xhtml", "第3章 旧")
+            )
+        )
+        val raw = FetchedInfo(
+            source = FETCH_INFO_SOURCE_JJWXC,
+            query = "Book",
+            resolvedUrl = "",
+            title = "Book",
+            author = "",
+            intro = "",
+            coverUrl = "",
+            catalog = listOf(
+                FetchedCatalogItem(index = 1, title = "新一", sequence = "1"),
+                FetchedCatalogItem(index = 2, title = "新二", sequence = "2"),
+                FetchedCatalogItem(index = 3, title = "新三", sequence = "3")
+            )
+        )
+        val preview = FetchInfoPreview(
+            toolId = "fetch",
+            parameters = fetchParameters(content = FETCH_INFO_CONTENT_CATALOG),
+            raw = raw,
+            filtered = raw,
+            filterIssues = emptyList()
+        )
+
+        val rows = buildFetchInfoCatalogPreviewRows(
+            book = book,
+            preview = preview,
+            filtered = true,
+            fallbackChapterIndex = 0,
+            renames = mapOf(1 to "手改标题"),
+            deletes = setOf(0)
+        )
+
+        // 第 0 章被删除：deleted 标记、抓取标题清空、原标题保留
+        assertTrue(rows[0].deleted)
+        assertEquals("第1章 旧", rows[0].originalTitle)
+        assertEquals("", rows[0].fetchedTitle)
+        // 第 1 章被重命名：使用手改值
+        assertEquals("手改标题", rows[1].fetchedTitle)
+        // 第 2 章正常拼装：原章号 + 抓取名字
+        assertEquals("第3章 新三", rows[2].fetchedTitle)
     }
 
     @Test
@@ -331,7 +381,7 @@ class FetchInfoPreviewUtilsTest {
             listOf(
                 FetchInfoCatalogPreviewRow("Vol01.xhtml", "第一卷 旧", "第一卷", isVolume = true, willCreateVolume = false),
                 FetchInfoCatalogPreviewRow("", "", "第二卷", isVolume = true, willCreateVolume = true),
-                FetchInfoCatalogPreviewRow("Chapter0001.xhtml", "第1章 旧", "第1章 新", isVolume = false)
+                FetchInfoCatalogPreviewRow("Chapter0001.xhtml", "第1章 旧", "第1章 第1章 新", isVolume = false, chapterPosition = 0)
             ),
             rows
         )
@@ -374,8 +424,8 @@ class FetchInfoPreviewUtilsTest {
 
         assertEquals(
             listOf(
-                FetchInfoCatalogPreviewRow("Chapter0001.xhtml", "第1章 旧", "第1章 原始", isVolume = false),
-                FetchInfoCatalogPreviewRow("", "", "2", isVolume = false, skipped = true)
+                FetchInfoCatalogPreviewRow("Chapter0001.xhtml", "第1章 旧", "第1章 第1章 原始", isVolume = false, chapterPosition = 0),
+                FetchInfoCatalogPreviewRow("", "", "2", isVolume = false, skipped = true, chapterPosition = 1)
             ),
             rows
         )
@@ -413,7 +463,7 @@ class FetchInfoPreviewUtilsTest {
 
         assertEquals(
             listOf(
-                FetchInfoCatalogPreviewRow("Chapter0001.xhtml", "第1章 旧", "第1章 新", isVolume = false),
+                FetchInfoCatalogPreviewRow("Chapter0001.xhtml", "第1章 旧", "第1章 第1章 新", isVolume = false, chapterPosition = 0),
                 FetchInfoCatalogPreviewRow("Chapter0002.xhtml", "第2章 旧", "", isVolume = false)
             ),
             rows

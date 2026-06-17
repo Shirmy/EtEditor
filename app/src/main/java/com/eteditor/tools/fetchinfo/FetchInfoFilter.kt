@@ -7,7 +7,10 @@ private data class FetchInfoReplacementRule(
     val name: String,
     val search: String,
     val replacement: String,
-    val regex: Boolean
+    val regex: Boolean,
+    val action: String = "replace",
+    val category: String = "净化",
+    val enabled: Boolean = true
 )
 
 object FetchInfoFilter {
@@ -28,12 +31,24 @@ object FetchInfoFilter {
     ): List<FetchedCatalogItem> {
         var items = input
         parseStructuredReplacementFilters(filterText, issues)?.let { rules ->
-            rules.forEach { rule ->
-                items = if (rule.regex) {
-                    val regex = parseFilterRegex(rule.search, rule.lineNo, rule.name, issues) ?: return@forEach
-                    items.map { item -> item.copy(title = regexReplace(item.title, regex, rule.replacement)) }
-                } else {
-                    items.map { item -> item.copy(title = item.title.replace(rule.search, rule.replacement)) }
+            val ordered = rules
+                .filter { it.enabled }
+                .sortedBy { if (it.category == "章节") 0 else 1 } // 稳定排序：章节在前、净化在后
+            ordered.forEach { rule ->
+                items = when {
+                    rule.action == "drop" -> {
+                        if (rule.regex) {
+                            val regex = parseFilterRegex(rule.search, rule.lineNo, rule.name, issues) ?: return@forEach
+                            items.filterNot { regex.containsMatchIn(it.title) }
+                        } else {
+                            items.filterNot { it.title.contains(rule.search) }
+                        }
+                    }
+                    rule.regex -> {
+                        val regex = parseFilterRegex(rule.search, rule.lineNo, rule.name, issues) ?: return@forEach
+                        items.map { item -> item.copy(title = regexReplace(item.title, regex, rule.replacement)) }
+                    }
+                    else -> items.map { item -> item.copy(title = item.title.replace(rule.search, rule.replacement)) }
                 }
             }
             return items
@@ -77,7 +92,7 @@ object FetchInfoFilter {
     ): String {
         var text = input
         parseStructuredReplacementFilters(filterText, issues)?.let { rules ->
-            rules.forEach { rule ->
+            rules.filter { it.enabled }.forEach { rule ->
                 text = if (rule.regex) {
                     val regex = parseFilterRegex(rule.search, rule.lineNo, rule.name, issues) ?: return@forEach
                     regexReplace(text, regex, rule.replacement)
@@ -165,7 +180,10 @@ object FetchInfoFilter {
                     name = name,
                     search = decodeLineBreakEscapes(search),
                     replacement = decodeLineBreakEscapes(json.optString("replacement")),
-                    regex = json.optBoolean("regex", false)
+                    regex = json.optBoolean("regex", false),
+                    action = if (json.optString("action").trim() == "drop") "drop" else "replace",
+                    category = if (json.optString("category").trim() == "章节") "章节" else "净化",
+                    enabled = json.optBoolean("enabled", true)
                 )
             }
             rules

@@ -178,6 +178,29 @@ class FetchInfoFilterTest {
         assertTrue(issues.all { it.reason.startsWith("过滤规则格式错误：") })
     }
 
+    @Test
+    fun structuredRulesApplyChapterCategoryBeforePurifyAndSupportDropAndEnabled() {
+        val filter = """
+            [
+              {"name":"去序号","search":"^\\d+\\s+","replacement":"","regex":true,"category":"净化"},
+              {"name":"滤单章","search":"单章","action":"drop","category":"章节"},
+              {"name":"停用","search":"aa","replacement":"ZZ","regex":false,"category":"净化","enabled":false}
+            ]
+        """.trimIndent()
+        val raw = fetchedInfo(
+            catalog = listOf(
+                FetchedCatalogItem(1, "01 aa"),
+                FetchedCatalogItem(2, "单章 番外")
+            )
+        )
+
+        val (filtered, issues) = FetchInfoFilter.apply(raw, fetchParameters(catalogFilter = filter))
+
+        // 章节类(drop 单章)先生效移除"单章 番外"；净化类(去前导序号)把"01 aa"清成"aa"；停用规则不生效。
+        assertEquals(listOf("aa"), filtered.catalog.map { it.title })
+        assertTrue(issues.isEmpty())
+    }
+
     private fun fetchParameters(
         catalogFilter: String = "",
         introFilter: String = ""

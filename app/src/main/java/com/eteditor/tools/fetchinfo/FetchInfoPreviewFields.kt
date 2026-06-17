@@ -44,6 +44,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -130,6 +132,12 @@ fun FetchInfoPreviewPane(
     var writingProgress by remember(preview) { mutableStateOf(0f) }
     var writingLabel by remember(preview) { mutableStateOf("应用抓取信息") }
     var catalogOrderReversed by remember(preview) { mutableStateOf(false) }
+    // 规则编辑/总开关/逐行覆盖按 toolId 记忆，避免规则即时刷新（preview 重建）时被重置
+    var filterActive by remember(toolId) { mutableStateOf(preview.parameters.catalogFilterEnabled) }
+    var showRulePanel by remember(toolId) { mutableStateOf(false) }
+    val renames = remember(toolId) { mutableStateMapOf<Int, String>() }
+    val deletes = remember(toolId) { mutableStateListOf<Int>() }
+    var renameTarget by remember(toolId) { mutableStateOf<Int?>(null) }
     val automationStep = controller.automationConfirmationRequest
         ?.takeIf { it.stepId == toolId }
         ?.let(controller::automationConfirmationStep)
@@ -151,7 +159,13 @@ fun FetchInfoPreviewPane(
         controller.controllerScope.launch {
             delay(16)
             yieldToAppUiBeforeHeavyWork()
-            val applied = controller.applyFetchInfoPreviewWithProgress(toolId, ::updateWritingProgress)
+            val applied = controller.applyFetchInfoPreviewWithProgress(
+                toolId,
+                filterActive = filterActive,
+                renames = renames.toMap(),
+                deletes = deletes.toSet(),
+                onProgress = ::updateWritingProgress
+            )
             if (applied) {
                 onApplied?.invoke() ?: onDismiss()
             } else {
@@ -159,10 +173,13 @@ fun FetchInfoPreviewPane(
             }
         }
     }
-    val filteredCatalogRows = remember(preview) { controller.fetchInfoCatalogPreviewRows(preview, filtered = true) }
-    val displayedCatalogRows = remember(filteredCatalogRows, catalogOrderReversed) {
-        if (catalogOrderReversed) filteredCatalogRows.asReversed() else filteredCatalogRows
-    }
+    val displayCatalogRows = controller.fetchInfoCatalogPreviewRows(
+        preview,
+        filtered = filterActive,
+        renames = renames.toMap(),
+        deletes = deletes.toSet()
+    )
+    val displayedCatalogRows = if (catalogOrderReversed) displayCatalogRows.asReversed() else displayCatalogRows
     val catalogSummary = remember(preview) {
         if (preview.parameters.fetchCatalog) controller.fetchInfoCatalogSummary(preview) else ""
     }
@@ -200,6 +217,36 @@ fun FetchInfoPreviewPane(
                     overflow = TextOverflow.Ellipsis
                 )
                 if (preview.parameters.fetchCatalog) {
+                    TextButton(
+                        onClick = { filterActive = !filterActive },
+                        enabled = !writing,
+                        shape = ControlShape,
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = if (filterActive) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        ),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(if (filterActive) "过滤开" else "过滤关")
+                    }
+                    TextButton(
+                        onClick = { showRulePanel = !showRulePanel },
+                        enabled = !writing,
+                        shape = ControlShape,
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = if (showRulePanel) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        ),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text("规则")
+                    }
                     TextButton(
                         onClick = { catalogOrderReversed = !catalogOrderReversed },
                         enabled = !writing,
@@ -242,14 +289,33 @@ fun FetchInfoPreviewPane(
                         .weight(1f)
                 )
             } else if (preview.parameters.fetchCatalog) {
-                FetchCatalogComparePane(
-                    rows = displayedCatalogRows,
-                    filterIssues = preview.filterIssues,
-                    orderReversed = catalogOrderReversed,
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f)
-                )
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (showRulePanel) {
+                        FetchInfoCatalogRulePanel(
+                            controller = controller,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 220.dp)
+                        )
+                    }
+                    FetchCatalogComparePane(
+                        rows = displayedCatalogRows,
+                        filterIssues = preview.filterIssues,
+                        orderReversed = catalogOrderReversed,
+                        onRename = { position -> renameTarget = position },
+                        onToggleDelete = { position ->
+                            if (deletes.contains(position)) deletes.remove(position) else deletes.add(position)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                    )
+                }
             } else {
                 LazyColumn(
                     modifier = Modifier
@@ -308,7 +374,13 @@ fun FetchInfoPreviewPane(
                             writingLabel = "应用抓取信息"
                             scope.launch {
                                 yieldToAppUiBeforeHeavyWork()
-                                val applied = controller.applyFetchInfoPreviewWithProgress(toolId, ::updateWritingProgress)
+                                val applied = controller.applyFetchInfoPreviewWithProgress(
+                                    toolId,
+                                    filterActive = filterActive,
+                                    renames = renames.toMap(),
+                                    deletes = deletes.toSet(),
+                                    onProgress = ::updateWritingProgress
+                                )
                                 writing = false
                                 if (applied) {
                                     onApplied?.invoke() ?: onDismiss()
@@ -326,6 +398,19 @@ fun FetchInfoPreviewPane(
                 }
             }
         }
+    }
+
+    renameTarget?.let { position ->
+        val initial = renames[position]
+            ?: displayCatalogRows.firstOrNull { it.chapterPosition == position }?.fetchedTitle.orEmpty()
+        FetchCatalogRenameDialog(
+            initialValue = initial,
+            onDismiss = { renameTarget = null },
+            onConfirm = { value ->
+                renames[position] = value
+                renameTarget = null
+            }
+        )
     }
 }
 
@@ -464,6 +549,8 @@ private fun FetchCatalogComparePane(
     rows: List<FetchInfoCatalogPreviewRow>,
     filterIssues: List<FetchInfoFilterIssue> = emptyList(),
     orderReversed: Boolean = false,
+    onRename: (Int) -> Unit = {},
+    onToggleDelete: (Int) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
@@ -502,7 +589,11 @@ private fun FetchCatalogComparePane(
                         rows,
                         key = { index, row -> "${index}-${row.fileName}-${row.fetchedTitle}" }
                     ) { index, row ->
-                        FetchCatalogCompareRow(row)
+                        FetchCatalogCompareRow(
+                            row = row,
+                            onRename = onRename,
+                            onToggleDelete = onToggleDelete
+                        )
                         if (index < rows.lastIndex || filterIssues.isNotEmpty()) {
                             HorizontalDivider(
                                 color = MaterialTheme.colorScheme.outlineVariant,
@@ -565,15 +656,20 @@ private fun FetchInfoFilterIssueRow(issue: FetchInfoFilterIssue) {
 }
 
 @Composable
-private fun FetchCatalogCompareRow(row: FetchInfoCatalogPreviewRow) {
+private fun FetchCatalogCompareRow(
+    row: FetchInfoCatalogPreviewRow,
+    onRename: (Int) -> Unit = {},
+    onToggleDelete: (Int) -> Unit = {}
+) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
         CatalogCompareLine(
             left = row.originalTitle.ifBlank { "无标题" },
-            right = row.fetchedTitle,
-            rightStrong = row.fetchedTitle.isNotBlank()
+            right = if (row.deleted) "已删除（保留原标题）" else row.fetchedTitle,
+            rightStrong = !row.deleted && row.fetchedTitle.isNotBlank(),
+            rightError = row.deleted
         )
         if (row.isVolume && row.willCreateVolume) {
             CatalogCompareLine(
@@ -589,6 +685,32 @@ private fun FetchCatalogCompareRow(row: FetchInfoCatalogPreviewRow) {
                 leftError = true,
                 rightError = true
             )
+        }
+        if (!row.isVolume && !row.skipped && row.chapterPosition >= 0) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(
+                    onClick = { onRename(row.chapterPosition) },
+                    enabled = !row.deleted,
+                    shape = ControlShape,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
+                ) {
+                    Text("重命名", style = MaterialTheme.typography.labelMedium)
+                }
+                TextButton(
+                    onClick = { onToggleDelete(row.chapterPosition) },
+                    shape = ControlShape,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = if (row.deleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text(if (row.deleted) "撤销删除" else "删除", style = MaterialTheme.typography.labelMedium)
+                }
+            }
         }
     }
 }

@@ -173,7 +173,7 @@ internal fun fetchInfoCatalogAutoTitleStyle(
         val chapter = targetChapters.getOrNull(targetCursor) ?: return@forEach
         targetCursor += 1
         val prefix = fetchInfoChapterNumberPrefix(chapter.title).takeIf { it.isNotBlank() }
-        val suffix = fetchInfoFetchedTitleSuffix(item)
+        val suffix = fetchInfoFetchedTitleName(item)
         if (prefix != null || suffix.isNotBlank()) {
             parts += TitleFormatParts(prefix = prefix, suffix = suffix)
         }
@@ -196,14 +196,14 @@ internal fun fetchInfoCatalogWriteBackRenderedTitle(
     autoStyle: String?
 ): TitleFormatRendered {
     val originalPrefix = fetchInfoChapterNumberPrefix(originalTitle)
-    val fetchedSuffix = fetchInfoFetchedTitleSuffix(item)
+    val fetchedName = fetchInfoFetchedTitleName(item)
     if (autoStyle != null && originalPrefix.isNotBlank()) {
-        return renderTitleFormat(originalPrefix, fetchedSuffix, autoStyle)
+        return renderTitleFormat(originalPrefix, fetchedName, autoStyle)
     }
     val plainTitle = if (originalPrefix.isBlank()) {
-        fetchedSuffix.ifBlank { ChapterDetector.cleanTitle(item.title) }
+        fetchedName.ifBlank { ChapterDetector.cleanTitle(item.title) }
     } else {
-        listOf(originalPrefix, fetchedSuffix)
+        listOf(originalPrefix, fetchedName)
             .filter { it.isNotBlank() }
             .joinToString(" ")
     }
@@ -224,34 +224,6 @@ internal fun fetchInfoChapterNumberPrefix(title: String): String {
         .orEmpty()
 }
 
-private fun fetchInfoFetchedTitleSuffix(item: FetchedCatalogItem): String {
-    val clean = ChapterDetector.cleanTitle(item.title.ifBlank { item.chapterTitle })
-    val withoutSequence = fetchInfoStripFetchedSequence(clean, item.sequence)
-    val withoutChapterPrefix = FETCH_INFO_CHAPTER_PREFIX_REGEX
-        .find(withoutSequence)
-        ?.let { withoutSequence.substring(it.range.last + 1) }
-        ?: withoutSequence
-    return fetchInfoStripTitleSeparators(withoutChapterPrefix)
-}
-
-private fun fetchInfoStripFetchedSequence(title: String, sequence: String): String {
-    val cleanSequence = sequence.trim()
-    val withoutExplicitSequence = if (cleanSequence.isNotBlank()) {
-        title.replaceFirst(
-            Regex("""^\s*${Regex.escape(cleanSequence)}\s*[|｜、.．:：\-—–_]*\s*"""),
-            ""
-        )
-    } else {
-        title
-    }
-    return withoutExplicitSequence.replaceFirst(
-        Regex("""^\s*\d+\s*[|｜]\s*"""),
-        ""
-    )
-}
-
-private fun fetchInfoStripTitleSeparators(title: String): String {
-    return title.trim()
-        .replaceFirst(Regex("""^[\s|｜、.．:：\-—–_]+"""), "")
-        .trim()
+private fun fetchInfoFetchedTitleName(item: FetchedCatalogItem): String {
+    return ChapterDetector.cleanTitle(item.title.ifBlank { item.chapterTitle })
 }

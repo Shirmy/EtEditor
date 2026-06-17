@@ -273,6 +273,36 @@ class ToolRuntimeParameterUtilsTest {
     }
 
     @Test
+    fun buildFetchInfoParametersReadsCatalogFilterEnabledDefaultingTrue() {
+        val on = buildFetchInfoParameters(
+            values = mapOf(FETCH_INFO_PARAM_CONTENT to FETCH_INFO_CONTENT_CATALOG),
+            sourceOptions = FetchInfoSources.options,
+            contentOptionsForSource = { listOf(FETCH_INFO_CONTENT_CATALOG to "Catalog") },
+            defaultQuery = "Book",
+            expectedAuthor = "",
+            sosadLoginCookie = "",
+            introTargetPath = "OEBPS/Text/intro.xhtml",
+            trueValue = BOOL_TRUE
+        )
+        assertTrue(on.catalogFilterEnabled)
+
+        val off = buildFetchInfoParameters(
+            values = mapOf(
+                FETCH_INFO_PARAM_CONTENT to FETCH_INFO_CONTENT_CATALOG,
+                FETCH_INFO_PARAM_CATALOG_FILTER_ENABLED to BOOL_FALSE
+            ),
+            sourceOptions = FetchInfoSources.options,
+            contentOptionsForSource = { listOf(FETCH_INFO_CONTENT_CATALOG to "Catalog") },
+            defaultQuery = "Book",
+            expectedAuthor = "",
+            sosadLoginCookie = "",
+            introTargetPath = "OEBPS/Text/intro.xhtml",
+            trueValue = BOOL_TRUE
+        )
+        assertFalse(off.catalogFilterEnabled)
+    }
+
+    @Test
     fun buildFetchInfoParametersFallsBackInvalidOptions() {
         val parameters = buildFetchInfoParameters(
             values = mapOf(
