@@ -106,7 +106,7 @@ internal fun isSosadAllowedHttpsUrl(url: String): Boolean {
 }
 
 internal fun isSosadAllowedImageUrl(url: String): Boolean {
-    return sosadAllowedImageHost(url) != null
+    return sosadAllowedImageHost(url) != null || isSosadDirectImageHttpsUrl(url)
 }
 
 internal fun isSosadSameHostHttpsRedirect(fromUrl: String, toUrl: String): Boolean {
@@ -116,9 +116,7 @@ internal fun isSosadSameHostHttpsRedirect(fromUrl: String, toUrl: String): Boole
 }
 
 internal fun isSosadImageHttpsRedirect(fromUrl: String, toUrl: String): Boolean {
-    val fromHost = sosadAllowedImageHost(fromUrl) ?: return false
-    val toHost = sosadAllowedImageHost(toUrl) ?: return false
-    return fromHost == toHost
+    return isSosadAllowedImageUrl(fromUrl) && isSosadAllowedImageUrl(toUrl)
 }
 
 private fun sosadAllowedHost(url: String): String? {
@@ -129,6 +127,15 @@ private fun sosadAllowedHost(url: String): String? {
 private fun sosadAllowedImageHost(url: String): String? {
     val asciiHost = httpsAsciiHost(url) ?: return null
     return asciiHost.takeIf { it in SOSAD_ALLOWED_HOSTS || it in SOSAD_IMAGE_HOSTS }
+}
+
+// 白名单之外的图片：只要是 HTTPS 图片直链（.jpg/.png/.webp/.gif）就放行，
+// 让任意图床的正文配图都能抓取。是否携带登录 Cookie 仍由 isSosadAllowedHttpsUrl 单独判断
+// （只认废文自家域名），因此放宽下载范围不会把废文 Cookie 泄露给第三方图床。
+private fun isSosadDirectImageHttpsUrl(url: String): Boolean {
+    if (httpsAsciiHost(url) == null) return false
+    val path = url.trim().substringBefore('#').substringBefore('?')
+    return sosadDirectImageExtensionRegex.containsMatchIn(path)
 }
 
 private fun httpsAsciiHost(url: String): String? {
@@ -155,6 +162,11 @@ private val SOSAD_ALLOWED_HOSTS = setOf(
 
 private val SOSAD_IMAGE_HOSTS = setOf(
     "i.ibb.co"
+)
+
+private val sosadDirectImageExtensionRegex = Regex(
+    """\.(?:jpe?g|png|webp|gif)$""",
+    RegexOption.IGNORE_CASE
 )
 
 internal fun shouldMarkSosadLoginInvalid(message: String, error: Throwable? = null): Boolean {

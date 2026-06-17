@@ -135,11 +135,17 @@ class SosadRequestUtilsTest {
     }
 
     @Test
-    fun imageUrlAllowsImageHostButRegularHttpsUrlDoesNot() {
+    fun imageUrlAllowsImageHostsAndHttpsDirectImageLinks() {
         assertTrue(isSosadAllowedImageUrl("https://i.ibb.co/image.png"))
         assertFalse(isSosadAllowedHttpsUrl("https://i.ibb.co/image.png"))
         assertTrue(isSosadAllowedImageUrl("https://sosad.fun/images/pic.jpg"))
+        // 白名单之外的图床：HTTPS 图片直链放行
+        assertTrue(isSosadAllowedImageUrl("https://i.postimg.cc/K8bG15Pk/IMG-0568.jpg"))
+        assertTrue(isSosadAllowedImageUrl("https://i.imgur.com/abc.png?x=1"))
+        // 仍被拒：非 HTTPS、或非图片链接
         assertFalse(isSosadAllowedImageUrl("http://i.ibb.co/image.png"))
+        assertFalse(isSosadAllowedImageUrl("http://i.postimg.cc/x/pic.jpg"))
+        assertFalse(isSosadAllowedImageUrl("https://evil.com/thread/1"))
     }
 
     @Test
@@ -156,22 +162,30 @@ class SosadRequestUtilsTest {
             requireSosadAllowedHttpsUrl("https://evil.com/thread/1", "废文链接")
         }
         assertThrows(IllegalStateException::class.java) {
-            requireSosadAllowedImageUrl("https://evil.com/image.png", "图片")
+            requireSosadAllowedImageUrl("https://evil.com/thread/1", "图片")
         }
     }
 
     @Test
-    fun imageRedirectRequiresSameAllowedImageHost() {
+    fun imageRedirectAllowsHttpsImageLinks() {
         assertTrue(
             isSosadImageHttpsRedirect(
                 fromUrl = "https://i.ibb.co/a.png",
                 toUrl = "https://i.ibb.co/b.png"
             )
         )
+        // 跨图床的图片直链跳转也允许
+        assertTrue(
+            isSosadImageHttpsRedirect(
+                fromUrl = "https://i.ibb.co/a.png",
+                toUrl = "https://i.postimg.cc/x/b.png"
+            )
+        )
+        // 目标不是图片直链：拒绝
         assertFalse(
             isSosadImageHttpsRedirect(
                 fromUrl = "https://i.ibb.co/a.png",
-                toUrl = "https://evil.com/b.png"
+                toUrl = "https://evil.com/b"
             )
         )
     }

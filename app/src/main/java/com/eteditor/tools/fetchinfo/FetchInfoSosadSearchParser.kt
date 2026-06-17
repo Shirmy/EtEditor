@@ -46,7 +46,9 @@ private suspend fun findSosadDetailUrl(
             FetchHttpClient.getText(searchUrl, headers, ::isSosadSameHostHttpsRedirect)
         }.getOrNull()
             ?: continue
-        findSosadDetailUrlInSearchHtml(html, searchUrl)?.let { return it }
+        // 镜像能打开:以这个镜像为准,找不到详情页就不再换其他镜像。
+        return findSosadDetailUrlInSearchHtml(html, searchUrl)
+            ?: error("没有从废文搜索结果找到页面：$query")
     }
     error("没有从废文搜索结果找到页面")
 }
@@ -64,13 +66,14 @@ internal suspend fun searchSosadItems(
         query.startsWith("https://", ignoreCase = true)
     val normalizedQuery = query.normalizeSearchText()
     val normalizedExpectedAuthor = expectedAuthor.normalizeSearchText()
-    val fallbackItems = mutableListOf<SosadSearchItem>()
     for ((index, searchUrl) in searchUrls.withIndex()) {
         onProgress("搜索镜像 ${index + 1}/${searchUrls.size}：${sosadSearchHostLabel(searchUrl)}")
         val html = runCatching {
             FetchHttpClient.getText(searchUrl, headers, ::isSosadSameHostHttpsRedirect)
         }.getOrNull()
             ?: continue
+        // 镜像能打开:各镜像内容一致,以这个镜像的结果为准,不再尝试其他镜像。
+        // 搜不到书名时返回该镜像结果(可能为空),由上层换下一个书源。
         val items = parseSosadSearchItems(html, searchUrl)
             .distinctBy { item -> sosadThreadId(item.detailUrl) ?: item.detailUrl }
             .sortForSosadMode(query, searchMode)
@@ -93,15 +96,13 @@ internal suspend fun searchSosadItems(
         } else {
             emptyList()
         }
-        when {
-            authorMatches.isNotEmpty() -> return authorMatches
-            normalizedExpectedAuthor.isBlank() && titleMatches.isNotEmpty() -> return titleMatches
+        return when {
+            authorMatches.isNotEmpty() -> authorMatches
+            normalizedExpectedAuthor.isBlank() && titleMatches.isNotEmpty() -> titleMatches
+            else -> items
         }
-        fallbackItems += items
     }
-    return fallbackItems
-        .distinctBy { item -> sosadThreadId(item.detailUrl) ?: item.detailUrl }
-        .sortForSosadMode(query, searchMode)
+    return emptyList()
 }
 
 private fun sosadSearchUrls(query: String): List<String> {
