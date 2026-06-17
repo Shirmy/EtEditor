@@ -323,6 +323,68 @@ class TextSourceLocationUtilsTest {
         )
     }
 
+    @Test
+    fun txtCurrentChapterIndexForLocationResolvesSearchLocationToCurrentChapter() {
+        val text = "Intro\nChapter 1\nBody 1\nChapter 2\nBody 2"
+        val firstStart = text.indexOf("Chapter 1")
+        val secondStart = text.indexOf("Chapter 2")
+        val document = TxtDocument(
+            originalName = "book.txt",
+            text = text,
+            encoding = "UTF-8",
+            chapters = listOf(
+                TxtChapter(1, 1, 3, "Chapter 1", 2, startIndex = firstStart, endIndex = secondStart),
+                TxtChapter(2, 3, 5, "Chapter 2", 2, startIndex = secondStart, endIndex = text.length)
+            )
+        )
+
+        assertEquals(
+            1,
+            txtCurrentChapterIndexForLocation(
+                document = document,
+                requestedChapterIndex = 9,
+                absoluteStart = text.indexOf("Body 2")
+            )
+        )
+    }
+
+    @Test
+    fun txtCurrentChapterIndexForLocationResolvesPrefaceAndUnchapteredText() {
+        val prefaceText = "Intro\nChapter 1\nBody 1"
+        val firstStart = prefaceText.indexOf("Chapter 1")
+        val documentWithPreface = TxtDocument(
+            originalName = "book.txt",
+            text = prefaceText,
+            encoding = "UTF-8",
+            chapters = listOf(
+                TxtChapter(1, 1, 3, "Chapter 1", 2, startIndex = firstStart, endIndex = prefaceText.length)
+            )
+        )
+        val documentWithoutChapters = TxtDocument(
+            originalName = "plain.txt",
+            text = "Plain body",
+            encoding = "UTF-8",
+            chapters = emptyList()
+        )
+
+        assertEquals(
+            TXT_PREFACE_CHAPTER_INDEX,
+            txtCurrentChapterIndexForLocation(
+                document = documentWithPreface,
+                requestedChapterIndex = 0,
+                absoluteStart = 0
+            )
+        )
+        assertEquals(
+            0,
+            txtCurrentChapterIndexForLocation(
+                document = documentWithoutChapters,
+                requestedChapterIndex = 3,
+                absoluteStart = 0
+            )
+        )
+    }
+
     private fun searchResult(id: String, chapterIndex: Int, start: Int, end: Int): TextSearchResult {
         return TextSearchResult(
             id = id,

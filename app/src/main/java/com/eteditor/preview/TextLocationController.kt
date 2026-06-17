@@ -60,6 +60,7 @@ private fun EditorController.selectEpubTextLocation(
     val book = epub ?: return false
     val chapter = book.chapters.getOrNull(chapterIndex) ?: return false
     val highlightRange = htmlVisibleBodyRelativeRange(chapter.html, sourceStart, sourceEnd) ?: return false
+    previewChapterIndex = chapterIndex
     previewDisplayChapterIndexOverride = chapterIndex
     previewHighlightChapterIndex = chapterIndex
     previewHighlightSourceStart = highlightRange.first
@@ -89,6 +90,11 @@ internal fun EditorController.selectTxtTextLocation(
     val document = txt ?: return false
     if (absoluteStart < 0 || absoluteEnd <= absoluteStart || absoluteStart > document.text.length) return false
     if (document.chapters.isEmpty()) {
+        previewChapterIndex = 0
+        txtFullPreviewCachedAnchor = TxtFullPreviewAnchor(
+            offset = absoluteStart.coerceIn(0, document.text.length),
+            lineIndex = countLineBreaksBefore(document.text, absoluteStart.coerceIn(0, document.text.length))
+        )
         previewDisplayChapterIndexOverride = 0
         previewHighlightChapterIndex = 0
         previewHighlightSourceStart = absoluteStart.coerceIn(0, document.text.length)
@@ -100,6 +106,11 @@ internal fun EditorController.selectTxtTextLocation(
 
     txtPrefaceEndIndex(document)?.let { prefaceEnd ->
         if (absoluteStart < prefaceEnd) {
+            previewChapterIndex = TXT_PREFACE_CHAPTER_INDEX
+            txtFullPreviewCachedAnchor = TxtFullPreviewAnchor(
+                offset = absoluteStart.coerceIn(0, prefaceEnd),
+                lineIndex = countLineBreaksBefore(document.text, absoluteStart.coerceIn(0, prefaceEnd))
+            )
             previewDisplayChapterIndexOverride = TXT_PREFACE_CHAPTER_INDEX
             previewHighlightChapterIndex = TXT_PREFACE_CHAPTER_INDEX
             previewHighlightSourceStart = absoluteStart.coerceIn(0, prefaceEnd)
@@ -123,6 +134,11 @@ internal fun EditorController.selectTxtTextLocation(
     val chapter = document.chapters.getOrNull(resolvedIndex) ?: return false
     val chapterStart = chapter.startIndex.coerceIn(0, document.text.length)
     val chapterEnd = chapter.endIndex.coerceIn(chapterStart, document.text.length)
+    previewChapterIndex = txtCurrentChapterIndexForLocation(document, chapterIndex, absoluteStart)
+    txtFullPreviewCachedAnchor = TxtFullPreviewAnchor(
+        offset = chapterStart,
+        lineIndex = chapter.lineIndex.coerceAtLeast(0)
+    )
     previewDisplayChapterIndexOverride = resolvedIndex
     previewHighlightChapterIndex = resolvedIndex
     previewHighlightSourceStart = (absoluteStart - chapterStart).coerceIn(0, chapterEnd - chapterStart)

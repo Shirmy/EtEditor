@@ -15,6 +15,28 @@ fun EditorController.txtPrefaceWordCount(): Int {
     return ChapterDetector.countVisibleChars(document.text.substring(0, prefaceEnd))
 }
 
+internal fun txtCurrentChapterIndexForLocation(
+    document: TxtDocument,
+    requestedChapterIndex: Int,
+    absoluteStart: Int
+): Int {
+    if (document.chapters.isEmpty()) return 0
+    val safeStart = absoluteStart.coerceIn(0, document.text.length)
+    txtPrefaceEndIndex(document)?.let { prefaceEnd ->
+        if (safeStart < prefaceEnd) {
+            return TXT_PREFACE_CHAPTER_INDEX
+        }
+    }
+    val resolvedIndex = requestedChapterIndex
+        .takeIf { it in document.chapters.indices }
+        ?.takeIf { index ->
+            val chapter = document.chapters[index]
+            safeStart in chapter.startIndex..chapter.endIndex.coerceAtLeast(chapter.startIndex)
+        }
+        ?: document.chapters.indexOfLast { chapter -> chapter.startIndex <= safeStart }
+    return resolvedIndex.takeIf { it >= 0 } ?: 0
+}
+
 internal fun EditorController.currentTxtPreviewSourceAnchorOffset(document: TxtDocument): Int {
     selectedTxtPreviewLocation()?.let { location ->
         return location.sourceStart.coerceIn(0, document.text.length)
