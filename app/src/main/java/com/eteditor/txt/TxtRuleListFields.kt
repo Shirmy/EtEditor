@@ -69,6 +69,7 @@ private fun TxtChapterRuleList(
             rule = rule,
             name = displayName,
             drag = drag,
+            sortMode = sortMode,
             onEnabledChange = { enabled ->
                 scope.launchAfterTxtMoveChapterSync(controller, "启用目录规则") {
                     controller.updateTxtChapterRuleEnabled(rule.index, enabled, deferRefresh = true)
@@ -113,6 +114,7 @@ private fun TxtChapterRuleRow(
     rule: TxtChapterRuleItem,
     name: String,
     drag: RuleListDragContext,
+    sortMode: Boolean = false,
     onEnabledChange: (Boolean) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -137,6 +139,7 @@ private fun TxtChapterRuleRow(
         openSwipeRowKey = drag.openSwipeRowKey,
         onOpenSwipeRowChange = drag.onOpenSwipeRowChange,
         showDragHandle = drag.reorderEnabled,
+        sortMode = sortMode,
         leadingContent = {
             RuleEnableSwitch(
                 checked = rule.enabled,
@@ -395,7 +398,8 @@ internal fun TxtPurifyTextPanel(
                             },
                             openSwipeRowKey = openSwipeRowKey,
                             onOpenSwipeRowChange = { openSwipeRowKey = it },
-                            showDragHandle = sortMode
+                            showDragHandle = sortMode,
+                            sortMode = sortMode
                         )
                     }
                 }
@@ -466,7 +470,8 @@ internal fun TxtPurifyTextPanel(
                             },
                             openSwipeRowKey = openSwipeRowKey,
                             onOpenSwipeRowChange = { openSwipeRowKey = it },
-                            showDragHandle = sortMode
+                            showDragHandle = sortMode,
+                            sortMode = sortMode
                         )
                     }
                 }
@@ -505,7 +510,8 @@ private fun TxtPurifyRuleRow(
     onDragVisualChange: (String?, Int?, Float) -> Unit,
     openSwipeRowKey: Any?,
     onOpenSwipeRowChange: (Any?) -> Unit,
-    showDragHandle: Boolean
+    showDragHandle: Boolean,
+    sortMode: Boolean = false
 ) {
     var showEditDialog by remember(rule.index) { mutableStateOf(false) }
     var deleteConfirm by remember(rule.index) { mutableStateOf<DeleteConfirmRequest?>(null) }
@@ -542,6 +548,7 @@ private fun TxtPurifyRuleRow(
         openSwipeRowKey = openSwipeRowKey,
         onOpenSwipeRowChange = onOpenSwipeRowChange,
         showDragHandle = showDragHandle,
+        sortMode = sortMode,
         leadingContent = {
             RuleEnableSwitch(
                 checked = rule.enabled,

@@ -238,6 +238,8 @@ private fun TxtTextReplacePresetRow(
         onDraggingChange = drag.onDraggingChange,
         openSwipeRowKey = drag.openSwipeRowKey,
         onOpenSwipeRowChange = drag.onOpenSwipeRowChange,
+        showDragHandle = false,
+        sortMode = drag.itemCount > 1,
         leadingContent = {
             Surface(
                 onClick = onApply,
@@ -513,6 +515,8 @@ private fun EpubTextReplacePresetRow(
         onDraggingChange = drag.onDraggingChange,
         openSwipeRowKey = drag.openSwipeRowKey,
         onOpenSwipeRowChange = drag.onOpenSwipeRowChange,
+        showDragHandle = false,
+        sortMode = drag.itemCount > 1,
         leadingContent = {
             Surface(
                 onClick = onApply,

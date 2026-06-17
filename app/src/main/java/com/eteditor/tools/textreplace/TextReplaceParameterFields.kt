@@ -11,11 +11,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -25,12 +29,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -313,6 +319,10 @@ private fun TextReplaceBatchRulesField(
     var editingIndex by remember(rawValue) { mutableStateOf<Int?>(null) }
     var showEditor by remember(rawValue) { mutableStateOf(false) }
     val editingRule = editingIndex?.let { index -> rules.getOrNull(index) }
+    var sortMode by remember { mutableStateOf(false) }
+    LaunchedEffect(rules.size) {
+        if (rules.size < 2) sortMode = false
+    }
 
     Column(
         modifier = modifier,
@@ -330,6 +340,17 @@ private fun TextReplaceBatchRulesField(
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
             )
+            if (rules.size >= 2) {
+                IconButton(
+                    onClick = { sortMode = !sortMode },
+                    colors = IconButtonDefaults.iconButtonColors(
+                        contentColor = if (sortMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    modifier = Modifier.size(30.dp)
+                ) {
+                    Icon(Icons.Outlined.SwapVert, contentDescription = if (sortMode) "退出排序" else "排序", modifier = Modifier.size(18.dp))
+                }
+            }
             IconButton(
                 onClick = {
                     editingIndex = null
@@ -352,12 +373,20 @@ private fun TextReplaceBatchRulesField(
                 TextReplaceBatchRuleRow(
                     index = index,
                     rule = rule,
+                    itemCount = rules.size,
+                    sortMode = sortMode,
                     onEdit = {
                         editingIndex = index
                         showEditor = true
                     },
                     onDelete = {
                         onValueChange(serializeTextReplaceBatchUiRules(rules.filterIndexed { rowIndex, _ -> rowIndex != index }))
+                    },
+                    onMove = { targetIndex ->
+                        val mutable = rules.toMutableList()
+                        val item = mutable.removeAt(index)
+                        mutable.add(targetIndex, item)
+                        onValueChange(serializeTextReplaceBatchUiRules(mutable))
                     }
                 )
             }
@@ -389,12 +418,15 @@ private fun TextReplaceBatchRulesField(
 private fun TextReplaceBatchRuleRow(
     index: Int,
     rule: TextReplaceBatchUiRule,
+    itemCount: Int,
+    sortMode: Boolean = false,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onMove: (Int) -> Unit
 ) {
     var deleteConfirm by remember(index, rule.name) { mutableStateOf<DeleteConfirmRequest?>(null) }
     Surface(
-        onClick = onEdit,
+        onClick = { if (!sortMode) onEdit() },
         shape = RowShape,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.72f)),
@@ -406,6 +438,13 @@ private fun TextReplaceBatchRuleRow(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(
+                text = "${index + 1}".padStart(2, '0'),
+                style = MaterialTheme.typography.labelMedium,
+                fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.width(22.dp)
+            )
+            Text(
                 text = rule.name.ifBlank { "规则${index + 1}" },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -413,25 +452,42 @@ private fun TextReplaceBatchRuleRow(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
             )
-            IconButton(
-                onClick = onEdit,
-                modifier = Modifier.size(28.dp),
-                colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.primary)
-            ) {
-                Icon(Icons.Outlined.Edit, contentDescription = "编辑批量替换", modifier = Modifier.size(16.dp))
-            }
-            IconButton(
-                onClick = {
-                    deleteConfirm = DeleteConfirmRequest(
-                        title = "确认删除规则",
-                        message = "确定删除批量替换“${rule.name.ifBlank { "规则${index + 1}" }}”吗？",
-                        onConfirm = onDelete
-                    )
-                },
-                modifier = Modifier.size(28.dp),
-                colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.error)
-            ) {
-                Icon(Icons.Outlined.Delete, contentDescription = "删除批量替换", modifier = Modifier.size(16.dp))
+            if (sortMode) {
+                IconButton(
+                    onClick = { if (index > 0) onMove(index - 1) },
+                    enabled = index > 0,
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(Icons.Outlined.KeyboardArrowUp, contentDescription = "上移", modifier = Modifier.size(18.dp))
+                }
+                IconButton(
+                    onClick = { if (index < itemCount - 1) onMove(index + 1) },
+                    enabled = index < itemCount - 1,
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "下移", modifier = Modifier.size(18.dp))
+                }
+            } else {
+                IconButton(
+                    onClick = onEdit,
+                    modifier = Modifier.size(28.dp),
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Icon(Icons.Outlined.Edit, contentDescription = "编辑批量替换", modifier = Modifier.size(16.dp))
+                }
+                IconButton(
+                    onClick = {
+                        deleteConfirm = DeleteConfirmRequest(
+                            title = "确认删除规则",
+                            message = "确定删除批量替换“${rule.name.ifBlank { "规则${index + 1}" }}”吗？",
+                            onConfirm = onDelete
+                        )
+                    },
+                    modifier = Modifier.size(28.dp),
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Icon(Icons.Outlined.Delete, contentDescription = "删除批量替换", modifier = Modifier.size(16.dp))
+                }
             }
         }
     }

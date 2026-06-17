@@ -313,7 +313,8 @@ private fun TxtBookTitleRuleList(
         TxtBookTitleRuleRow(
             rule = rule,
             controller = controller,
-            drag = drag
+            drag = drag,
+            sortMode = sortMode
         )
     }
 }
@@ -322,7 +323,8 @@ private fun TxtBookTitleRuleList(
 private fun TxtBookTitleRuleRow(
     rule: TxtBookTitleRuleItem,
     controller: EditorController,
-    drag: RuleListDragContext
+    drag: RuleListDragContext,
+    sortMode: Boolean = false
 ) {
     var showEditDialog by remember(rule.index) { mutableStateOf(false) }
     var deleteConfirm by remember(rule.index) { mutableStateOf<DeleteConfirmRequest?>(null) }
@@ -352,6 +354,7 @@ private fun TxtBookTitleRuleRow(
         openSwipeRowKey = drag.openSwipeRowKey,
         onOpenSwipeRowChange = drag.onOpenSwipeRowChange,
         showDragHandle = drag.reorderEnabled,
+        sortMode = sortMode,
         leadingContent = {
             RuleSelectCircle(
                 selected = rule.matchCount > 0

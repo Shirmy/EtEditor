@@ -31,6 +31,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DragHandle
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -705,6 +707,7 @@ internal fun DraggableCompactRuleListRow(
     subtitle: String = "",
     onClick: (() -> Unit)? = null,
     showDragHandle: Boolean = true,
+    sortMode: Boolean = false,
     leadingContent: (@Composable RowScope.() -> Unit)? = null
 ) {
     var ownedDragOffset by remember(rowKey, itemCount) { mutableStateOf(0f) }
@@ -729,7 +732,24 @@ internal fun DraggableCompactRuleListRow(
         onClick = onClick,
         leadingContent = leadingContent,
         trailingContent = {
-            if (showDragHandle) {
+            if (sortMode) {
+                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    IconButton(
+                        onClick = { if (position > 0) onMove(position - 1) },
+                        enabled = position > 0,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(Icons.Outlined.KeyboardArrowUp, contentDescription = "上移", modifier = Modifier.size(18.dp))
+                    }
+                    IconButton(
+                        onClick = { if (position < itemCount - 1) onMove(position + 1) },
+                        enabled = position < itemCount - 1,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "下移", modifier = Modifier.size(18.dp))
+                    }
+                }
+            } else if (showDragHandle) {
                 RuleListDragHandle(
                     rowKey = rowKey,
                     position = position,
