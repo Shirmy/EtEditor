@@ -152,6 +152,10 @@ internal fun AutomationPanel(
                     },
                     onDelete = { chainId ->
                         controller.removeAutomationChain(chainId)
+                    },
+                    onCreate = {
+                        controller.createAutomationChain()
+                        mode = AutomationViewMode.Edit
                     }
                 )
             }
@@ -175,6 +179,10 @@ internal fun AutomationPanel(
                         },
                         onDelete = { chainId ->
                             controller.removeAutomationChain(chainId)
+                        },
+                        onCreate = {
+                            controller.createAutomationChain()
+                            mode = AutomationViewMode.Edit
                         }
                     )
                 }
@@ -199,6 +207,10 @@ internal fun AutomationPanel(
                         },
                         onDelete = { chainId ->
                             controller.removeAutomationChain(chainId)
+                        },
+                        onCreate = {
+                            controller.createAutomationChain()
+                            mode = AutomationViewMode.Edit
                         }
                     )
                 }
@@ -302,7 +314,7 @@ private fun AutomationEditView(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(editScrollState)
-            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .padding(start = 12.dp, end = 12.dp, bottom = 6.dp)
             .padding(end = 10.dp, bottom = 52.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -310,7 +322,7 @@ private fun AutomationEditView(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(40.dp),
+                    .height(WorkspaceHeaderHeight),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {

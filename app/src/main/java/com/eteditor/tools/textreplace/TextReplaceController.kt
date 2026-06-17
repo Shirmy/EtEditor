@@ -102,60 +102,6 @@ fun EditorController.applySelectedTextSearchResult(toolId: String): Boolean {
     return true
 }
 
-fun EditorController.applySelectedTextSearchResults(toolId: String, resultIds: Set<String>): Boolean {
-    if (textSearchToolId != toolId) {
-        statusMessage = "没有可执行的替换预览"
-        return false
-    }
-    if (resultIds.isEmpty()) {
-        statusMessage = "没有勾选可替换内容"
-        return false
-    }
-    val tool = textReplaceToolForPreview(toolId) ?: return false
-    val parameters = textReplaceParameters(tool).copy(preview = false)
-    if (parameters.isReplacementMode()) {
-        statusMessage = ".replacement 预览请在分组预览中替换"
-        return false
-    }
-    val activeRules = textReplaceRules(parameters)
-        ?.filter { it.enabled && it.find.isNotEmpty() }
-        ?: return false
-    val plans = try {
-        textSearchResults
-            .filter { result -> result.id in resultIds }
-            .mapNotNull { result ->
-                val rule = activeRules.getOrNull(result.ruleIndex) ?: return@mapNotNull null
-                ReplacementMatchPlan(
-                    chapterIndex = result.chapterIndex,
-                    sourceStart = result.sourceStart,
-                    sourceEnd = result.sourceEnd,
-                    replacementText = singleMatchReplacement(result.matchText, rule, caseSensitive = false)
-                )
-            }
-    } catch (error: IllegalArgumentException) {
-        statusMessage = textReplaceRegexErrorMessage(error)
-        return false
-    }
-    if (plans.isEmpty()) {
-        statusMessage = "没有勾选可替换内容"
-        return false
-    }
-    applyDeferredTxtTextReplacementRefresh()
-    val applied = applyReplacementMatchPlans(plans)
-    if (applied <= 0) {
-        statusMessage = "选中内容已无法替换，请重新预览"
-        return false
-    }
-
-    checkReport = null
-    markDocumentChanged()
-    clearPreviewHighlight()
-    clearTextSearchState()
-    refreshChapters()
-    statusMessage = "替换完成：$applied 处"
-    return true
-}
-
 suspend fun EditorController.applySelectedTextSearchResultsWithProgress(
     toolId: String,
     resultIds: Set<String>,
@@ -218,8 +164,11 @@ suspend fun EditorController.applySelectedTextSearchResultsWithProgress(
     checkReport = null
     markDocumentChanged()
     clearPreviewHighlight()
-    clearTextSearchState()
-    refreshChapters()
+    refreshTextSearchPreviewAfterSelectedReplacement(
+        toolId = toolId,
+        parameters = parameters,
+        activeRules = activeRules
+    )
     statusMessage = "替换完成：$applied 处"
     return true
 }
@@ -429,6 +378,32 @@ internal fun EditorController.rebuildCurrentTextSearchPreviewAfterDocumentChange
     selectedTextSearchResultId = null
     selectedReplacementPreviewMatchId = null
     return true
+}
+
+private fun EditorController.refreshTextSearchPreviewAfterSelectedReplacement(
+    toolId: String,
+    parameters: TextReplaceParameters,
+    activeRules: List<TextReplaceRule>
+) {
+    if (kind != DocumentKind.Epub) {
+        clearTextSearchState()
+        refreshChapters()
+        return
+    }
+    refreshChapters()
+    val rebuiltResults = try {
+        buildTextSearchResults(activeRules, parameters)
+    } catch (error: IllegalArgumentException) {
+        emptyList()
+    }
+    if (rebuiltResults.isEmpty()) {
+        clearTextSearchState()
+    } else {
+        textSearchToolId = toolId
+        textSearchResults = rebuiltResults
+        selectedTextSearchResultId = null
+        selectedReplacementPreviewMatchId = null
+    }
 }
 
 internal fun EditorController.runTextReplaceTool(tool: EditorTool, manual: Boolean): Boolean {

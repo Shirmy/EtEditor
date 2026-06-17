@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,12 +19,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.SwapVert
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -42,6 +45,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -53,7 +57,8 @@ internal fun AutomationChainList(
     modifier: Modifier = Modifier,
     onRun: (String) -> Unit,
     onEdit: (String) -> Unit,
-    onDelete: (String) -> Unit
+    onDelete: (String) -> Unit,
+    onCreate: () -> Unit
 ) {
     val ungroupedLabel = "未分组"
     var sortingGroup by remember { mutableStateOf<String?>(null) }
@@ -73,127 +78,177 @@ internal fun AutomationChainList(
             openSwipeChainId = null
         }
     }
+    if (controller.automationChains.isEmpty()) {
+        AutomationChainEmptyState(
+            onCreate = onCreate,
+            modifier = modifier.fillMaxSize()
+        )
+        return
+    }
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 12.dp, top = 8.dp, end = 12.dp, bottom = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        contentPadding = PaddingValues(start = 12.dp, top = 4.dp, end = 12.dp, bottom = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        if (controller.automationChains.isEmpty()) {
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillParentMaxWidth()
-                        .padding(top = 24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "暂无执行中",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
         orderedGroupNames.forEach { groupName ->
             val chains = chainsByGroup[groupName].orEmpty()
+            val chainIds = chains.map { it.id }
             item(key = "automation-group-$groupName") {
-                Surface(
-                    shape = RowShape,
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.18f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.78f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(7.dp),
-                        verticalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(30.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(
-                                text = groupName,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.weight(1f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = "${chains.size}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            IconButton(
-                                onClick = {
-                                    sortingGroup = if (sortingGroup == groupName) null else groupName
-                                },
-                                enabled = chains.size > 1,
-                                colors = IconButtonDefaults.iconButtonColors(
-                                    contentColor = if (sortingGroup == groupName) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
-                                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
-                                ),
-                                modifier = Modifier.size(30.dp)
-                            ) {
-                                Icon(Icons.Outlined.SwapVert, contentDescription = "组内排序", modifier = Modifier.size(17.dp))
-                            }
-                        }
-                        chains.forEachIndexed { chainIndex, chain ->
-                            val chainIds = chains.map { it.id }
-                            AutomationChainRow(
-                                rowKey = chain.id,
-                                name = chain.name,
-                                selected = chain.id == controller.selectedAutomationChainId,
-                                stepCount = chain.steps.size,
-                                stepSummary = automationChainStepFlow(controller, chain),
-                                sorting = sortingGroup == groupName,
-                                canMoveUp = chainIndex > 0,
-                                canMoveDown = chainIndex < chains.lastIndex,
-                                onMoveUp = {
-                                    controller.moveAutomationChainWithinDisplayGroup(
-                                        groupName,
-                                        chainIds,
-                                        chainIndex,
-                                        chainIndex - 1
-                                    )
-                                },
-                                onMoveDown = {
-                                    controller.moveAutomationChainWithinDisplayGroup(
-                                        groupName,
-                                        chainIds,
-                                        chainIndex,
-                                        chainIndex + 1
-                                    )
-                                },
-                                onRun = { onRun(chain.id) },
-                                onEdit = { onEdit(chain.id) },
-                                onDelete = { onDelete(chain.id) },
-                                openSwipeRowKey = openSwipeChainId,
-                                onOpenSwipeRowChange = { openSwipeChainId = it }
-                            )
-                        }
+                AutomationGroupHeader(
+                    groupName = groupName,
+                    count = chains.size,
+                    sorting = sortingGroup == groupName,
+                    onToggleSort = {
+                        sortingGroup = if (sortingGroup == groupName) null else groupName
                     }
+                )
+            }
+            chains.forEachIndexed { chainIndex, chain ->
+                item(key = chain.id) {
+                    AutomationChainRow(
+                        rowKey = chain.id,
+                        name = chain.name,
+                        selected = chain.id == controller.selectedAutomationChainId,
+                        stepCount = chain.steps.size,
+                        sorting = sortingGroup == groupName,
+                        canMoveUp = chainIndex > 0,
+                        canMoveDown = chainIndex < chains.lastIndex,
+                        onMoveUp = {
+                            controller.moveAutomationChainWithinDisplayGroup(
+                                groupName,
+                                chainIds,
+                                chainIndex,
+                                chainIndex - 1
+                            )
+                        },
+                        onMoveDown = {
+                            controller.moveAutomationChainWithinDisplayGroup(
+                                groupName,
+                                chainIds,
+                                chainIndex,
+                                chainIndex + 1
+                            )
+                        },
+                        onRun = { onRun(chain.id) },
+                        onEdit = { onEdit(chain.id) },
+                        onDelete = { onDelete(chain.id) },
+                        openSwipeRowKey = openSwipeChainId,
+                        onOpenSwipeRowChange = { openSwipeChainId = it }
+                    )
                 }
             }
         }
     }
 }
 
-private fun automationChainStepFlow(controller: EditorController, chain: AutomationChain): String {
-    if (chain.steps.isEmpty()) return "未添加步骤"
-    return chain.steps.mapIndexed { index, step ->
-        "${index + 1}.${controller.automationStepLabel(step)}"
-    }.joinToString(" → ")
+@Composable
+private fun AutomationGroupHeader(
+    groupName: String,
+    count: Int,
+    sorting: Boolean,
+    onToggleSort: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 10.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = groupName,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Surface(
+            shape = RoundedCornerShape(50),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+        ) {
+            Text(
+                text = "$count",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 9.dp, vertical = 2.dp)
+            )
+        }
+        IconButton(
+            onClick = onToggleSort,
+            enabled = count > 1,
+            colors = IconButtonDefaults.iconButtonColors(
+                contentColor = if (sorting) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
+            ),
+            modifier = Modifier.size(30.dp)
+        ) {
+            Icon(Icons.Outlined.SwapVert, contentDescription = "组内排序", modifier = Modifier.size(17.dp))
+        }
+    }
+}
+
+@Composable
+private fun AutomationChainEmptyState(
+    onCreate: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Column(
+            modifier = Modifier.padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        RoundedCornerShape(50)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Outlined.PlayArrow,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.size(30.dp)
+                )
+            }
+            Text(
+                text = "还没有执行链",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "把多个功能串成一条链,一键按顺序执行。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+            Button(
+                onClick = onCreate,
+                shape = ControlShape,
+                contentPadding = CompactButtonPadding
+            ) {
+                Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(17.dp))
+                Spacer(Modifier.width(5.dp))
+                Text("新建执行链")
+            }
+        }
+    }
+}
+
+private fun automationChainAvatarText(name: String): String {
+    val trimmed = name.trim()
+    if (trimmed.isEmpty()) return "链"
+    return trimmed.take(1).uppercase()
 }
 
 @Composable
@@ -202,7 +257,6 @@ private fun AutomationChainRow(
     name: String,
     selected: Boolean,
     stepCount: Int,
-    stepSummary: String,
     sorting: Boolean,
     canMoveUp: Boolean,
     canMoveDown: Boolean,
@@ -218,6 +272,7 @@ private fun AutomationChainRow(
     var deleteConfirm by remember(rowKey) { mutableStateOf<DeleteConfirmRequest?>(null) }
     var rowOffsetPx by remember(rowKey) { mutableStateOf(0f) }
     val actionWidth = 72.dp
+    val rowHeight = 56.dp
     val actionWidthPx = with(LocalDensity.current) { actionWidth.toPx() }
     val canSwipe = !sorting
     LaunchedEffect(canSwipe, openSwipeRowKey, rowKey) {
@@ -241,7 +296,7 @@ private fun AutomationChainRow(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .width(actionWidth)
-                    .height(62.dp)
+                    .height(rowHeight)
             ) {
                 Row(
                     modifier = Modifier
@@ -317,79 +372,96 @@ private fun AutomationChainRow(
                     )
                 }
         ) {
-            Column(
-                modifier = Modifier.padding(start = 8.dp, top = 7.dp, end = 8.dp, bottom = 7.dp),
-                verticalArrangement = Arrangement.spacedBy(3.dp)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(rowHeight)
+                    .padding(horizontal = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .width(2.dp)
-                            .height(18.dp)
-                            .background(
-                                if (selected) MaterialTheme.colorScheme.primary else rowColor,
-                                RoundedCornerShape(999.dp)
-                            )
-                    )
-                    Text(
-                        text = name,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = "$stepCount 步",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    if (sorting) {
-                        IconButton(
-                            onClick = onMoveUp,
-                            enabled = canMoveUp,
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Icon(Icons.Outlined.KeyboardArrowUp, contentDescription = "上移 $name", modifier = Modifier.size(17.dp))
-                        }
-                        IconButton(
-                            onClick = onMoveDown,
-                            enabled = canMoveDown,
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "下移 $name", modifier = Modifier.size(17.dp))
-                        }
-                    } else {
-                        IconButton(
-                            onClick = {
-                                rowOffsetPx = 0f
-                                onOpenSwipeRowChange(null)
-                                onRun()
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(
+                            if (selected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
                             },
-                            enabled = stepCount > 0,
-                            colors = IconButtonDefaults.iconButtonColors(
-                                contentColor = MaterialTheme.colorScheme.primary,
-                                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                            ),
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Icon(Icons.Outlined.PlayArrow, contentDescription = "执行 $name", modifier = Modifier.size(17.dp))
+                            RoundedCornerShape(10.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = automationChainAvatarText(name),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (selected) {
+                            MaterialTheme.colorScheme.onPrimary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
                         }
-                    }
+                    )
                 }
                 Text(
-                    text = stepSummary,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(start = 10.dp, end = 2.dp)
+                    overflow = TextOverflow.Ellipsis
                 )
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = if (selected) {
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                    }
+                ) {
+                    Text(
+                        text = "$stepCount 步",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+                if (sorting) {
+                    IconButton(
+                        onClick = onMoveUp,
+                        enabled = canMoveUp,
+                        modifier = Modifier.size(30.dp)
+                    ) {
+                        Icon(Icons.Outlined.KeyboardArrowUp, contentDescription = "上移 $name", modifier = Modifier.size(17.dp))
+                    }
+                    IconButton(
+                        onClick = onMoveDown,
+                        enabled = canMoveDown,
+                        modifier = Modifier.size(30.dp)
+                    ) {
+                        Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "下移 $name", modifier = Modifier.size(17.dp))
+                    }
+                } else {
+                    IconButton(
+                        onClick = {
+                            rowOffsetPx = 0f
+                            onOpenSwipeRowChange(null)
+                            onRun()
+                        },
+                        enabled = stepCount > 0,
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                        ),
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(Icons.Outlined.PlayArrow, contentDescription = "执行 $name", modifier = Modifier.size(18.dp))
+                    }
+                }
             }
         }
     }

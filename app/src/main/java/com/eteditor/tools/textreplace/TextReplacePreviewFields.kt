@@ -134,6 +134,9 @@ fun TextSearchResultsPane(
             yieldToAppUiBeforeHeavyWork()
             val applied = controller.applySelectedTextSearchResultsWithProgress(toolId, resultIds, ::updateExecutionProgress)
             if (applied) {
+                if (controller.textSearchResults.isNotEmpty()) {
+                    controller.clearTextSearchState()
+                }
                 completeWithDeferredRefresh()
             } else {
                 automationStep?.let { step -> controller.failAutomationConfirmationStep(step) }
@@ -268,7 +271,7 @@ fun TextSearchResultsPane(
                     onClick = {
                         executionJob?.cancel()
                         val resultIds = checkedResultIds
-                        if (onApplyStarted != null || automationStep != null) {
+                        if (automationStep != null) {
                             startExecutionAfterClosing(resultIds)
                         } else {
                             executing = true
@@ -281,7 +284,22 @@ fun TextSearchResultsPane(
                                 }
                                 executing = false
                                 if (applied) {
-                                    completeWithDeferredRefresh()
+                                    val keepOpen = shouldKeepTextSearchPreviewOpenAfterSelectedApply(
+                                        hasAutomationStep = false,
+                                        hasAppliedCallback = onApplied != null,
+                                        remainingResults = controller.textSearchResults.size
+                                    )
+                                    if (keepOpen) {
+                                        executionProgress = 1f
+                                        val remainingResultIds = controller.textSearchResults.mapTo(linkedSetOf()) { it.id }
+                                        checkedResultIds = emptySet()
+                                        knownResultIds = remainingResultIds
+                                    } else {
+                                        if (controller.textSearchResults.isNotEmpty()) {
+                                            controller.clearTextSearchState()
+                                        }
+                                        completeWithDeferredRefresh()
+                                    }
                                 } else {
                                     paneMessage = controller.statusMessage.ifBlank { "执行替换失败" }
                                 }
@@ -623,6 +641,14 @@ private fun ReplacementFilePreviewPane(
             onDismiss = { invalidRulesMessage = null }
         )
     }
+}
+
+internal fun shouldKeepTextSearchPreviewOpenAfterSelectedApply(
+    hasAutomationStep: Boolean,
+    hasAppliedCallback: Boolean,
+    remainingResults: Int
+): Boolean {
+    return !hasAutomationStep && !hasAppliedCallback && remainingResults > 0
 }
 
 internal fun displayLineBreakEscapes(text: String): String {

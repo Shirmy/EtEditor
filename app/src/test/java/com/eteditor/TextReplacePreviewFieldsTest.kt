@@ -120,4 +120,40 @@ class TextReplacePreviewFieldsTest {
             )
         )
     }
+
+    @Test
+    fun shouldKeepTextSearchPreviewOpenAfterSelectedApplyOnlyForManualRemainingResults() {
+        assertEquals(
+            true,
+            shouldKeepTextSearchPreviewOpenAfterSelectedApply(
+                hasAutomationStep = false,
+                hasAppliedCallback = false,
+                remainingResults = 2
+            )
+        )
+        assertEquals(
+            false,
+            shouldKeepTextSearchPreviewOpenAfterSelectedApply(
+                hasAutomationStep = true,
+                hasAppliedCallback = false,
+                remainingResults = 2
+            )
+        )
+        assertEquals(
+            false,
+            shouldKeepTextSearchPreviewOpenAfterSelectedApply(
+                hasAutomationStep = false,
+                hasAppliedCallback = true,
+                remainingResults = 2
+            )
+        )
+        assertEquals(
+            false,
+            shouldKeepTextSearchPreviewOpenAfterSelectedApply(
+                hasAutomationStep = false,
+                hasAppliedCallback = false,
+                remainingResults = 0
+            )
+        )
+    }
 }

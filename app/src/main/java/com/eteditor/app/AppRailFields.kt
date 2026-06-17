@@ -179,7 +179,7 @@ private fun RailDocumentControls(
         when (documentKind) {
             DocumentKind.Epub -> {
                 RailGlyphToggle(
-                    label = "名",
+                    label = "Ch",
                     selected = hideDirectoryFileName,
                     enabled = enabled,
                     diagonalSlash = !hideDirectoryFileName,
@@ -187,7 +187,7 @@ private fun RailDocumentControls(
                     onClick = { onHideDirectoryFileNameChange(!hideDirectoryFileName) }
                 )
                 RailGlyphToggle(
-                    label = "01",
+                    label = "S1",
                     selected = epubHideSection0001FromNcx,
                     enabled = enabled,
                     diagonalSlash = !epubHideSection0001FromNcx,

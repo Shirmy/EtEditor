@@ -854,12 +854,12 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.applyPreviewHighlight(range
         )
     }
     setHighlightTexts(highlights)
-    setSelection(startPosition.getLine(), startPosition.getColumn(), false)
+    setSelection(endPosition.getLine(), endPosition.getColumn(), false)
     getComponent(EditorTextActionWindow::class.java)?.dismiss()
-    scrollPreviewPositionCentered(startPosition.getLine(), startPosition.getColumn())
+    scrollPreviewPositionCentered(endPosition.getLine(), endPosition.getColumn())
     previewContentKey()?.let { contentKey ->
         postPreviewFrames(contentKey, 2) {
-            scrollPreviewPositionCentered(startPosition.getLine(), startPosition.getColumn())
+            scrollPreviewPositionCentered(endPosition.getLine(), endPosition.getColumn())
             getComponent(EditorTextActionWindow::class.java)?.dismiss()
         }
     }
