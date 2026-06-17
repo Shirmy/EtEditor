@@ -227,10 +227,12 @@ internal fun AutomationStepList(
                     )
                 } else {
                     steps.forEachIndexed { index, step ->
+                        val canEditPreset = step.presetId.isBlank() || controller.editorTools.any { it.id == step.presetId }
                         AutomationStepRow(
                             index = index + 1,
                             title = controller.automationStepLabel(step),
                             isPreset = step.presetId.isNotBlank(),
+                            canEdit = canEditPreset,
                             sortMode = sortMode,
                             itemCount = steps.size,
                             onEdit = { onEditStep(step.id) },
@@ -249,6 +251,7 @@ private fun AutomationStepRow(
     index: Int,
     title: String,
     isPreset: Boolean,
+    canEdit: Boolean,
     sortMode: Boolean,
     itemCount: Int,
     onEdit: () -> Unit,
@@ -313,12 +316,14 @@ private fun AutomationStepRow(
                     Icon(Icons.Outlined.KeyboardArrowDown, contentDescription = "下移", modifier = Modifier.size(18.dp))
                 }
             } else {
-                IconButton(
-                    onClick = onEdit,
-                    colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
-                    modifier = Modifier.size(28.dp)
-                ) {
-                    Icon(Icons.Outlined.Edit, contentDescription = "编辑步骤", modifier = Modifier.size(17.dp))
+                if (canEdit) {
+                    IconButton(
+                        onClick = onEdit,
+                        colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(Icons.Outlined.Edit, contentDescription = "编辑步骤", modifier = Modifier.size(17.dp))
+                    }
                 }
                 IconButton(
                     onClick = {
