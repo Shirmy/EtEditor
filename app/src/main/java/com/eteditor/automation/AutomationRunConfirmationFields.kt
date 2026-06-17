@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -410,10 +411,15 @@ private fun AutomationFetchInfoConfirmation(
             onApplied = onApplied,
             modifier = modifier
         )
+    } else if (preparing) {
+        AutomationFetchInfoLoadingPane(
+            progress = controller.fetchInfoProgress.takeIf { it > 0f } ?: 0.08f,
+            modifier = modifier
+        )
     } else {
         AutomationConfirmationFallback(
             request = request,
-            message = if (preparing) "正在准备抓取预览..." else controller.statusMessage.ifBlank { "没有可用的抓取预览" },
+            message = controller.statusMessage.ifBlank { "没有可用的抓取预览" },
             onDismiss = onDismiss,
             modifier = modifier
         )
@@ -690,6 +696,34 @@ private fun AutomationInsertChapterConfirmation(
             message = message,
             onDismiss = { paneMessage = null }
         )
+    }
+}
+
+@Composable
+private fun AutomationFetchInfoLoadingPane(
+    progress: Float,
+    modifier: Modifier = Modifier
+) {
+    val safeProgress = progress.coerceIn(0f, 1f)
+    Surface(
+        shape = PreviewShape,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = modifier.fillMaxSize()
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            LinearProgressIndicator(
+                progress = { safeProgress },
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 }
 
