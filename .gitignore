@@ -17,10 +17,14 @@ keystore/
 # JVM crash logs
 hs_err_pid*.log
 replay_pid*.log
+*.log
 
 # Claude/Codex session files
 .claude/
 .codex/
+
+# Local planning notes
+docs/superpowers/
 
 # Release APKs
 release-apk/

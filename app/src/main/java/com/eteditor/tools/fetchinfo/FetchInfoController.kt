@@ -529,27 +529,18 @@ private suspend fun EditorController.applyFetchedInfoToEpub(
     if (parameters.writeCover && info.coverUrl.isNotBlank()) {
         val coverResult = withContext(Dispatchers.IO) {
             runCatching {
-                val coverUrl = if (parameters.source == FETCH_INFO_SOURCE_SOSAD) {
-                    requireSosadAllowedHttpsUrl(info.coverUrl, "废文封面链接")
-                } else {
-                    info.coverUrl
-                }
-                val headers = if (parameters.source == FETCH_INFO_SOURCE_SOSAD) {
-                    buildSosadRequestHeaders(parameters.authCookie, coverUrl)
-                } else {
-                    emptyMap()
-                }
-                if (parameters.source == FETCH_INFO_SOURCE_SOSAD) {
+                val request = buildFetchInfoCoverRequest(parameters, info.coverUrl)
+                if (request.sameHostRedirectOnly) {
                     FetchHttpClient.getBytes(
-                        coverUrl,
-                        headers,
+                        request.url,
+                        request.headers,
                         ::isSosadSameHostHttpsRedirect,
                         maxBytes = HTTP_IMAGE_RESPONSE_MAX_BYTES
                     )
                 } else {
                     FetchHttpClient.getBytes(
-                        coverUrl,
-                        headers,
+                        request.url,
+                        request.headers,
                         maxBytes = HTTP_IMAGE_RESPONSE_MAX_BYTES
                     )
                 }

@@ -283,6 +283,7 @@ fun FetchInfoPreviewPane(
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             if (isCoverPreview) {
                 FetchedCoverPreviewBlock(
+                    parameters = preview.parameters,
                     info = preview.raw,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -416,6 +417,7 @@ fun FetchInfoPreviewPane(
 
 @Composable
 private fun FetchedInfoBlock(
+    parameters: FetchInfoParameters? = null,
     title: String,
     info: FetchedInfo,
     showCoverImage: Boolean = false,
@@ -440,7 +442,7 @@ private fun FetchedInfoBlock(
                 color = MaterialTheme.colorScheme.onSurface
             )
             if (showCoverImage) {
-                FetchCoverImage(info.coverUrl)
+                FetchCoverImage(parameters = parameters, coverUrl = info.coverUrl)
             } else if (info.coverUrl.isNotBlank()) {
                 FetchInfoLine("封面", info.coverUrl)
             }
@@ -513,6 +515,7 @@ private fun FetchedInfoBlock(
 
 @Composable
 private fun FetchedCoverPreviewBlock(
+    parameters: FetchInfoParameters,
     info: FetchedInfo,
     modifier: Modifier = Modifier
 ) {
@@ -535,6 +538,7 @@ private fun FetchedCoverPreviewBlock(
                 color = MaterialTheme.colorScheme.onSurface
             )
             FetchCoverImage(
+                parameters = parameters,
                 coverUrl = info.coverUrl,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -759,6 +763,7 @@ private fun CatalogCompareLine(
 
 @Composable
 private fun FetchCoverImage(
+    parameters: FetchInfoParameters? = null,
     coverUrl: String,
     modifier: Modifier = Modifier
         .fillMaxWidth()
@@ -775,17 +780,33 @@ private fun FetchCoverImage(
         loading = true
         val result = withContext(Dispatchers.IO) {
             runCatching {
-                val response = FetchHttpClient.getBytes(
-                    coverUrl,
-                    maxBytes = HTTP_IMAGE_RESPONSE_MAX_BYTES
-                )
+                val request = parameters?.let { buildFetchInfoCoverRequest(it, coverUrl) }
+                val response = if (request?.sameHostRedirectOnly == true) {
+                    FetchHttpClient.getBytes(
+                        request.url,
+                        request.headers,
+                        ::isSosadSameHostHttpsRedirect,
+                        maxBytes = HTTP_IMAGE_RESPONSE_MAX_BYTES
+                    )
+                } else if (request != null) {
+                    FetchHttpClient.getBytes(
+                        request.url,
+                        request.headers,
+                        maxBytes = HTTP_IMAGE_RESPONSE_MAX_BYTES
+                    )
+                } else {
+                    FetchHttpClient.getBytes(
+                        coverUrl,
+                        maxBytes = HTTP_IMAGE_RESPONSE_MAX_BYTES
+                    )
+                }
                 val size = imageSize(response.bytes) ?: error("无法解析封面图片")
                 validateImageDimensions(size, "封面图片")
                 val bitmap = BitmapFactory.decodeByteArray(response.bytes, 0, response.bytes.size)
                     ?: error("无法解析封面图片")
                 FetchCoverImageInfo(
                     bitmap = bitmap.asImageBitmap(),
-                    type = coverImageType(response.contentType, coverUrl),
+                    type = coverImageType(response.contentType, request?.url ?: coverUrl),
                     byteSize = response.bytes.size,
                     width = bitmap.width,
                     height = bitmap.height
