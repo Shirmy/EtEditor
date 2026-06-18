@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.HorizontalScrollView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -387,21 +388,28 @@ private class BodyReadOnlyTextActionWindow(
         val row = textActionButtonRow()
         actionButtons.forEach { row.removeView(it) }
         actionButtons.clear()
+        val weighted = row is LinearLayout
         actions.forEachIndexed { index, action ->
             val button = TextView(targetEditor.context).apply {
                 text = action.title
                 gravity = android.view.Gravity.CENTER
-                minWidth = (targetEditor.getDpUnit() * 52).roundToInt()
+                if (!weighted) {
+                    minWidth = (targetEditor.getDpUnit() * 52).roundToInt()
+                }
                 setPadding(
                     (targetEditor.getDpUnit() * 12).roundToInt(),
                     0,
                     (targetEditor.getDpUnit() * 12).roundToInt(),
                     0
                 )
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
+                layoutParams = if (weighted) {
+                    LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
+                } else {
+                    ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                }
                 setTextColor(
                     targetEditor.getColorScheme()
                         .getColor(io.github.rosemoe.sora.widget.schemes.EditorColorScheme.TEXT_ACTION_WINDOW_ICON_COLOR)
@@ -423,7 +431,20 @@ private class BodyReadOnlyTextActionWindow(
 
     private fun textActionButtonRow(): ViewGroup {
         val scrollView = getView().getChildAt(0) as? HorizontalScrollView
-        return scrollView?.getChildAt(0) as? ViewGroup ?: getView()
+        if (scrollView != null) {
+            // 让按钮行填满视口宽度，配合按钮 weight 均分，
+            // 三个按钮并排显示不被截断、无需横向滑动。
+            scrollView.isFillViewport = true
+            val row = scrollView.getChildAt(0) as? ViewGroup
+            if (row != null) {
+                row.layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                return row
+            }
+        }
+        return getView()
     }
 }
 

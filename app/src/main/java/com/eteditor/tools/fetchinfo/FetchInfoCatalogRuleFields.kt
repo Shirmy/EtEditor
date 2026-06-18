@@ -304,7 +304,7 @@ private fun FetchCatalogRuleGroup(
 }
 
 @Composable
-private fun FetchRuleEnableToggle(
+internal fun FetchRuleEnableToggle(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
@@ -332,7 +332,7 @@ private fun FetchRuleEnableToggle(
 }
 
 @Composable
-private fun FetchCatalogRuleEditDialog(
+internal fun FetchCatalogRuleEditDialog(
     title: String,
     initialCategory: String,
     initialName: String,

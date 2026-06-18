@@ -263,7 +263,7 @@ internal fun defaultEditorToolDefinitions(): List<ToolDefinition> {
                 ToolParameterDefinition(
                     key = FETCH_INFO_PARAM_INTRO_FILTER,
                     label = "简介过滤",
-                    defaultValue = "trim\ncompressBlankLines"
+                    defaultValue = ""
                 )
             )
         ),

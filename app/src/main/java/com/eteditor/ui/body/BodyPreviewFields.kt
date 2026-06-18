@@ -526,10 +526,35 @@ internal fun BodyPreview(
             return
         }
         val target = editTarget ?: currentBodyEditTarget()
+        val nativeCursorIndex = nativeBodyEditor?.let { editor ->
+            runCatching { editor.getCursor().getLeft().coerceAtLeast(0) }.getOrNull()
+        }
+        val epubEditCursorIndex = if (controller.kind == DocumentKind.Epub) nativeCursorIndex else null
+        val txtEditAnchorOffset = if (controller.kind == DocumentKind.Txt && nativeCursorIndex != null) {
+            val window = txtFullEditWindow
+            if (target.txtPreviewMode == TXT_PREVIEW_MODE_FULL && window != null) {
+                (window.sourceStart + nativeCursorIndex)
+            } else {
+                val document = controller.txt
+                val chapter = document?.chapters?.getOrNull(target.chapterIndex)
+                val chapterStart = chapter?.startIndex ?: 0
+                chapterStart + nativeCursorIndex
+            }
+        } else null
         val saved = saveBodyEditingToTarget(target, showNoChangeMessage = true)
         if (saved) {
+            if (controller.kind == DocumentKind.Epub && epubEditCursorIndex != null && epubEditCursorIndex >= 0) {
+                controller.locateEpubPreviewAtBodyOffset(target.chapterIndex, epubEditCursorIndex)
+            } else if (controller.kind == DocumentKind.Txt && txtEditAnchorOffset != null) {
+                val document = controller.txt
+                if (document != null) {
+                    controller.restoreTxtPreviewPositionForSourceOffset(document, txtEditAnchorOffset)
+                    controller.refreshPreview()
+                }
+            }
             txtFullEditWindow = null
             txtEditAnchorSourceOffset = null
+            focusManager.clearFocus()
             onEditingChange(false)
         }
     }
@@ -592,7 +617,9 @@ internal fun BodyPreview(
                     modifier = Modifier
                         .fillMaxSize()
                         .imePadding()
-                        .padding(8.dp),
+                        // 编辑态底部不留白：键盘弹起时（imePadding 已把底部抬到键盘上方），
+                        // 去掉这 8dp 下内边距，编辑器底部直接贴键盘上沿，不再露出 Surface 白底那条带。
+                        .padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 0.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Box(

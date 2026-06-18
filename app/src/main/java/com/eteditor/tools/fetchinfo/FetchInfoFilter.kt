@@ -82,6 +82,10 @@ object FetchInfoFilter {
         issues: MutableList<FetchInfoFilterIssue>
     ): String {
         var text = input
+        // 无配置（默认空）时，仍做内置 trim/压缩空行收尾，保证简介基础清理始终生效。
+        if (filterText.isBlank()) {
+            return finishIntroCleanup(text)
+        }
         parseStructuredReplacementFilters(filterText, issues)?.let { rules ->
             rules.filter { it.enabled }.forEach { rule ->
                 text = if (rule.regex) {
@@ -91,7 +95,9 @@ object FetchInfoFilter {
                     text.replace(rule.search, rule.replacement)
                 }
             }
-            return text
+            // 结构化规则跑完后，trim/压缩空行作为内置固定收尾（不再依赖行命令默认值），
+            // 保证简介无论有没有自定义规则都会做基础清理。
+            return finishIntroCleanup(text)
         }
         filterText.lines().forEachIndexed { index, rawLine ->
             val lineNo = index + 1
@@ -100,7 +106,7 @@ object FetchInfoFilter {
             when {
                 line.equals("trim", ignoreCase = true) -> text = text.trim()
                 line.equals("compressBlankLines", ignoreCase = true) -> {
-                    text = text.replace(Regex("""[ \t]*\r?\n[ \t]*\r?\n+"""), "\n\n")
+                    text = compressIntroBlankLines(text)
                 }
                 line.startsWith("truncateBefore:", ignoreCase = true) -> {
                     val token = line.substringAfter(':')
@@ -204,5 +210,15 @@ object FetchInfoFilter {
 
     private fun regexReplace(source: String, regex: Regex, replacement: String): String {
         return regex.replace(source) { match -> expandRegexReplacement(match, replacement) }
+    }
+
+    // 简介内置收尾：去首尾空白 + 压缩多余空行。供结构化规则分支无条件调用，
+    // 也是旧行命令 trim / compressBlankLines 的底层实现，保证两条路径行为一致。
+    private fun finishIntroCleanup(input: String): String {
+        return compressIntroBlankLines(input).trim()
+    }
+
+    private fun compressIntroBlankLines(input: String): String {
+        return input.replace(Regex("""[ \t]*\r?\n[ \t]*\r?\n+"""), "\n\n")
     }
 }

@@ -84,16 +84,7 @@ fun FetchInfoParameterFields(
             )
         }
     }
-    if (selectedContent == FETCH_INFO_CONTENT_INTRO) {
-        parameterByKey[FETCH_INFO_PARAM_INTRO_FILTER]?.let { parameter ->
-            FetchFilterRulesField(
-                label = "简介过滤",
-                rawValue = valueFor(parameter),
-                onValueChange = { value -> onValueChange(parameter, value) },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-    }
+    // 简介过滤已迁移到抓取预览界面右上角的「简介规则」面板（持久化保存），此处不再提供旧的过滤文本框。
 }
 
 @Composable

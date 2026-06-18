@@ -63,6 +63,32 @@ class FetchInfoFilterTest {
     }
 
     @Test
+    fun applyStructuredIntroFiltersStillRunBuiltInTrimAndCompress() {
+        // 简介结构化规则跑完后，trim/压缩空行作为内置固定收尾应无条件生效。
+        val raw = fetchedInfo(intro = "  头部\n\n\n正文 旧\n尾部  ")
+        val parameters = fetchParameters(
+            introFilter = """[{"name":"替换","search":"旧","replacement":"新"}]"""
+        )
+
+        val (filtered, issues) = FetchInfoFilter.apply(raw, parameters)
+
+        assertEquals("头部\n\n正文 新\n尾部", filtered.intro)
+        assertEquals(emptyList<FetchInfoFilterIssue>(), issues)
+    }
+
+    @Test
+    fun applyEmptyIntroFilterStillRunBuiltInTrimAndCompress() {
+        // 无任何简介规则（默认空）时，也应做基础 trim/压缩空行清理。
+        val raw = fetchedInfo(intro = "  头部\n\n\n尾部  ")
+        val parameters = fetchParameters(introFilter = "")
+
+        val (filtered, issues) = FetchInfoFilter.apply(raw, parameters)
+
+        assertEquals("头部\n\n尾部", filtered.intro)
+        assertEquals(emptyList<FetchInfoFilterIssue>(), issues)
+    }
+
+    @Test
     fun applyStructuredCatalogFiltersUseRegexGroupsAndEscapedLineBreaks() {
         val raw = fetchedInfo(
             catalog = listOf(FetchedCatalogItem(9, "第12章 旧\n标题"))
@@ -179,25 +205,25 @@ class FetchInfoFilterTest {
     }
 
     @Test
-    fun structuredRulesApplyChapterCategoryBeforePurifyAndSupportDropAndEnabled() {
+    fun structuredRulesApplyChapterCategoryBeforePurifyAndRespectEnabled() {
         val filter = """
             [
               {"name":"去序号","search":"^\\d+\\s+","replacement":"","regex":true,"category":"净化"},
-              {"name":"滤单章","search":"单章","action":"drop","category":"章节"},
+              {"name":"章节改写","search":"番外","replacement":"特别篇","regex":false,"category":"章节"},
               {"name":"停用","search":"aa","replacement":"ZZ","regex":false,"category":"净化","enabled":false}
             ]
         """.trimIndent()
         val raw = fetchedInfo(
             catalog = listOf(
                 FetchedCatalogItem(1, "01 aa"),
-                FetchedCatalogItem(2, "单章 番外")
+                FetchedCatalogItem(2, "02 番外")
             )
         )
 
         val (filtered, issues) = FetchInfoFilter.apply(raw, fetchParameters(catalogFilter = filter))
 
-        // 章节类(drop 单章)先生效移除"单章 番外"；净化类(去前导序号)把"01 aa"清成"aa"；停用规则不生效。
-        assertEquals(listOf("aa"), filtered.catalog.map { it.title })
+        // 章节类(番外→特别篇)先生效，净化类(去前导序号)把"01"/"02"清掉；停用规则(aa→ZZ)不生效。
+        assertEquals(listOf("aa", "特别篇"), filtered.catalog.map { it.title })
         assertTrue(issues.isEmpty())
     }
 

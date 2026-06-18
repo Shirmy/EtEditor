@@ -58,6 +58,9 @@ fun EditorController.updateEditableBodyText(text: String): Boolean {
                 return true
             }
             chapter.html = rebuildHtmlWithBodyContent(bodyParts.prefix, text, bodyParts.suffix)
+            // 编辑结果要同步进 book.entries（真正落盘的字节）并规整换行，否则只改了内存副本，
+            // 保存/导出仍是旧内容——这正是其它修改 EPUB 正文的路径都会做、而此处此前遗漏的一步。
+            normalizeEpubChapterLineEndingsToCrlf(book, chapter)
             chapter.wordCount = ChapterDetector.countHtmlChars(chapter.html)
             checkReport = null
             markDocumentChanged()

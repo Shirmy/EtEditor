@@ -143,6 +143,7 @@ fun FetchInfoPreviewPane(
     // 不再读旧的 catalogFilterEnabled，避免历史默认值存了"关闭"后界面无法再开启。
     val filterActive = true
     var showRulePanel by remember(toolId) { mutableStateOf(false) }
+    var showIntroRulePanel by remember(toolId) { mutableStateOf(false) }
     var showSkippedDialog by remember(preview) { mutableStateOf(false) }
     val renames = remember(toolId) { mutableStateMapOf<Int, String>() }
     val deletes = remember(toolId) { mutableStateListOf<Int>() }
@@ -260,6 +261,16 @@ fun FetchInfoPreviewPane(
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                         ) {
                             Text("逆序")
+                        }
+                    }
+                    if (isIntroPreview) {
+                        IconButton(
+                            onClick = { showIntroRulePanel = true },
+                            enabled = !writing,
+                            colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Outlined.Tune, contentDescription = "规则", modifier = Modifier.size(19.dp))
                         }
                     }
                     IconButton(
@@ -419,6 +430,13 @@ fun FetchInfoPreviewPane(
         FetchInfoCatalogRuleDialog(
             controller = controller,
             onDismiss = { showRulePanel = false }
+        )
+    }
+
+    if (showIntroRulePanel) {
+        FetchInfoIntroRuleDialog(
+            controller = controller,
+            onDismiss = { showIntroRulePanel = false }
         )
     }
 

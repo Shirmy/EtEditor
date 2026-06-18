@@ -219,3 +219,14 @@ internal fun EditorController.refreshPreview() {
         }
     }
 }
+
+internal fun EditorController.locateEpubPreviewAtBodyOffset(chapterIndex: Int, bodyOffset: Int) {
+    val book = epub ?: return
+    val chapter = book.chapters.getOrNull(chapterIndex) ?: return
+    val body = htmlVisibleBodyContent(chapter.html)
+    val safeOffset = bodyOffset.coerceIn(0, body.length)
+    previewHighlightChapterIndex = chapterIndex
+    previewHighlightSourceStart = safeOffset
+    previewHighlightSourceEnd = safeOffset
+    refreshPreview()
+}
