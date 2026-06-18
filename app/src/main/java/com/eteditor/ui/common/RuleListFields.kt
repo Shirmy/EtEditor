@@ -191,6 +191,7 @@ private fun CompactRuleListRow(
     onOpenSwipeRowChange: (Any?) -> Unit,
     modifier: Modifier = Modifier,
     subtitle: String = "",
+    showIndex: Boolean = true,
     onClick: (() -> Unit)? = null,
     dragOffsetPx: Float = 0f,
     displacedOffsetPx: Float = 0f,
@@ -327,14 +328,16 @@ private fun CompactRuleListRow(
                 horizontalArrangement = Arrangement.spacedBy(7.dp)
             ) {
                 leadingContent?.invoke(this)
-                Text(
-                    text = index.toString(),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    modifier = Modifier.width(22.dp)
-                )
+                if (showIndex) {
+                    Text(
+                        text = index.toString(),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        modifier = Modifier.width(22.dp)
+                    )
+                }
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(1.dp)
@@ -705,6 +708,7 @@ internal fun DraggableCompactRuleListRow(
     onOpenSwipeRowChange: (Any?) -> Unit,
     modifier: Modifier = Modifier,
     subtitle: String = "",
+    showIndex: Boolean = true,
     onClick: (() -> Unit)? = null,
     showDragHandle: Boolean = true,
     sortMode: Boolean = false,
@@ -721,6 +725,7 @@ internal fun DraggableCompactRuleListRow(
         index = index,
         name = name,
         subtitle = subtitle,
+        showIndex = showIndex,
         onEdit = onEdit,
         onDelete = onDelete,
         openSwipeRowKey = openSwipeRowKey,

@@ -74,14 +74,6 @@ fun FetchInfoParameterFields(
     }
 
     if (selectedContent == FETCH_INFO_CONTENT_CATALOG) {
-        parameterByKey[FETCH_INFO_PARAM_CATALOG_FILTER]?.let { parameter ->
-            FetchFilterRulesField(
-                label = "目录过滤",
-                rawValue = valueFor(parameter),
-                onValueChange = { value -> onValueChange(parameter, value) },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
         parameterByKey[FETCH_INFO_PARAM_AUTO_TITLE_FORMAT]?.let { parameter ->
             val effectiveValue = valueFor(parameter).ifBlank { parameter.defaultValue }
             ToolSwitchField(

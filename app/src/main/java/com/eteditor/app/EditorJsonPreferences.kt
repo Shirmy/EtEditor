@@ -49,9 +49,10 @@ internal class EditorJsonPreferences(
     }
 
     fun writeBuiltInToolDefaults(json: String) {
+        // 同步写盘：内置默认值（含目录规则）改完即落盘，避免进程被杀时异步写丢失。
         prefs.edit()
             .putString(KEY_BUILT_IN_TOOL_DEFAULTS, json)
-            .apply()
+            .commit()
     }
 
     private fun writeStringCommit(key: String, value: String): Boolean {

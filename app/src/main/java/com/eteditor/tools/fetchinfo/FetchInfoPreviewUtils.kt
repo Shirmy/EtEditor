@@ -40,11 +40,7 @@ internal fun buildFetchInfoCatalogSummary(
     preview: FetchInfoPreview
 ): String {
     val fetchedCount = preview.filtered.catalog.count { !it.isVolume }
-    return when {
-        fetchedCount > targetCount -> "范围内共 ${targetCount} 章，抓取到 ${fetchedCount} 章；超出 ${fetchedCount - targetCount} 章不写回"
-        fetchedCount < targetCount -> "范围内共 ${targetCount} 章，抓取到 ${fetchedCount} 章；少 ${targetCount - fetchedCount} 章，剩余位置为空"
-        else -> "范围内共 ${targetCount} 章，抓取到 ${fetchedCount} 章；数量一致"
-    }
+    return "原章节 ${targetCount} 章  抓取章节 ${fetchedCount} 章"
 }
 
 internal fun buildFetchInfoCatalogPreviewRows(
@@ -67,8 +63,10 @@ internal fun buildFetchInfoCatalogPreviewRows(
     return buildList {
         catalog.forEach { fetched ->
             if (fetched.isVolume) {
+                // 目标章节已用尽后出现的卷，后面没有可承载的章节，标记为不写入。
+                val volumeSkipped = targetCursor >= targets.size
                 val insertPosition = fetchInfoVolumeInsertPosition(book, targets, targetCursor, fallbackChapterIndex)
-                val volumeChapter = findFetchInfoAdjacentVolume(book, insertPosition, usedVolumePaths)
+                val volumeChapter = if (volumeSkipped) null else findFetchInfoAdjacentVolume(book, insertPosition, usedVolumePaths)
                 if (volumeChapter != null) usedVolumePaths += volumeChapter.path
                 add(
                     FetchInfoCatalogPreviewRow(
@@ -76,7 +74,8 @@ internal fun buildFetchInfoCatalogPreviewRows(
                         originalTitle = volumeChapter?.title.orEmpty(),
                         fetchedTitle = fetched.previewText(),
                         isVolume = true,
-                        willCreateVolume = volumeChapter == null
+                        willCreateVolume = !volumeSkipped && volumeChapter == null,
+                        skipped = volumeSkipped
                     )
                 )
             } else {
@@ -113,7 +112,8 @@ internal fun buildFetchInfoCatalogPreviewRows(
                     fileName = chapter.path.substringAfterLast('/'),
                     originalTitle = chapter.title,
                     fetchedTitle = "",
-                    isVolume = false
+                    isVolume = false,
+                    missingFetch = true
                 )
             )
         }

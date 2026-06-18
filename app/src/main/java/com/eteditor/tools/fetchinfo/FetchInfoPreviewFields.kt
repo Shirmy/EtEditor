@@ -4,6 +4,7 @@ import android.graphics.BitmapFactory
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -27,11 +28,16 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Save
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,6 +59,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontFamily
@@ -132,9 +139,11 @@ fun FetchInfoPreviewPane(
     var writingProgress by remember(preview) { mutableStateOf(0f) }
     var writingLabel by remember(preview) { mutableStateOf("应用抓取信息") }
     var catalogOrderReversed by remember(preview) { mutableStateOf(false) }
-    // 规则编辑/总开关/逐行覆盖按 toolId 记忆，避免规则即时刷新（preview 重建）时被重置
-    var filterActive by remember(toolId) { mutableStateOf(preview.parameters.catalogFilterEnabled) }
+    // 过滤恒为开：总开关 UI 已移除，是否过滤改由每条规则自己的开关控制（全关时 filtered 即等于 raw）。
+    // 不再读旧的 catalogFilterEnabled，避免历史默认值存了"关闭"后界面无法再开启。
+    val filterActive = true
     var showRulePanel by remember(toolId) { mutableStateOf(false) }
+    var showSkippedDialog by remember(preview) { mutableStateOf(false) }
     val renames = remember(toolId) { mutableStateMapOf<Int, String>() }
     val deletes = remember(toolId) { mutableStateListOf<Int>() }
     var renameTarget by remember(toolId) { mutableStateOf<Int?>(null) }
@@ -185,9 +194,14 @@ fun FetchInfoPreviewPane(
             deletes = deleteSnapshot
         )
     }
-    val displayedCatalogRows = if (catalogOrderReversed) displayCatalogRows.asReversed() else displayCatalogRows
-    val catalogSummary = remember(preview) {
-        if (preview.parameters.fetchCatalog) controller.fetchInfoCatalogSummary(preview) else ""
+    val visibleCatalogRows = displayCatalogRows.filterNot { it.skipped }
+    val skippedCatalogRows = displayCatalogRows.filter { it.skipped }
+    val displayedCatalogRows = if (catalogOrderReversed) visibleCatalogRows.asReversed() else visibleCatalogRows
+    val catalogOriginalCount = remember(preview) {
+        if (preview.parameters.fetchCatalog) controller.fetchInfoWritableChapterCount() else 0
+    }
+    val catalogFetchedCount = remember(preview) {
+        if (preview.parameters.fetchCatalog) preview.filtered.catalog.count { !it.isVolume } else 0
     }
     val isCoverPreview = preview.parameters.fetchCover
     val isIntroPreview = preview.parameters.fetchIntro
@@ -208,83 +222,92 @@ fun FetchInfoPreviewPane(
             modifier = Modifier.padding(10.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = headingText,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (preview.parameters.fetchCatalog) {
-                    TextButton(
-                        onClick = { filterActive = !filterActive },
-                        enabled = !writing,
-                        shape = ControlShape,
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = if (filterActive) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            }
-                        ),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Text(if (filterActive) "过滤开" else "过滤关")
-                    }
-                    TextButton(
-                        onClick = { showRulePanel = !showRulePanel },
-                        enabled = !writing,
-                        shape = ControlShape,
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = if (showRulePanel) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            }
-                        ),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Text("规则")
-                    }
-                    TextButton(
-                        onClick = { catalogOrderReversed = !catalogOrderReversed },
-                        enabled = !writing,
-                        shape = ControlShape,
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = if (catalogOrderReversed) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            }
-                        ),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Text("逆序")
-                    }
-                }
-                IconButton(
-                    onClick = onDismiss,
-                    enabled = !writing,
-                    colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
-                    modifier = Modifier.size(32.dp)
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(Icons.Outlined.Close, contentDescription = "关闭", modifier = Modifier.size(19.dp))
+                    Text(
+                        text = headingText,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (preview.parameters.fetchCatalog) {
+                        IconButton(
+                            onClick = { showRulePanel = true },
+                            enabled = !writing,
+                            colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Outlined.Tune, contentDescription = "规则", modifier = Modifier.size(19.dp))
+                        }
+                        TextButton(
+                            onClick = { catalogOrderReversed = !catalogOrderReversed },
+                            enabled = !writing,
+                            shape = ControlShape,
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = if (catalogOrderReversed) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+                            ),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text("逆序")
+                        }
+                    }
+                    IconButton(
+                        onClick = onDismiss,
+                        enabled = !writing,
+                        colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(Icons.Outlined.Close, contentDescription = "关闭", modifier = Modifier.size(19.dp))
+                    }
                 }
-            }
-            if (preview.parameters.fetchCatalog) {
-                Text(
-                    text = catalogSummary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                if (preview.parameters.fetchCatalog) {
+                    val hasSkipped = skippedCatalogRows.isNotEmpty()
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = "原章节 $catalogOriginalCount 章",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "抓取章节 $catalogFetchedCount 章",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            if (hasSkipped) {
+                                Surface(
+                                    onClick = { showSkippedDialog = true },
+                                    shape = ControlShape,
+                                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.18f),
+                                    modifier = Modifier.size(26.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Outlined.ErrorOutline,
+                                            contentDescription = "查看不写入章节",
+                                            tint = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(17.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             if (isCoverPreview) {
@@ -296,33 +319,18 @@ fun FetchInfoPreviewPane(
                         .weight(1f)
                 )
             } else if (preview.parameters.fetchCatalog) {
-                Column(
+                FetchCatalogComparePane(
+                    rows = displayedCatalogRows,
+                    filterIssues = preview.filterIssues,
+                    orderReversed = catalogOrderReversed,
+                    onRename = { position -> renameTarget = position },
+                    onToggleDelete = { position ->
+                        if (deletes.contains(position)) deletes.remove(position) else deletes.add(position)
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    if (showRulePanel) {
-                        FetchInfoCatalogRulePanel(
-                            controller = controller,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 220.dp)
-                        )
-                    }
-                    FetchCatalogComparePane(
-                        rows = displayedCatalogRows,
-                        filterIssues = preview.filterIssues,
-                        orderReversed = catalogOrderReversed,
-                        onRename = { position -> renameTarget = position },
-                        onToggleDelete = { position ->
-                            if (deletes.contains(position)) deletes.remove(position) else deletes.add(position)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                    )
-                }
+                        .weight(1f)
+                )
             } else {
                 LazyColumn(
                     modifier = Modifier
@@ -405,6 +413,20 @@ fun FetchInfoPreviewPane(
                 }
             }
         }
+    }
+
+    if (showRulePanel) {
+        FetchInfoCatalogRuleDialog(
+            controller = controller,
+            onDismiss = { showRulePanel = false }
+        )
+    }
+
+    if (showSkippedDialog) {
+        FetchSkippedChaptersDialog(
+            rows = skippedCatalogRows,
+            onDismiss = { showSkippedDialog = false }
+        )
     }
 
     renameTarget?.let { position ->
@@ -601,6 +623,7 @@ private fun FetchCatalogComparePane(
                     ) { index, row ->
                         FetchCatalogCompareRow(
                             row = row,
+                            interactive = true,
                             onRename = onRename,
                             onToggleDelete = onToggleDelete
                         )
@@ -668,70 +691,107 @@ private fun FetchInfoFilterIssueRow(issue: FetchInfoFilterIssue) {
 @Composable
 private fun FetchCatalogCompareRow(
     row: FetchInfoCatalogPreviewRow,
+    interactive: Boolean = false,
     onRename: (Int) -> Unit = {},
     onToggleDelete: (Int) -> Unit = {}
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(5.dp)
-    ) {
-        CatalogCompareLine(
-            left = row.originalTitle.ifBlank { "无标题" },
-            right = if (row.deleted) "已删除（保留原标题）" else row.fetchedTitle,
-            rightStrong = !row.deleted && row.fetchedTitle.isNotBlank(),
-            rightError = row.deleted
-        )
+    val hasActions = interactive && !row.isVolume && !row.skipped && row.chapterPosition >= 0
+
+    val lines = buildList {
         if (row.isVolume && row.willCreateVolume) {
-            CatalogCompareLine(
-                left = "缺卷将新建",
-                right = "",
-                leftError = true
+            // 缺卷：左列主行直接显示"缺卷将新建"，与右侧卷名对齐成一行。
+            add(
+                CatalogCompareLineSpec(
+                    left = "缺卷将新建",
+                    right = row.fetchedTitle,
+                    leftError = true,
+                    rightStrong = row.fetchedTitle.isNotBlank()
+                )
+            )
+        } else if (row.missingFetch) {
+            // 原章节多出来、没抓到对应内容：整行变灰，右侧标注保持原样。
+            add(
+                CatalogCompareLineSpec(
+                    left = row.originalTitle,
+                    right = "未抓到·保持原样",
+                    leftDimmed = true,
+                    rightDimmed = true
+                )
+            )
+        } else {
+            add(
+                CatalogCompareLineSpec(
+                    left = row.originalTitle,
+                    right = if (row.deleted) "已删除（保留原标题）" else row.fetchedTitle,
+                    rightStrong = !row.deleted && row.fetchedTitle.isNotBlank(),
+                    rightError = row.deleted
+                )
             )
         }
-        if (row.skipped) {
-            CatalogCompareLine(
-                left = "超出范围",
-                right = "不写入",
-                leftError = true,
-                rightError = true
-            )
-        }
-        if (!row.isVolume && !row.skipped && row.chapterPosition >= 0) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(
-                    onClick = { onRename(row.chapterPosition) },
-                    enabled = !row.deleted,
-                    shape = ControlShape,
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant)
-                ) {
-                    Text("重命名", style = MaterialTheme.typography.labelMedium)
-                }
-                TextButton(
-                    onClick = { onToggleDelete(row.chapterPosition) },
-                    shape = ControlShape,
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = if (row.deleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+    }
+
+    if (hasActions) {
+        var menuExpanded by remember(row.chapterPosition) { mutableStateOf(false) }
+        CatalogCompareBlock(
+            lines = lines,
+            rightColumnModifier = Modifier.pointerInput(row.chapterPosition) {
+                detectTapGestures(onLongPress = { menuExpanded = true })
+            },
+            rightColumnOverlay = {
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false },
+                    modifier = Modifier.border(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant,
+                        RowShape
                     )
                 ) {
-                    Text(if (row.deleted) "撤销删除" else "删除", style = MaterialTheme.typography.labelMedium)
+                    DropdownMenuItem(
+                        text = { Text("重命名") },
+                        enabled = !row.deleted,
+                        onClick = {
+                            menuExpanded = false
+                            onRename(row.chapterPosition)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = if (row.deleted) "撤销删除" else "删除",
+                                color = if (row.deleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            )
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onToggleDelete(row.chapterPosition)
+                        }
+                    )
                 }
             }
-        }
+        )
+    } else {
+        CatalogCompareBlock(lines = lines)
     }
 }
 
+private data class CatalogCompareLineSpec(
+    val left: String,
+    val right: String,
+    val leftError: Boolean = false,
+    val rightStrong: Boolean = false,
+    val rightError: Boolean = false,
+    val leftDimmed: Boolean = false,
+    val rightDimmed: Boolean = false
+)
+
+// 左右两列共用一条贯穿整行的竖线，行内多条信息不再断开。
+// rightColumnModifier/rightColumnOverlay 只作用在右列（抓取章节），用于长按弹菜单并让菜单锚定右侧。
 @Composable
-private fun CatalogCompareLine(
-    left: String,
-    right: String,
-    leftError: Boolean = false,
-    rightStrong: Boolean = false,
-    rightError: Boolean = false
+private fun CatalogCompareBlock(
+    lines: List<CatalogCompareLineSpec>,
+    rightColumnModifier: Modifier = Modifier,
+    rightColumnOverlay: @Composable () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -740,12 +800,22 @@ private fun CatalogCompareLine(
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(
-            text = left,
-            style = MaterialTheme.typography.bodySmall,
-            color = if (leftError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f)
-        )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            lines.forEach { line ->
+                Text(
+                    text = line.left,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = when {
+                        line.leftError -> MaterialTheme.colorScheme.error
+                        line.leftDimmed -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+                        else -> MaterialTheme.colorScheme.onSurface
+                    }
+                )
+            }
+        }
         Box(
             modifier = Modifier
                 .fillMaxHeight()
@@ -753,17 +823,85 @@ private fun CatalogCompareLine(
                 .width(1.dp)
                 .background(MaterialTheme.colorScheme.outlineVariant)
         )
-        Text(
-            text = right,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = if (rightStrong) FontWeight.Medium else FontWeight.Normal,
-            color = when {
-                rightError -> MaterialTheme.colorScheme.error
-                right.isBlank() -> MaterialTheme.colorScheme.onSurfaceVariant
-                else -> MaterialTheme.colorScheme.onSurface
-            },
-            modifier = Modifier.weight(1f)
-        )
+        Box(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = rightColumnModifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                lines.forEach { line ->
+                    Text(
+                        text = line.right,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = if (line.rightStrong) FontWeight.Medium else FontWeight.Normal,
+                        color = when {
+                            line.rightError -> MaterialTheme.colorScheme.error
+                            line.rightDimmed -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+                            line.right.isBlank() -> MaterialTheme.colorScheme.onSurfaceVariant
+                            else -> MaterialTheme.colorScheme.onSurface
+                        }
+                    )
+                }
+            }
+            rightColumnOverlay()
+        }
+    }
+}
+
+@Composable
+private fun FetchSkippedChaptersDialog(
+    rows: List<FetchInfoCatalogPreviewRow>,
+    onDismiss: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            shape = PreviewShape,
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            shadowElevation = 8.dp,
+            modifier = Modifier
+                .fixedDialogWidth(fraction = 0.9f, maxWidth = 420.dp)
+                .heightIn(max = 520.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "不写入章节 ${rows.size}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Outlined.Close, contentDescription = "关闭", modifier = Modifier.size(18.dp))
+                    }
+                }
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 440.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    itemsIndexed(rows, key = { index, _ -> "skipped-$index" }) { index, row ->
+                        Text(
+                            text = "${index + 1}. ${row.fetchedTitle.ifBlank { "（空标题）" }}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

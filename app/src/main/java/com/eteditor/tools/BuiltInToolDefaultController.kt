@@ -4,7 +4,7 @@ private fun EditorController.builtInToolDefaultDefinition(toolId: String): ToolD
     return availableTools.firstOrNull { it.id == toolId }
 }
 
-fun EditorController.updateBuiltInToolParameter(toolId: String, key: String, value: String) {
+fun EditorController.updateBuiltInToolParameter(toolId: String, key: String, value: String, clearPreview: Boolean = true) {
     val definition = builtInToolDefaultDefinition(toolId) ?: return
     val parameter = definition.parameters.firstOrNull { it.key == key } ?: return
     val optionKeys = toolParameterOptionKeys(toolId, key, parameter)
@@ -34,7 +34,7 @@ fun EditorController.updateBuiltInToolParameter(toolId: String, key: String, val
     if (toolId == "file_rename") clearFileRenamePlan()
     if (toolId == "chapter_title_rename") clearTitleRenamePlan()
     if (toolId == "title_format") clearTitleFormatPlan()
-    if (toolId == "fetch_info") clearFetchInfoPreview()
+    if (toolId == "fetch_info" && clearPreview) clearFetchInfoPreview()
     if (toolId == "insert_chapter") {
         clearInsertChapterSourcePreview()
         clearFetchInfoSearchChoiceRequest(builtInToolPlanId(toolId))

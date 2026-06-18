@@ -31,7 +31,10 @@ internal fun applyFetchedCatalogToEpub(
     var touchedCurrent = false
     catalog.forEach { item ->
         if (item.isVolume) {
-            val title = ChapterDetector.cleanTitle(item.title)
+            // 目标章节已用尽后出现的卷不再写回，与预览一致。
+            if (targetCursor >= targetChapters.size) return@forEach
+            // 抓取来的卷标题保持原样，仅去首尾空白。
+            val title = item.title.trim()
             if (title.isBlank()) return@forEach
             val insertPosition = fetchInfoVolumeInsertPosition(book, targetChapters, targetCursor, currentChapterIndex)
             val existingVolume = findFetchInfoAdjacentVolume(book, insertPosition, usedVolumePaths)
@@ -58,7 +61,8 @@ internal fun applyFetchedCatalogToEpub(
             if (position in deletes) return@forEach
             val renamed = renames[position]
             if (renamed != null) {
-                val cleanRenamed = ChapterDetector.cleanTitle(renamed)
+                // 用户手动输入的重命名保持原样，仅去首尾空白。
+                val cleanRenamed = renamed.trim()
                 if (cleanRenamed.isBlank()) return@forEach
                 updateFetchedCatalogChapterTitle(chapter, cleanRenamed)
                 if (chapter === currentChapter) touchedCurrent = true

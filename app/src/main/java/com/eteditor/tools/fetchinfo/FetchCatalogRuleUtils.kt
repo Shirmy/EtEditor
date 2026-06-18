@@ -5,8 +5,6 @@ import org.json.JSONObject
 
 const val FETCH_CATALOG_RULE_CATEGORY_CHAPTER = "章节"
 const val FETCH_CATALOG_RULE_CATEGORY_PURIFY = "净化"
-const val FETCH_CATALOG_RULE_ACTION_REPLACE = "replace"
-const val FETCH_CATALOG_RULE_ACTION_DROP = "drop"
 
 data class FetchCatalogRuleItem(
     val index: Int,
@@ -15,7 +13,6 @@ data class FetchCatalogRuleItem(
     val search: String,
     val replacement: String = "",
     val regex: Boolean = false,
-    val action: String = FETCH_CATALOG_RULE_ACTION_REPLACE,
     val enabled: Boolean = true
 )
 
@@ -24,14 +21,6 @@ internal fun normalizeFetchCatalogRuleCategory(value: String): String {
         FETCH_CATALOG_RULE_CATEGORY_CHAPTER
     } else {
         FETCH_CATALOG_RULE_CATEGORY_PURIFY
-    }
-}
-
-internal fun normalizeFetchCatalogRuleAction(value: String): String {
-    return if (value.trim() == FETCH_CATALOG_RULE_ACTION_DROP) {
-        FETCH_CATALOG_RULE_ACTION_DROP
-    } else {
-        FETCH_CATALOG_RULE_ACTION_REPLACE
     }
 }
 
@@ -53,7 +42,6 @@ fun parseFetchCatalogRuleItems(text: String): List<FetchCatalogRuleItem> {
                         search = search,
                         replacement = json.optString("replacement"),
                         regex = json.optBoolean("regex", false),
-                        action = normalizeFetchCatalogRuleAction(json.optString("action")),
                         enabled = json.optBoolean("enabled", true)
                     )
                 )
@@ -70,7 +58,6 @@ fun serializeFetchCatalogRuleItems(items: List<FetchCatalogRuleItem>): String {
         json.put("search", item.search)
         json.put("replacement", item.replacement)
         json.put("regex", item.regex)
-        json.put("action", normalizeFetchCatalogRuleAction(item.action))
         json.put("category", normalizeFetchCatalogRuleCategory(item.category))
         json.put("enabled", item.enabled)
         array.put(json)
@@ -84,8 +71,7 @@ fun addFetchCatalogRule(
     name: String,
     search: String,
     replacement: String,
-    regex: Boolean,
-    action: String
+    regex: Boolean
 ): String {
     val items = parseFetchCatalogRuleItems(text).toMutableList()
     items += FetchCatalogRuleItem(
@@ -95,7 +81,6 @@ fun addFetchCatalogRule(
         search = search,
         replacement = replacement,
         regex = regex,
-        action = normalizeFetchCatalogRuleAction(action),
         enabled = true
     )
     return serializeFetchCatalogRuleItems(items)
@@ -108,8 +93,7 @@ fun updateFetchCatalogRule(
     name: String,
     search: String,
     replacement: String,
-    regex: Boolean,
-    action: String
+    regex: Boolean
 ): String {
     val items = parseFetchCatalogRuleItems(text).toMutableList()
     val current = items.getOrNull(index) ?: return text
@@ -118,8 +102,7 @@ fun updateFetchCatalogRule(
         name = name.trim(),
         search = search,
         replacement = replacement,
-        regex = regex,
-        action = normalizeFetchCatalogRuleAction(action)
+        regex = regex
     )
     return serializeFetchCatalogRuleItems(items)
 }

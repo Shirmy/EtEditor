@@ -85,6 +85,7 @@ data class FetchInfoCatalogPreviewRow(
     val willCreateVolume: Boolean = false,
     val skipped: Boolean = false,
     val deleted: Boolean = false,
+    val missingFetch: Boolean = false,
     val chapterPosition: Int = -1
 )
 

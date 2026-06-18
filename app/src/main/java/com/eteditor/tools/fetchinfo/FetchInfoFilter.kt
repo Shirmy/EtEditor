@@ -8,7 +8,6 @@ private data class FetchInfoReplacementRule(
     val search: String,
     val replacement: String,
     val regex: Boolean,
-    val action: String = FETCH_CATALOG_RULE_ACTION_REPLACE,
     val category: String = FETCH_CATALOG_RULE_CATEGORY_PURIFY,
     val enabled: Boolean = true
 )
@@ -36,14 +35,6 @@ object FetchInfoFilter {
                 .sortedBy { if (it.category == FETCH_CATALOG_RULE_CATEGORY_CHAPTER) 0 else 1 } // 稳定排序：章节在前、净化在后
             ordered.forEach { rule ->
                 items = when {
-                    rule.action == FETCH_CATALOG_RULE_ACTION_DROP -> {
-                        if (rule.regex) {
-                            val regex = parseFilterRegex(rule.search, rule.lineNo, rule.name, issues) ?: return@forEach
-                            items.filterNot { regex.containsMatchIn(it.title) }
-                        } else {
-                            items.filterNot { it.title.contains(rule.search) }
-                        }
-                    }
                     rule.regex -> {
                         val regex = parseFilterRegex(rule.search, rule.lineNo, rule.name, issues) ?: return@forEach
                         items.map { item -> item.copy(title = regexReplace(item.title, regex, rule.replacement)) }
@@ -181,7 +172,6 @@ object FetchInfoFilter {
                     search = decodeLineBreakEscapes(search),
                     replacement = decodeLineBreakEscapes(json.optString("replacement")),
                     regex = json.optBoolean("regex", false),
-                    action = normalizeFetchCatalogRuleAction(json.optString("action")),
                     category = normalizeFetchCatalogRuleCategory(json.optString("category")),
                     enabled = json.optBoolean("enabled", true)
                 )

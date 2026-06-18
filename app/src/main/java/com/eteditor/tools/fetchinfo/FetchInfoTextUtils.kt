@@ -201,7 +201,7 @@ internal fun fetchInfoCatalogWriteBackRenderedTitle(
         return renderTitleFormat(originalPrefix, fetchedName, autoStyle)
     }
     val plainTitle = if (originalPrefix.isBlank()) {
-        fetchedName.ifBlank { ChapterDetector.cleanTitle(item.title) }
+        fetchedName.ifBlank { item.title.trim() }
     } else {
         listOf(originalPrefix, fetchedName)
             .filter { it.isNotBlank() }
@@ -225,5 +225,6 @@ internal fun fetchInfoChapterNumberPrefix(title: String): String {
 }
 
 private fun fetchInfoFetchedTitleName(item: FetchedCatalogItem): String {
-    return ChapterDetector.cleanTitle(item.title.ifBlank { item.chapterTitle })
+    // 抓取来的标题不做内置规范化（不合并空格/不转全角/不去标记），仅去首尾空白，保持原站原样。
+    return item.title.ifBlank { item.chapterTitle }.trim()
 }
