@@ -32,3 +32,19 @@ fun EditorController.automationConfirmationState(request: AutomationConfirmation
     val step = automationConfirmationStep(request) ?: return null
     return automationRunStepStatuses[step.id]?.state
 }
+
+// 选中执行链是否已"跑完"：没有待确认请求，且所有步骤都到达终态（完成/跳过/失败）。
+// 用于判断运行视图里任务是否还在进行中——跑完后才允许点目录离开自动化面板。
+fun EditorController.isSelectedAutomationRunFinished(): Boolean {
+    if (automationConfirmationRequest != null) return false
+    val chain = selectedAutomationChain ?: return false
+    if (chain.steps.isEmpty()) return false
+    return chain.steps.all { step ->
+        when (automationRunStepStatuses[step.id]?.state) {
+            AutomationRunStepState.Completed,
+            AutomationRunStepState.Skipped,
+            AutomationRunStepState.Failed -> true
+            else -> false
+        }
+    }
+}

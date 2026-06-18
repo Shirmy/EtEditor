@@ -5,12 +5,14 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 fun EditorController.previousPreviewChapter() {
-    clearPreviewHighlight()
     when (kind) {
         DocumentKind.Epub -> {
             val book = epub ?: return
             if (book.chapters.isEmpty()) return
-            previewChapterIndex = (previewChapterIndex - 1).coerceAtLeast(0)
+            val target = (previewChapterIndex - 1).coerceAtLeast(0)
+            if (target == previewChapterIndex) return
+            clearPreviewHighlight()
+            previewChapterIndex = target
             refreshPreviewWithChapterSwitchProgress()
         }
         DocumentKind.Txt -> {
@@ -18,7 +20,10 @@ fun EditorController.previousPreviewChapter() {
             val document = txt ?: return
             if (document.chapters.isEmpty()) return
             val minIndex = if (txtHasPreface()) -1 else 0
-            previewChapterIndex = (previewChapterIndex - 1).coerceAtLeast(minIndex)
+            val target = (previewChapterIndex - 1).coerceAtLeast(minIndex)
+            if (target == previewChapterIndex) return
+            clearPreviewHighlight()
+            previewChapterIndex = target
             refreshPreviewWithChapterSwitchProgress()
         }
         DocumentKind.None -> Unit
@@ -26,19 +31,24 @@ fun EditorController.previousPreviewChapter() {
 }
 
 fun EditorController.nextPreviewChapter() {
-    clearPreviewHighlight()
     when (kind) {
         DocumentKind.Epub -> {
             val book = epub ?: return
             if (book.chapters.isEmpty()) return
-            previewChapterIndex = (previewChapterIndex + 1).coerceAtMost(book.chapters.lastIndex)
+            val target = (previewChapterIndex + 1).coerceAtMost(book.chapters.lastIndex)
+            if (target == previewChapterIndex) return
+            clearPreviewHighlight()
+            previewChapterIndex = target
             refreshPreviewWithChapterSwitchProgress()
         }
         DocumentKind.Txt -> {
             if (warnTxtMoveChapterSyncPending("\u5207\u6362\u7ae0\u8282\u9884\u89c8")) return
             val document = txt ?: return
             if (document.chapters.isEmpty()) return
-            previewChapterIndex = (previewChapterIndex + 1).coerceAtMost(document.chapters.lastIndex)
+            val target = (previewChapterIndex + 1).coerceAtMost(document.chapters.lastIndex)
+            if (target == previewChapterIndex) return
+            clearPreviewHighlight()
+            previewChapterIndex = target
             refreshPreviewWithChapterSwitchProgress()
         }
         DocumentKind.None -> Unit

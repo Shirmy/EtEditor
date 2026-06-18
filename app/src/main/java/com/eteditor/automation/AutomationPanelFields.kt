@@ -54,10 +54,19 @@ internal fun AutomationPanel(
     compact: Boolean = false,
     resetKey: Int = 0,
     documentSessionKey: Int = 0,
-    onPickTextReplaceRuleFile: TextReplaceRuleFilePicker = { _ -> }
+    onPickTextReplaceRuleFile: TextReplaceRuleFilePicker = { _ -> },
+    onDirectoryEscapeAllowedChange: (Boolean) -> Unit = {}
 ) {
     var mode by remember(documentSessionKey, resetKey) { mutableStateOf(AutomationViewMode.List) }
     var pendingRunChainId by remember(documentSessionKey, resetKey) { mutableStateOf<String?>(null) }
+    // 是否允许点目录离开自动化面板：执行列表随时可离开；运行视图要等任务跑完才行；
+    // 编辑视图、以及刚点运行还没开跑（pendingRunChainId 非空）时都不允许。
+    val directoryEscapeAllowed = when (mode) {
+        AutomationViewMode.List -> true
+        AutomationViewMode.Run -> pendingRunChainId == null && controller.isSelectedAutomationRunFinished()
+        AutomationViewMode.Edit -> false
+    }
+    LaunchedEffect(directoryEscapeAllowed) { onDirectoryEscapeAllowedChange(directoryEscapeAllowed) }
     var showGroupManager by remember(documentSessionKey, resetKey) { mutableStateOf(false) }
     val chain = controller.selectedAutomationChain
 

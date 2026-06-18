@@ -212,6 +212,9 @@ private fun WideLayout(
 ) {
     var directoryOpen by remember { mutableStateOf(false) }
     var rightPanel by remember { mutableStateOf<WideRightPanel?>(null) }
+    // 自动化面板当前是否允许点目录离开（执行列表 / 已跑完的运行视图为 true；编辑中、运行中为 false）。
+    // 目录按钮据此判断：允许时点目录才关掉自动化、放出目录；否则完全不响应。
+    var automationDirectoryEscapeAllowed by remember { mutableStateOf(true) }
     var txtFeaturePanel by remember { mutableStateOf(TxtFeaturePanel.Search) }
     var automationResetKey by remember { mutableStateOf(0) }
     var featuresResetKey by remember { mutableStateOf(0) }
@@ -459,7 +462,16 @@ private fun WideLayout(
                         directoryOpen = directoryVisible,
                         onToggleDirectory = {
                             if (directoryAvailable()) {
-                                directoryOpen = !directoryOpen
+                                if (automationSplitOpen) {
+                                    // 自动化面板开着：仅当允许离开（执行列表，或任务已跑完的运行视图）时，
+                                    // 点目录才关掉自动化并放出目录；正在编辑/运行任务时完全不响应。
+                                    if (automationDirectoryEscapeAllowed) {
+                                        rightPanel = null
+                                        directoryOpen = true
+                                    }
+                                } else {
+                                    directoryOpen = !directoryOpen
+                                }
                             }
                         },
                         onOpenAutomation = {
@@ -489,7 +501,8 @@ private fun WideLayout(
                             compact = true,
                             resetKey = automationResetKey,
                             documentSessionKey = controller.documentSessionKey,
-                            onPickTextReplaceRuleFile = onPickTextReplaceRuleFile
+                            onPickTextReplaceRuleFile = onPickTextReplaceRuleFile,
+                            onDirectoryEscapeAllowedChange = { automationDirectoryEscapeAllowed = it }
                         )
                     }
                     WideRightPanel.Features -> {
