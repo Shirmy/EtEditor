@@ -95,7 +95,7 @@ internal fun FetchInfoCatalogRuleDialog(
             color = MaterialTheme.colorScheme.surface,
             border = DialogBorder,
             shadowElevation = 8.dp,
-            modifier = Modifier.fixedDialogWidth(fraction = 0.82f, maxWidth = 360.dp)
+            modifier = Modifier.fixedDialogWidth(fraction = 0.72f, maxWidth = 320.dp)
         ) {
             Column(
                 modifier = Modifier.padding(14.dp),
