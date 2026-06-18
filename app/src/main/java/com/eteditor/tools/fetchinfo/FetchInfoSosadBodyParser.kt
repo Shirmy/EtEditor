@@ -27,6 +27,10 @@ private fun ensureSosadSpecialBlocks(
 ): List<FetchedSosadBodyBlock> {
     // 每个特殊块（预警 / 作者有话说）解析成一组块：文字块在前，块内图片块紧随其后，
     // 这样重排到正文前/后时图片始终跟着所属的特殊块走。
+    // 图片去重用共享集合，并以正文已有图片为初值，避免同一张图既出现在正文又出现在特殊块里被抓两次。
+    val seenImageUrls = blocks
+        .mapNotNull { it.imageUrl.takeIf { url -> url.isNotBlank() }?.trim()?.lowercase() }
+        .toMutableSet()
     val specialGroups = sosadBodySpecialBlockRegex
         .findAll(scopedHtml.normalizeSosadBodyMarkup())
         .filterNot { match -> isSosadReactionBlock(match.value) }
@@ -35,7 +39,7 @@ private fun ensureSosadSpecialBlocks(
             val text = special.cleaned.lines.joinToString("\n").trim()
             text.takeIf { it.isNotBlank() }?.let { cleanText ->
                 val textBlock = FetchedSosadBodyBlock(text = cleanText, cssClass = special.cssClass)
-                val imageBlocks = sosadSpecialBlockImageUrls(token, baseUrl)
+                val imageBlocks = sosadSpecialBlockImageUrls(token, baseUrl, seenImageUrls)
                     .map { url -> FetchedSosadBodyBlock(imageUrl = url, cssClass = special.cssClass) }
                 listOf(textBlock) + imageBlocks
             }
@@ -58,9 +62,13 @@ private fun ensureSosadSpecialBlocks(
     return warnings + filtered + authorNotes
 }
 
-// 从一个特殊块 token 里按出现顺序提取图片链接（去重），用于把预警/作者有话说里的图片也抓下来。
-private fun sosadSpecialBlockImageUrls(token: String, baseUrl: String): List<String> {
-    val seen = mutableSetOf<String>()
+// 从一个特殊块 token 里按出现顺序提取图片链接，用传入的共享集合去重
+//（跨特殊块、且与正文图片统一去重）。
+private fun sosadSpecialBlockImageUrls(
+    token: String,
+    baseUrl: String,
+    seen: MutableSet<String>
+): List<String> {
     return sosadSpecialImageTokenRegex.findAll(token)
         .mapNotNull { match -> sosadBodyImageUrl(match.value, baseUrl).takeIf { it.isNotBlank() } }
         .filter { url -> seen.add(url.trim().lowercase()) }

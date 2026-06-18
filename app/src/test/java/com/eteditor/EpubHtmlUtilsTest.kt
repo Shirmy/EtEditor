@@ -137,6 +137,23 @@ class EpubHtmlUtilsTest {
     }
 
     @Test
+    fun editEpubBodyAndSyncEntryReflectsNewContentInSavedBytes() {
+        // 复现 EPUB 正文编辑保存路径的核心：改正文 -> rebuildHtmlWithBodyContent -> 同步 entry。
+        // 守护此前的缺陷：仅改 chapter.html 不同步 entries 会导致保存/导出仍是旧内容。
+        val book = sampleBook(html = "<html><body><p>旧正文</p></body></html>")
+        val chapter = book.chapters.single()
+
+        val parts = htmlBodyContentParts(chapter.html)
+        chapter.html = rebuildHtmlWithBodyContent(parts.prefix, "<p>新正文</p>", parts.suffix)
+        normalizeEpubChapterLineEndingsToCrlf(book, chapter)
+
+        val savedBytes = String(book.entries.getValue(chapter.path), StandardCharsets.UTF_8)
+        assertTrue(savedBytes.contains("新正文"))
+        assertTrue(!savedBytes.contains("旧正文"))
+        assertEquals(chapter.html, savedBytes)
+    }
+
+    @Test
     fun toCrlfLineEndingsNormalizesMixedLineEndings() {
         assertEquals("一\r\n二\r\n三\r\n四", "一\r\n二\n三\r四".toCrlfLineEndings())
     }
