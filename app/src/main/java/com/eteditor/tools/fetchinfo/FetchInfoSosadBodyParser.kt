@@ -10,7 +10,7 @@ internal fun parseSosadBodyDetail(html: String, baseUrl: String): FetchedSosadBo
             .filter { it.isNotBlank() }
             .map { line -> FetchedSosadBodyBlock(text = line) }
     }
-    val blocks = ensureSosadSpecialBlocks(baseBlocks, scopedHtml)
+    val blocks = ensureSosadSpecialBlocks(baseBlocks, scopedHtml, baseUrl)
     return FetchedSosadBody(text = text, blocks = blocks)
 }
 
@@ -22,32 +22,49 @@ private fun sosadScopedBodyHtml(html: String, baseUrl: String): String {
 
 private fun ensureSosadSpecialBlocks(
     blocks: List<FetchedSosadBodyBlock>,
-    scopedHtml: String
+    scopedHtml: String,
+    baseUrl: String
 ): List<FetchedSosadBodyBlock> {
-    val specials = sosadBodySpecialBlockRegex
+    // 每个特殊块（预警 / 作者有话说）解析成一组块：文字块在前，块内图片块紧随其后，
+    // 这样重排到正文前/后时图片始终跟着所属的特殊块走。
+    val specialGroups = sosadBodySpecialBlockRegex
         .findAll(scopedHtml.normalizeSosadBodyMarkup())
         .filterNot { match -> isSosadReactionBlock(match.value) }
-        .mapNotNull { match -> sosadBodySpecialBlockText(match.value) }
-        .mapNotNull { special ->
+        .mapNotNull { match -> sosadBodySpecialBlockText(match.value)?.let { match.value to it } }
+        .mapNotNull { (token, special) ->
             val text = special.cleaned.lines.joinToString("\n").trim()
-            text.takeIf { it.isNotBlank() }
-                ?.let { FetchedSosadBodyBlock(text = it, cssClass = special.cssClass) }
+            text.takeIf { it.isNotBlank() }?.let { cleanText ->
+                val textBlock = FetchedSosadBodyBlock(text = cleanText, cssClass = special.cssClass)
+                val imageBlocks = sosadSpecialBlockImageUrls(token, baseUrl)
+                    .map { url -> FetchedSosadBodyBlock(imageUrl = url, cssClass = special.cssClass) }
+                listOf(textBlock) + imageBlocks
+            }
         }
-        .distinctBy { it.cssClass to it.text }
+        .distinctBy { group -> group.first().cssClass to group.first().text }
         .toList()
-    if (specials.isEmpty()) return blocks
+    if (specialGroups.isEmpty()) return blocks
     val specialTexts = buildSet {
-        specials.forEach { special ->
-            add(special.text.trim())
-            special.text.split('\n').forEach { line -> add(line.trim()) }
+        specialGroups.forEach { group ->
+            val text = group.first().text
+            add(text.trim())
+            text.split('\n').forEach { line -> add(line.trim()) }
         }
     }
     val filtered = blocks.filterNot { block ->
         block.text.isNotBlank() && block.text.trim() in specialTexts
     }
-    val warnings = specials.filter { it.cssClass == SOSAD_BODY_CSS_SYS }
-    val authorNotes = specials.filter { it.cssClass == SOSAD_BODY_CSS_AUTHOR_NOTE }
+    val warnings = specialGroups.filter { it.first().cssClass == SOSAD_BODY_CSS_SYS }.flatten()
+    val authorNotes = specialGroups.filter { it.first().cssClass == SOSAD_BODY_CSS_AUTHOR_NOTE }.flatten()
     return warnings + filtered + authorNotes
+}
+
+// 从一个特殊块 token 里按出现顺序提取图片链接（去重），用于把预警/作者有话说里的图片也抓下来。
+private fun sosadSpecialBlockImageUrls(token: String, baseUrl: String): List<String> {
+    val seen = mutableSetOf<String>()
+    return sosadSpecialImageTokenRegex.findAll(token)
+        .mapNotNull { match -> sosadBodyImageUrl(match.value, baseUrl).takeIf { it.isNotBlank() } }
+        .filter { url -> seen.add(url.trim().lowercase()) }
+        .toList()
 }
 
 private fun sosadBodyHtmlBlock(scopedHtml: String, baseUrl: String): String {
@@ -379,6 +396,13 @@ private fun String.isSupportedSosadImageUrlText(): Boolean {
 
 private val sosadBodyBlockTokenRegex = Regex(
     """<([a-z0-9]+)\b[^>]+class=["'][^"']*\bgrayout\b[^"']*["'][^>]*>.*?</\1>|<a\b[^>]*\bhref\s*=\s*["'][^"']+["'][^>]*>.*?</a>|<img\b[^>]*>|https://[^\s"'<>]+\.(?:jpe?g|png|webp|gif)(?:\?[^\s"'<>]*)?|https\s+i\s+ibb\s+co\s+[^\s"'<>]+\s+[^\r\n<>]+?\s+(?:jpe?g|png|webp|gif)\b""",
+    setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+)
+
+// 仅匹配图片类 token（不含外层 grayout 包裹），用于在特殊块内部直接提取图片，
+// 避免用整块 token 正则时外层 grayout 把内部 <img> 整段吞掉。
+private val sosadSpecialImageTokenRegex = Regex(
+    """<a\b[^>]*\bhref\s*=\s*["'][^"']+["'][^>]*>.*?</a>|<img\b[^>]*>|https://[^\s"'<>]+\.(?:jpe?g|png|webp|gif)(?:\?[^\s"'<>]*)?|https\s+i\s+ibb\s+co\s+[^\s"'<>]+\s+[^\r\n<>]+?\s+(?:jpe?g|png|webp|gif)\b""",
     setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
 )
 
