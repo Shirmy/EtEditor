@@ -337,10 +337,10 @@ internal fun BodyPreview(
     fun openEpubEditFromPreview(visibleOffset: Int) {
         if (epubDoubleTapEditEnabled) {
             val editableText = textForBodyEditTarget(currentBodyEditTarget())
-            val previewWindow = controller.previewText
-            val windowStart = editableText.indexOf(previewWindow)
-                .takeIf { it >= 0 }
-                ?: 0
+            // 直接用已记录的可见窗口源偏移，而不是用 indexOf 反查窗口起点：
+            // 章节较长、从中间开窗显示时，预览文本可能在本章前面有重复内容，
+            // indexOf 会命中错误的第一处导致光标定位偏移；选区操作一直用的就是这个偏移。
+            val windowStart = controller.previewVisibleSourceOffsetValue()
             startBodyEditing(
                 initialSelection = (windowStart + visibleOffset).coerceIn(0, editableText.length),
                 showKeyboard = true
