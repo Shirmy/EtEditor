@@ -173,12 +173,18 @@ fun FetchInfoPreviewPane(
             }
         }
     }
-    val displayCatalogRows = controller.fetchInfoCatalogPreviewRows(
-        preview,
-        filtered = filterActive,
-        renames = renames.toMap(),
-        deletes = deletes.toSet()
-    )
+    // 预览行依赖 preview / 过滤开关 / 逐行重命名与删除；把它们都作为 key 缓存，
+    // 避免每次重组（滚动、按钮高亮等）都重新遍历整本书生成行。
+    val renameSnapshot = renames.toMap()
+    val deleteSnapshot = deletes.toSet()
+    val displayCatalogRows = remember(preview, filterActive, renameSnapshot, deleteSnapshot) {
+        controller.fetchInfoCatalogPreviewRows(
+            preview,
+            filtered = filterActive,
+            renames = renameSnapshot,
+            deletes = deleteSnapshot
+        )
+    }
     val displayedCatalogRows = if (catalogOrderReversed) displayCatalogRows.asReversed() else displayCatalogRows
     val catalogSummary = remember(preview) {
         if (preview.parameters.fetchCatalog) controller.fetchInfoCatalogSummary(preview) else ""
