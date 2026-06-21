@@ -461,13 +461,14 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.scrollEditLineNearTop(line:
     if (line == null) return
     val safeLine = line.coerceIn(0, (getLineCount() - 1).coerceAtLeast(0))
     val targetY = runCatching {
-        (getCharOffsetY(safeLine, 0) - getRowHeight())
+        (getOffsetY() + getCharOffsetY(safeLine, 0) - getRowHeight())
             .roundToInt()
             .coerceIn(0, getScrollMaxY())
     }.getOrDefault(0)
     val scroller = getScroller()
     scroller.forceFinished(true)
     scroller.startScroll(getOffsetX(), getOffsetY(), 0, targetY - getOffsetY(), 0)
+    scroller.abortAnimation()
     invalidate()
 }
 
