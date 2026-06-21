@@ -147,7 +147,7 @@ internal fun LargeBodyCodeEditor(
                     setDisplayLnPanel(false)
                     setHorizontalScrollBarEnabled(false)
                     isVerticalScrollBarEnabled = true
-                    setPadding(padding, padding, padding, padding)
+                    setPadding(padding, padding, padding, 0)
                     setOnFocusChangeListener { _, hasFocus -> onFocusChanged(hasFocus) }
                     configureTxtFullEditWindowExpansion(
                         sourceStart = windowSourceStart,
@@ -184,7 +184,7 @@ internal fun LargeBodyCodeEditor(
                 editor.setLineNumberEnabled(false)
                 editor.setDisplayLnPanel(false)
                 editor.setHorizontalScrollBarEnabled(false)
-                editor.setPadding(padding, padding, padding, padding)
+                editor.setPadding(padding, padding, padding, 0)
                 editor.configureTxtFullEditWindowExpansion(
                     sourceStart = windowSourceStart,
                     sourceEnd = windowSourceEnd,
