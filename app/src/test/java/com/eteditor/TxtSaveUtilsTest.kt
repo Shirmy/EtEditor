@@ -149,11 +149,11 @@ class TxtSaveUtilsTest {
 
         val result = prepareTxtDocumentSave(document, renumberTitles = false)
 
-        assertEquals("第9章 新标题\n正文", result.mapping.text)
+        assertEquals("第9章 新标题\r\n正文", result.mapping.text)
         assertEquals(1, result.mapping.changedCount)
         assertEquals("UTF-8", result.encodingLabel)
         assertEquals(
-            "第9章 新标题\n正文",
+            "第9章 新标题\r\n正文",
             String(result.bytes, StandardCharsets.UTF_8)
         )
         assertTrue(result.keepMappedCatalog)
@@ -178,9 +178,27 @@ class TxtSaveUtilsTest {
 
         val result = prepareTxtDocumentSave(document, renumberTitles = false)
 
-        assertEquals(text, result.mapping.text)
+        assertEquals("第1章 标题\r\n正文", result.mapping.text)
         assertEquals(0, result.mapping.changedCount)
-        assertEquals(text, String(result.bytes, StandardCharsets.UTF_8))
+        assertEquals("第1章 标题\r\n正文", String(result.bytes, StandardCharsets.UTF_8))
+        assertFalse(result.keepMappedCatalog)
+    }
+
+    @Test
+    fun prepareTxtDocumentSaveNormalizesMixedLineEndingsToCrLf() {
+        val text = "A\nB\rC\r\nD"
+        val document = TxtDocument(
+            originalName = "book",
+            text = text,
+            encoding = "UTF-8",
+            chapters = emptyList()
+        )
+
+        val result = prepareTxtDocumentSave(document, renumberTitles = false)
+
+        assertEquals("A\r\nB\r\nC\r\nD", result.mapping.text)
+        assertEquals("A\r\nB\r\nC\r\nD", String(result.bytes, StandardCharsets.UTF_8))
+        assertEquals(0, result.mapping.changedCount)
         assertFalse(result.keepMappedCatalog)
     }
 
