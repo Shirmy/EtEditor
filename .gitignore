@@ -26,5 +26,8 @@ replay_pid*.log
 # Local planning notes
 docs/superpowers/
 
+# opencode skills & config
+.opencode/
+
 # Release APKs
 release-apk/
