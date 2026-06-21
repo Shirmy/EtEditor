@@ -167,6 +167,7 @@ internal fun LargeBodyCodeEditor(
                     ) {
                         appliedLayoutSizeKey = latestLayoutSizeKey
                         appliedExpectedLayoutSizeKey = latestExpectedLayoutSizeKey
+                        contentKeyPending = false
                         latestOnContentApplied()
                     }
                     onEditorReady(this)
