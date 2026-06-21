@@ -705,7 +705,6 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.setPreviewTextAfterStableLa
             setText(text)
             rebuildPlainTextSoftWrap()
             setSelection(0, 0, false)
-            applyPreviewHighlightOrScroll(highlightRange, scrollTargetOffset, scrollTargetLineIndex)
             requestLayout()
             invalidate()
             postPreviewFrames(contentKey, 6) {
@@ -914,7 +913,7 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.applyPreviewHighlightOrScro
         return
     }
     val position = content.getIndexer().getCharPosition(target)
-    scrollPreviewPositionNearTop(position.getLine(), 0)
+    scrollPreviewPositionCentered(position.getLine(), 0)
 }
 
 private fun io.github.rosemoe.sora.widget.CodeEditor.scrollPreviewPositionNearTop(

@@ -227,6 +227,6 @@ internal fun EditorController.locateEpubPreviewAtBodyOffset(chapterIndex: Int, b
     val safeOffset = bodyOffset.coerceIn(0, body.length)
     previewHighlightChapterIndex = chapterIndex
     previewHighlightSourceStart = safeOffset
-    previewHighlightSourceEnd = safeOffset
+    previewHighlightSourceEnd = (safeOffset + 1).coerceAtMost(body.length)
     refreshPreview()
 }
