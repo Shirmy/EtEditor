@@ -405,7 +405,7 @@ private class BodyReadOnlyTextActionWindow(
                 layoutParams = if (weighted) {
                     LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
                 } else {
-                    ViewGroup.LayoutParams(
+                    ViewGroup.MarginLayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
                     )
@@ -437,7 +437,7 @@ private class BodyReadOnlyTextActionWindow(
             scrollView.isFillViewport = true
             val row = scrollView.getChildAt(0) as? ViewGroup
             if (row != null) {
-                row.layoutParams = ViewGroup.LayoutParams(
+                row.layoutParams = android.widget.FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
