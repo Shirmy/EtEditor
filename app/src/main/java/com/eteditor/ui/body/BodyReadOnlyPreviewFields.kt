@@ -368,7 +368,16 @@ private fun BodyPlainReadOnlyPreviewContent(
                 controller.selectedReplacementPreviewMatchId
             ),
             highlightRange = previewHighlightRange,
-            scrollTargetOffset = null,
+            scrollTargetOffset = if (
+                previewHighlightRange == null &&
+                hasPreview &&
+                previewHighlightStart >= 0 &&
+                previewHighlightStart <= previewText.length
+            ) {
+                previewHighlightStart
+            } else {
+                null
+            },
             scrollTargetLineIndex = null,
             interactive = hasPreview,
             showLoading = true,
