@@ -53,7 +53,10 @@ fun EditorController.updateEditableBodyText(text: String): Boolean {
             val chapter = book.chapters.getOrNull(chapterIndex) ?: return false
             val bodyParts = htmlBodyContentParts(chapter.html)
             val currentText = bodyParts.body
-            if (currentText == text) {
+            // EPUB 保存时会统一换行符为 CRLF,而 CodeEditor 的 getText() 可能返回 \n。
+            // 统一换行符再比较,避免没改内容也被判定为修改而写入。
+            fun normCrLf(s: String) = s.replace("\r\n", "\n").replace('\r', '\n')
+            if (normCrLf(currentText) == normCrLf(text)) {
                 statusMessage = "正文未修改"
                 return true
             }

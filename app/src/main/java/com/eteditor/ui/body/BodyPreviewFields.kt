@@ -459,14 +459,28 @@ internal fun BodyPreview(
     fun saveBodyEditingToTarget(target: BodyEditTarget, showNoChangeMessage: Boolean): Boolean {
         val nextText = currentEditorTextForTarget(target)
         val activeWindow = txtFullEditWindow
+        // EPUB 保存时会把换行符统一成 CRLF,导致下次加载的原文是 \r\n,
+        // 而 CodeEditor 内部 getText() 可能返回 \n。切章节对比时如果不
+        // 统一换行符,\r\n != \n 会被误判为已修改。统一成 \n 再比较。
+        fun normalizeForCompare(s: String): String = s.replace("\r\n", "\n").replace('\r', '\n')
         val changed = if (
             target.kind == DocumentKind.Txt &&
             target.txtPreviewMode == TXT_PREVIEW_MODE_FULL &&
             activeWindow != null
         ) {
             activeWindow.text != nextText
+        } else if (useNativeFullTextEditor) {
+            normalizeForCompare(editTargetOriginalText) != normalizeForCompare(nextText)
         } else {
-            textForBodyEditTarget(target) != nextText
+            normalizeForCompare(textForBodyEditTarget(target)) != normalizeForCompare(nextText)
+        }
+        // 编辑器内容滞后时（切章节后还没加载新 target），nextText 是旧章节内容，
+        // 不能写到当前 target。用户没改就跳过保存。
+        if (useNativeFullTextEditor && !changed) {
+            if (target == editTarget) {
+                editTargetOriginalText = nextText
+            }
+            return true
         }
         val saved = if (target.kind == DocumentKind.Txt && target.txtPreviewMode == TXT_PREVIEW_MODE_FULL && txtFullEditWindow != null) {
             val window = activeWindow
@@ -496,8 +510,6 @@ internal fun BodyPreview(
             editTarget = nextTarget
             if (!useNativeFullTextEditor) {
                 setBodyDraftForTarget(nextTarget)
-            } else {
-                editTargetOriginalText = textForBodyEditTarget(nextTarget)
             }
         } else if (previousTarget != nextTarget) {
             saveBodyEditingToTarget(previousTarget, showNoChangeMessage = false)
@@ -508,8 +520,6 @@ internal fun BodyPreview(
             if (!useNativeFullTextEditor) {
                 nativeBodyEditor = null
                 setBodyDraftForTarget(nextTarget)
-            } else {
-                editTargetOriginalText = textForBodyEditTarget(nextTarget)
             }
         }
     }
@@ -689,6 +699,9 @@ internal fun BodyPreview(
                                 },
                                 onEditorReady = { nativeBodyEditor = it },
                                 onFocusChanged = { bodyEditorFocused = it },
+                                onContentApplied = {
+                                    editTargetOriginalText = textForBodyEditTarget(currentBodyEditTarget())
+                                },
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .padding(end = 4.dp)

@@ -96,6 +96,7 @@ internal fun LargeBodyCodeEditor(
     onWindowEdgeReached: ((TxtFullEditWindowEdge, String, Int, Int) -> Unit)? = null,
     onEditorReady: (io.github.rosemoe.sora.widget.CodeEditor) -> Unit,
     onFocusChanged: (Boolean) -> Unit,
+    onContentApplied: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val textColor = MaterialTheme.colorScheme.onSurface.toArgb()
@@ -103,6 +104,7 @@ internal fun LargeBodyCodeEditor(
     val textSizeSp = MaterialTheme.typography.bodyMedium.fontSize.value.takeIf { it > 0f } ?: 14f
     val padding = with(LocalDensity.current) { 8.dp.roundToPx() }
     val latestOnWindowEdgeReached by rememberUpdatedState(onWindowEdgeReached)
+    val latestOnContentApplied by rememberUpdatedState(onContentApplied)
     BoxWithConstraints(
         modifier = modifier
             .clipToBounds()
@@ -114,9 +116,11 @@ internal fun LargeBodyCodeEditor(
         val latestLayoutSizeKey by rememberUpdatedState(layoutSizeKey)
         var appliedLayoutSizeKey by remember { mutableStateOf<Pair<Int, Int>?>(null) }
         var appliedExpectedLayoutSizeKey by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+        var contentKeyPending by remember { mutableStateOf(false) }
         LaunchedEffect(contentKey) {
             appliedLayoutSizeKey = null
             appliedExpectedLayoutSizeKey = null
+            contentKeyPending = true
         }
         LaunchedEffect(expectedLayoutSizeKey) {
             appliedLayoutSizeKey = null
@@ -163,6 +167,7 @@ internal fun LargeBodyCodeEditor(
                     ) {
                         appliedLayoutSizeKey = latestLayoutSizeKey
                         appliedExpectedLayoutSizeKey = latestExpectedLayoutSizeKey
+                        latestOnContentApplied()
                     }
                     onEditorReady(this)
                 }
@@ -172,6 +177,7 @@ internal fun LargeBodyCodeEditor(
                     editor.tag = contentKey
                     appliedLayoutSizeKey = null
                     appliedExpectedLayoutSizeKey = null
+                    contentKeyPending = true
                 }
                 editor.applyPlainTextEditorColors(textColor, backgroundColor)
                 editor.setBackgroundColor(backgroundColor)
@@ -199,19 +205,25 @@ internal fun LargeBodyCodeEditor(
                             appliedExpectedLayoutSizeKey != expectedLayoutSizeKey
                     )
                 ) {
-                    // 布局尺寸变化（如输入法收起导致 imePadding 抬高的区域回缩）时，
-                    // 编辑器可能已有用户输入但尚未保存。若仍用外部传入的原文 setText，
-                    // 会把用户刚输入的内容覆盖掉。这里优先用编辑器当前内容，仅在其为空
-                    // （首次布局完成前的边缘情形）时回退到传入文本。
-                    val currentEditorText = editor.getText()?.toString().orEmpty()
+                    // contentKeyPending 为 true 表示章节切换后编辑器还没加载新内容,
+                    // 必须用传入的新 text 覆盖编辑器(此时 text 是新章节内容)。
+                    // 否则是布局尺寸变化(如输入法收起),编辑器可能已有用户输入,
+                    // 优先用编辑器当前内容保护未保存的修改,仅在其为空时回退到 text。
+                    val effectiveText = if (contentKeyPending) {
+                        text
+                    } else {
+                        editor.getText()?.toString().orEmpty().ifEmpty { text }
+                    }
                     editor.setEditTextAfterStableLayout(
-                        text = currentEditorText.ifEmpty { text },
+                        text = effectiveText,
                         contentKey = contentKey,
                         selectionTargetIndex = selectionTargetIndex,
                         scrollTargetLineIndex = scrollTargetLineIndex
                     ) {
                         appliedLayoutSizeKey = latestLayoutSizeKey
                         appliedExpectedLayoutSizeKey = latestExpectedLayoutSizeKey
+                        contentKeyPending = false
+                        latestOnContentApplied()
                     }
                 }
                 onEditorReady(editor)
