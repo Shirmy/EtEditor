@@ -199,8 +199,13 @@ internal fun LargeBodyCodeEditor(
                             appliedExpectedLayoutSizeKey != expectedLayoutSizeKey
                     )
                 ) {
+                    // 布局尺寸变化（如输入法收起导致 imePadding 抬高的区域回缩）时，
+                    // 编辑器可能已有用户输入但尚未保存。若仍用外部传入的原文 setText，
+                    // 会把用户刚输入的内容覆盖掉。这里优先用编辑器当前内容，仅在其为空
+                    // （首次布局完成前的边缘情形）时回退到传入文本。
+                    val currentEditorText = editor.getText()?.toString().orEmpty()
                     editor.setEditTextAfterStableLayout(
-                        text = text,
+                        text = currentEditorText.ifEmpty { text },
                         contentKey = contentKey,
                         selectionTargetIndex = selectionTargetIndex,
                         scrollTargetLineIndex = scrollTargetLineIndex
