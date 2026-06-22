@@ -206,25 +206,26 @@ internal fun LargeBodyCodeEditor(
                             appliedExpectedLayoutSizeKey != expectedLayoutSizeKey
                     )
                 ) {
-                    // contentKeyPending 为 true 表示章节切换后编辑器还没加载新内容,
-                    // 必须用传入的新 text 覆盖编辑器(此时 text 是新章节内容)。
-                    // 否则是布局尺寸变化(如输入法收起),编辑器可能已有用户输入,
-                    // 优先用编辑器当前内容保护未保存的修改,仅在其为空时回退到 text。
-                    val effectiveText = if (contentKeyPending) {
-                        text
+                    if (contentKeyPending) {
+                        // 章节切换后编辑器还没加载新内容,用传入的新 text 覆盖编辑器,
+                        // 应用光标和滚动目标位置。
+                        editor.setEditTextAfterStableLayout(
+                            text = text,
+                            contentKey = contentKey,
+                            selectionTargetIndex = selectionTargetIndex,
+                            scrollTargetLineIndex = scrollTargetLineIndex
+                        ) {
+                            appliedLayoutSizeKey = latestLayoutSizeKey
+                            appliedExpectedLayoutSizeKey = latestExpectedLayoutSizeKey
+                            contentKeyPending = false
+                            latestOnContentApplied()
+                        }
                     } else {
-                        editor.getText()?.toString().orEmpty().ifEmpty { text }
-                    }
-                    editor.setEditTextAfterStableLayout(
-                        text = effectiveText,
-                        contentKey = contentKey,
-                        selectionTargetIndex = selectionTargetIndex,
-                        scrollTargetLineIndex = scrollTargetLineIndex
-                    ) {
+                        // 布局尺寸变化(如输入法收起/展开),内容没变,编辑器自己会重新排版。
+                        // 不调 setEditTextAfterStableLayout,避免 applyEditSelectionTarget
+                        // 把光标重置到初始位置、scrollEditLineNearTop 重置滚动位置。
                         appliedLayoutSizeKey = latestLayoutSizeKey
                         appliedExpectedLayoutSizeKey = latestExpectedLayoutSizeKey
-                        contentKeyPending = false
-                        latestOnContentApplied()
                     }
                 }
                 onEditorReady(editor)
