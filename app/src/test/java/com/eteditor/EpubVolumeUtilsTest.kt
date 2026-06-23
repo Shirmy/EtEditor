@@ -71,15 +71,18 @@ class EpubVolumeUtilsTest {
                 "OEBPS/Text/Chapter0001.xhtml",
                 "OEBPS/Text/Vol01.xhtml",
                 "OEBPS/Text/Chapter0002.xhtml",
+                "OEBPS/Text/chapter_0003.xhtml",
+                "OEBPS/Text/Section0003.xhtml",
+                "OEBPS/Text/Chapter0004.xhtml",
                 "OEBPS/Text/VolF01.xhtml",
-                "OEBPS/Text/Chapter0003.xhtml"
+                "OEBPS/Text/chapter_0005.xhtml"
             ),
-            titles = listOf("序章", "第一卷", "第一章", "番外一", "番外章")
+            titles = listOf("序章", "第一卷", "第一章", "第二章", "说明页", "平级章", "番外一", "番外章")
         )
 
         applyVolumeTocLevels(book)
 
-        assertEquals(listOf(0, 0, 1, 0, 1), book.chapters.map { it.tocLevel })
+        assertEquals(listOf(0, 0, 1, 1, 0, 0, 0, 1), book.chapters.map { it.tocLevel })
     }
 
     @Test

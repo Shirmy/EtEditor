@@ -193,7 +193,6 @@ class FetchInfoTargetUtilsTest {
             listOf("Chapter0001.xhtml", "Section0002.html", "Section0002.xhtml", "custom.htm"),
             buildFetchInfoIntroTargetOptions(book, "OEBPS/Text/Chapter0001.xhtml").map { it.second }
         )
-        assertTrue(epubExportOptions(hideSection0001FromNcx = false).ncxFollowHtmlFileTitle)
         assertEquals(false, epubExportOptions(hideSection0001FromNcx = false).hideSection0001FromNcx)
     }
 

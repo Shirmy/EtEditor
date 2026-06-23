@@ -175,7 +175,7 @@ class EpubTocUtilsTest {
     }
 
     @Test
-    fun updateNcxTitlesRebuildsHierarchyFromHtmlHeadingsAndHidesSection0001() {
+    fun updateNcxTitlesRebuildsHierarchyFromInternalTocLevelsAndHidesSection0001() {
         val ncx = """
             <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/">
                 <head><meta name="dtb:depth" content="1" /></head>
@@ -192,6 +192,7 @@ class EpubTocUtilsTest {
             chapter("cover", "OEBPS/Text/Section0001.xhtml", "封面", "<html><body><h1>封面</h1></body></html>"),
             chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "旧第一章", "<html><body><h1>HTML<br/>第一章</h1></body></html>"),
             chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "旧第二章", "<html><body><h2>HTML 第二章</h2></body></html>")
+                .copy(tocLevel = 1)
         )
 
         val updated = updateNcxTitles(
@@ -199,8 +200,6 @@ class EpubTocUtilsTest {
             ncxPath = "OEBPS/toc.ncx",
             chapters = chapters,
             options = EpubExportOptions(
-                ncxFollowHtmlFileTitle = true,
-                rebuildNcxHierarchyFromHtmlHeadings = true,
                 hideSection0001FromNcx = true
             )
         )
@@ -216,7 +215,7 @@ class EpubTocUtilsTest {
     }
 
     @Test
-    fun updateNcxTitlesUsesUnifiedHtmlTitleWhenLegacyFollowOptionIsDisabled() {
+    fun updateNcxTitlesIgnoresHtmlHeadingLevelsWhenInternalTocLevelsDiffer() {
         val ncx = """
             <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/">
                 <navMap>
@@ -232,8 +231,14 @@ class EpubTocUtilsTest {
                 "c1",
                 "OEBPS/Text/Chapter0001.xhtml",
                 "旧内存标题",
-                "<html><body><h1>HTML<br/>第一章</h1></body></html>"
-            )
+                "<html><body><h2>HTML<br/>第一章</h2></body></html>"
+            ),
+            chapter(
+                "c2",
+                "OEBPS/Text/Chapter0002.xhtml",
+                "旧第二章",
+                "<html><body><h1>HTML 第二章</h1></body></html>"
+            ).copy(tocLevel = 1)
         )
 
         val updated = updateNcxTitles(
@@ -241,14 +246,13 @@ class EpubTocUtilsTest {
             ncxPath = "OEBPS/toc.ncx",
             chapters = chapters,
             options = EpubExportOptions(
-                ncxFollowHtmlFileTitle = false,
-                rebuildNcxHierarchyFromHtmlHeadings = false,
                 hideSection0001FromNcx = false
             )
         )
         val entries = parseNcxEntries(updated, "OEBPS/toc.ncx")
 
         assertEquals(TocEntry("HTML 第一章", 0), entries["OEBPS/Text/Chapter0001.xhtml"])
+        assertEquals(TocEntry("HTML 第二章", 1), entries["OEBPS/Text/Chapter0002.xhtml"])
     }
 
     @Test

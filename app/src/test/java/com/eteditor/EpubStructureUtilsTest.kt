@@ -58,6 +58,29 @@ class EpubStructureUtilsTest {
     }
 
     @Test
+    fun updateEpubChapterItemModelRebuildsVolumeLevelsWhenChildChapterBecomesSection() {
+        val book = sampleBook(
+            listOf(
+                chapter("v1", "OEBPS/Text/Vol01.xhtml", "Volume 1"),
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "Chapter 1"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "Chapter 2")
+            )
+        )
+        applyVolumeTocLevels(book)
+
+        val result = updateEpubChapterItemModel(
+            book = book,
+            chapterIndex = 1,
+            fileName = "Section0002",
+            chapterTitle = "Section 2"
+        )
+
+        assertTrue(result.success)
+        assertEquals("OEBPS/Text/Section0002.xhtml", book.chapters[1].path)
+        assertEquals(listOf(0, 0, 0), book.chapters.map { it.tocLevel })
+    }
+
+    @Test
     fun updateEpubChapterItemModelRejectsBlankTitleAndExistingFileName() {
         val book = sampleBook(
             listOf(

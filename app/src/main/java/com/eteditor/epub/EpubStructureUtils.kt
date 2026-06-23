@@ -168,6 +168,7 @@ internal fun deleteEpubChapterFromBook(
         return EpubChapterDeleteResult(success = false, message = "至少需要保留 1 个 HTML 章节")
     }
     val chapter = book.chapters.removeAt(chapterIndex)
+    val deletedVolume = chapter.isVolumeChapter()
     val displayTitle = chapter.title.ifBlank { chapter.path.substringAfterLast('/') }
     book.spineIds.removeAll { it == chapter.id }
     book.manifest.remove(chapter.id)
@@ -177,7 +178,7 @@ internal fun deleteEpubChapterFromBook(
             book.entries.remove(alias)
         }
     }
-    if (book.chapters.any { it.isVolumeChapter() }) applyVolumeTocLevels(book)
+    if (deletedVolume || book.chapters.any { it.isVolumeChapter() }) applyVolumeTocLevels(book)
     val resequence = resequenceEpubBodyChaptersAfterStructureChange(
         book = book,
         preferredTitleSource = chapter.title
@@ -394,6 +395,7 @@ internal fun updateEpubChapterItemModel(
     chapterTitle: String
 ): EpubChapterItemUpdateResult {
     val chapter = book.chapters.getOrNull(chapterIndex) ?: return EpubChapterItemUpdateResult(success = false)
+    val hadVolumeChapters = book.chapters.any { it.isVolumeChapter() }
     val manifestItem = book.manifest[chapter.id]
     val cleanedTitle = ChapterDetector.cleanTitle(chapterTitle)
     var errorMessage = ""
@@ -436,6 +438,9 @@ internal fun updateEpubChapterItemModel(
         }
     }
     chapter.wordCount = ChapterDetector.countHtmlChars(chapter.html)
+    if (hadVolumeChapters || book.chapters.any { it.isVolumeChapter() }) {
+        applyVolumeTocLevels(book)
+    }
     return EpubChapterItemUpdateResult(success = true)
 }
 

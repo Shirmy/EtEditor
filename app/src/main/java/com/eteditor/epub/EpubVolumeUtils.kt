@@ -474,15 +474,24 @@ private val EPUB_SELECTION_HTML_TAG_NAMES = setOf(
 )
 
 internal fun applyVolumeTocLevels(book: EpubBook) {
-    var insideVolume = false
+    var insideVolumeChapterRun = false
     book.chapters.forEach { chapter ->
         if (chapter.isVolumeChapter()) {
             chapter.tocLevel = 0
-            insideVolume = true
+            insideVolumeChapterRun = true
+        } else if (insideVolumeChapterRun && chapter.isAutoVolumeChildChapter()) {
+            chapter.tocLevel = 1
         } else {
-            chapter.tocLevel = if (insideVolume) 1 else 0
+            chapter.tocLevel = 0
+            insideVolumeChapterRun = false
         }
     }
+}
+
+private fun EpubChapter.isAutoVolumeChildChapter(): Boolean {
+    val fileName = path.substringAfterLast('/').substringBefore('#')
+    val stem = fileName.substringBeforeLast('.', fileName)
+    return Regex("""^(?:Chapter\d+|chapter_\d+)${'$'}""").matches(stem)
 }
 
 internal fun resequenceEpubVolumeFileNames(book: EpubBook, kind: String): Int {

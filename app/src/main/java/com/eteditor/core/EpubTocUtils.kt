@@ -9,13 +9,7 @@ internal data class TocEntry(
 
 internal data class TocNode(
     val chapter: EpubChapter,
-    val titleOverride: String? = null,
     val children: MutableList<TocNode> = mutableListOf()
-)
-
-internal data class HtmlTocHeading(
-    val title: String,
-    val level: Int
 )
 
 internal fun findNcxPath(spine: Element?, manifest: Map<String, ManifestItem>): String? {
@@ -155,7 +149,7 @@ internal fun updateNcxTitles(
 
             val navLabel = doc.createElementNS(namespace, "navLabel")
             val text = doc.createElementNS(namespace, "text")
-            text.textContent = node.titleOverride ?: tocTitle(node.chapter, options)
+            text.textContent = tocTitle(node.chapter, options)
             navLabel.appendChild(text)
             navPoint.appendChild(navLabel)
 
@@ -173,19 +167,11 @@ internal fun updateNcxTitles(
             navMap.removeChild(navMap.firstChild)
         }
         val tocChapters = chapters.filterNot { it.isExcludedFromNcx(options) }
-        val tocTree = if (options.rebuildNcxHierarchyFromHtmlHeadings) {
-            buildHtmlHeadingTocTree(tocChapters, options)
-        } else {
-            buildTocTree(tocChapters)
-        }
+        val tocTree = buildTocTree(tocChapters)
         tocTree.forEach { node ->
             navMap.appendChild(createNavPoint(node))
         }
-        val depth = if (options.rebuildNcxHierarchyFromHtmlHeadings) {
-            tocTreeDepth(tocTree)
-        } else {
-            (tocChapters.maxOfOrNull { it.tocLevel.coerceAtLeast(0) } ?: 0) + 1
-        }
+        val depth = (tocChapters.maxOfOrNull { it.tocLevel.coerceAtLeast(0) } ?: 0) + 1
         val depthMeta = doc.elements("meta").firstOrNull { meta ->
             meta.attr("name").equals("dtb:depth", ignoreCase = true)
         }
@@ -313,79 +299,12 @@ private fun buildTocTree(chapters: List<EpubChapter>): List<TocNode> {
     return roots
 }
 
-private fun buildHtmlHeadingTocTree(
-    chapters: List<EpubChapter>,
-    options: EpubExportOptions
-): List<TocNode> {
-    val roots = mutableListOf<TocNode>()
-    var currentH1Node: TocNode? = null
-    chapters.forEach { chapter ->
-        val heading = htmlTocHeading(chapter.html)
-        val title = htmlHeadingTocTitle(chapter, options)
-        if (chapter.isEpubCoverDirectoryCandidate()) {
-            val node = TocNode(chapter = chapter, titleOverride = title)
-            roots += node
-            currentH1Node = null
-            return@forEach
-        }
-        val level = heading?.level
-            ?: chapter.tocLevel.coerceAtLeast(0).coerceAtMost(1)
-        val node = TocNode(chapter = chapter, titleOverride = title)
-        if (level == 0) {
-            roots += node
-            currentH1Node = node
-        } else {
-            val parent = currentH1Node
-            if (parent == null) {
-                roots += node
-            } else {
-                parent.children += node
-            }
-        }
-    }
-    return roots
-}
-
-private fun tocTreeDepth(nodes: List<TocNode>): Int {
-    if (nodes.isEmpty()) return 1
-    return nodes.maxOf { node ->
-        1 + if (node.children.isEmpty()) 0 else tocTreeDepth(node.children)
-    }
-}
-
 private fun tocTitle(chapter: EpubChapter, options: EpubExportOptions): String {
     return chapter.epubDirectoryTitle(useOwnSection0001Title = !options.hideSection0001FromNcx)
 }
 
 private fun navTitle(chapter: EpubChapter, options: EpubExportOptions): String {
     return chapter.epubDirectoryTitle(useOwnSection0001Title = !options.hideSection0001FromNcx)
-}
-
-private fun htmlHeadingTocTitle(chapter: EpubChapter, options: EpubExportOptions): String {
-    return chapter.epubDirectoryTitle(useOwnSection0001Title = !options.hideSection0001FromNcx)
-}
-
-private fun htmlTocHeading(html: String): HtmlTocHeading? {
-    val h1 = firstNonBlankTagText(html, "h1")
-    if (h1.isNotBlank()) return HtmlTocHeading(h1, 0)
-    val h2 = firstNonBlankTagText(html, "h2")
-    if (h2.isNotBlank()) return HtmlTocHeading(h2, 1)
-    return null
-}
-
-private fun firstNonBlankTagText(html: String, tag: String): String {
-    return htmlTagTextRegex(tag).findAll(html)
-        .map { match -> ChapterDetector.stripHtml(match.groupValues.getOrNull(1).orEmpty()) }
-        .firstOrNull { it.isNotBlank() }
-        .orEmpty()
-}
-
-private fun htmlTagTextRegex(tag: String): Regex {
-    val escapedTag = Regex.escape(tag)
-    return Regex(
-        """<(?:(?:[A-Za-z_][\w.-]*):)?$escapedTag\b[^>]*>(.*?)</(?:(?:[A-Za-z_][\w.-]*):)?$escapedTag\s*>""",
-        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
-    )
 }
 
 private fun EpubChapter.isExcludedFromNcx(options: EpubExportOptions): Boolean {

@@ -78,8 +78,6 @@ data class EpubBook(
 )
 
 data class EpubExportOptions(
-    val ncxFollowHtmlFileTitle: Boolean = true,
-    val rebuildNcxHierarchyFromHtmlHeadings: Boolean = true,
     val hideSection0001FromNcx: Boolean = true
 )
 

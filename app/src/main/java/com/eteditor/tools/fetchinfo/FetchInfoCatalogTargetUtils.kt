@@ -50,8 +50,6 @@ internal fun isSection0001Path(pathOrFileName: String): Boolean {
 
 internal fun epubExportOptions(hideSection0001FromNcx: Boolean): EpubExportOptions {
     return EpubExportOptions(
-        ncxFollowHtmlFileTitle = true,
-        rebuildNcxHierarchyFromHtmlHeadings = true,
         hideSection0001FromNcx = hideSection0001FromNcx
     )
 }
