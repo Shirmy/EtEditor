@@ -38,6 +38,28 @@ class TextSearchStateControllerTest {
         assertEquals(listOf("a", "b", "c"), rules.map { it.pattern })
     }
 
+    @Test
+    fun textSearchPreviewAfterBodyTextChangeKeepsToolIdWhenRebuilt() {
+        val calls = mutableListOf<String>()
+
+        val result = textSearchPreviewToolIdAfterBodyTextChange("tool-1") { toolId ->
+            calls += toolId
+            true
+        }
+
+        assertEquals("tool-1", result)
+        assertEquals(listOf("tool-1"), calls)
+    }
+
+    @Test
+    fun textSearchPreviewAfterBodyTextChangeClearsToolIdWhenRebuildHasNoResults() {
+        val result = textSearchPreviewToolIdAfterBodyTextChange("tool-1") {
+            false
+        }
+
+        assertEquals(null, result)
+    }
+
     private fun replacementPreview(
         toolId: String,
         multiRules: List<ReplacementPreviewRule> = emptyList(),
