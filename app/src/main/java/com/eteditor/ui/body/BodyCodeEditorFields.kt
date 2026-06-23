@@ -226,6 +226,7 @@ internal fun LargeBodyCodeEditor(
                         // 把光标重置到初始位置、scrollEditLineNearTop 重置滚动位置。
                         appliedLayoutSizeKey = latestLayoutSizeKey
                         appliedExpectedLayoutSizeKey = latestExpectedLayoutSizeKey
+                        editor.scrollCurrentEditCursorNearTopAfterLayout(contentKey)
                     }
                 }
                 onEditorReady(editor)
@@ -489,6 +490,20 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.scrollEditLineNearTop(line:
     scroller.startScroll(getOffsetX(), getOffsetY(), 0, targetY - getOffsetY(), 0)
     scroller.abortAnimation()
     invalidate()
+}
+
+private fun io.github.rosemoe.sora.widget.CodeEditor.scrollCurrentEditCursorNearTopAfterLayout(contentKey: Any) {
+    postPreviewFrames(contentKey, 2) {
+        val content = getText()
+        if (content.length <= 0) return@postPreviewFrames
+        val cursorIndex = runCatching {
+            getCursor().getLeft().coerceIn(0, content.length)
+        }.getOrNull() ?: return@postPreviewFrames
+        val position = runCatching {
+            content.getIndexer().getCharPosition(cursorIndex)
+        }.getOrNull() ?: return@postPreviewFrames
+        scrollEditLineNearTop(position.getLine())
+    }
 }
 
 private fun io.github.rosemoe.sora.widget.CodeEditor.setEditTextAfterStableLayout(
