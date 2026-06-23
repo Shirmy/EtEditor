@@ -211,8 +211,6 @@ internal fun InsertChapterToolParameterPanel(
                     targetChapterIndex = null,
                     selectedSourceIndices = if (useSelectedSourceIndices) selectedSourceIndices else emptySet(),
                     useSelectedSourceIndices = useSelectedSourceIndices,
-                    // 逆序显示方便挑选，但始终按正序插入
-                    reverseSelectedOrder = false,
                     onProgress = ::updateInsertProgress
                 )
                 if (!ok) {

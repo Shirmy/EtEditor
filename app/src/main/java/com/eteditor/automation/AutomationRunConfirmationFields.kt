@@ -623,8 +623,6 @@ private fun AutomationInsertChapterConfirmation(
                     targetChapterIndex = null,
                     selectedSourceIndices = runSourceIndices,
                     useSelectedSourceIndices = true,
-                    // 逆序显示方便挑选，但始终按正序插入
-                    reverseSelectedOrder = false,
                     onProgress = ::updateProgress
                 )
             }
