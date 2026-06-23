@@ -7,6 +7,7 @@ import com.eteditor.core.syncEpubDirectoryTitleFromHtml
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -145,8 +146,14 @@ internal fun EditorController.startTxtCatalogDetection(
             }
             log(statusMessage)
             if (autoPurifyAfterDetection) {
-                autoSelectTxtPurifyRulesAfterOpen(document)
-                applyTxtPurifyRulesAfterOpen()
+                delay(80)
+                if (
+                    sessionKey == documentSessionKey &&
+                    kind == DocumentKind.Txt &&
+                    txt === document
+                ) {
+                    applyTxtPurifyRulesAfterOpenInBackground(document, sessionKey)
+                }
             } else if (autoPurifyBodyAfterDetection || autoPurifyCatalogAfterDetection) {
                 applyTxtPurifyTargets(
                     applyBody = autoPurifyBodyAfterDetection,

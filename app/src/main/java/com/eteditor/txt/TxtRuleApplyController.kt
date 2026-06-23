@@ -2,6 +2,8 @@ package com.eteditor
 
 import com.eteditor.core.DocumentKind
 import com.eteditor.core.TxtDocument
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 fun EditorController.applyTxtBookTitleFilter(showNoMatchMessage: Boolean = true): Boolean {
     if (txt == null) return false
@@ -46,6 +48,102 @@ internal fun EditorController.applyTxtPurifyRulesAfterOpen(): Boolean {
         successOnNoop = false,
         successMessage = { catalogCount, bodyCount -> "打开 TXT 自动净化：目录 $catalogCount 个，正文 $bodyCount 处" }
     )
+}
+
+internal suspend fun EditorController.applyTxtPurifyRulesAfterOpenInBackground(
+    document: TxtDocument,
+    sessionKey: Int
+): Boolean {
+    val autoSelectSnapshot = document.snapshot()
+    val autoSelectRulesText = txtPurifyRulesText
+    val autoSelectWarning = withContext(Dispatchers.Default) {
+        txtPurifyRegexCostWarningForDocument(
+            document = autoSelectSnapshot,
+            rules = parseTxtPurifyRuleItems(autoSelectRulesText),
+            applyBody = true,
+            applyCatalog = true,
+            requireEnabled = false
+        )
+    }
+    if (autoSelectWarning != null) {
+        statusMessage = autoSelectWarning
+        return false
+    }
+    val autoSelectResult = withContext(Dispatchers.Default) {
+        autoSelectTxtPurifyRulesAfterOpenModel(autoSelectSnapshot, autoSelectRulesText)
+    }
+    if (!isSameTxtDocumentSession(document, sessionKey)) return false
+    if (autoSelectResult.success) {
+        commitTxtPurifyRuleEdit(autoSelectResult, applyChangedRule = false)
+    }
+
+    val applySnapshot = document.snapshot()
+    val rulesText = txtPurifyRulesText
+    val detectionConfig = currentTxtChapterDetectionConfig()
+    val enabledKeys = txtEnabledChapterRuleKeys
+    val supplementedLines = txtSupplementedCatalogLines
+    val applyWarning = withContext(Dispatchers.Default) {
+        txtPurifyRegexCostWarningForDocument(
+            document = applySnapshot,
+            rules = enabledTxtPurifyRules(rulesText),
+            applyBody = true,
+            applyCatalog = true,
+            requireEnabled = true
+        )
+    }
+    if (applyWarning != null) {
+        statusMessage = applyWarning
+        return false
+    }
+
+    var invalidRulePattern: String? = null
+    val result = withContext(Dispatchers.Default) {
+        applyTxtPurifyTargetsToDocument(
+            document = applySnapshot,
+            rulesText = rulesText,
+            applyBody = true,
+            applyCatalog = true,
+            detectChapters = { text ->
+                detectTxtChaptersWithCatalogConfig(
+                    text = text,
+                    config = detectionConfig,
+                    autoKeys = enabledKeys,
+                    supplementedCatalogLines = supplementedLines
+                )
+            },
+            onInvalidRule = { rule -> invalidRulePattern = rule.pattern }
+        )
+    }
+    invalidRulePattern?.let { pattern ->
+        statusMessage = "净化规则错误：$pattern"
+        return false
+    }
+    val purifyResult = result ?: return false
+    if (!purifyResult.changed) return false
+    if (!isSameTxtDocumentSession(document, sessionKey)) return false
+    if (document.text != autoSelectSnapshot.text) return false
+
+    document.text = applySnapshot.text
+    document.chapters = applySnapshot.chapters
+    checkReport = null
+    markDocumentChanged()
+    clearTextSearchState()
+    refreshChapters()
+    statusMessage = "打开 TXT 自动净化：目录 ${purifyResult.catalogCount} 个，正文 ${purifyResult.bodyCount} 处"
+    return true
+}
+
+private fun TxtDocument.snapshot(): TxtDocument {
+    return copy(chapters = chapters.toList())
+}
+
+private fun EditorController.isSameTxtDocumentSession(
+    document: TxtDocument,
+    sessionKey: Int
+): Boolean {
+    return sessionKey == documentSessionKey &&
+        kind == DocumentKind.Txt &&
+        txt === document
 }
 
 private fun EditorController.applyTxtPurifyRulesInternal(
