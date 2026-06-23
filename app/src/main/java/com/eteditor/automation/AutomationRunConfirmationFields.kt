@@ -606,7 +606,6 @@ private fun AutomationInsertChapterConfirmation(
 
     val runInsert: () -> Unit = {
         val runSourceIndices = selectedSourceIndices
-        val runSourceOrderReversed = sourceOrderReversed
         resetProgress()
         applying = true
         controller.setAutomationRunStepState(step, AutomationRunStepState.Running)
@@ -624,8 +623,8 @@ private fun AutomationInsertChapterConfirmation(
                     targetChapterIndex = null,
                     selectedSourceIndices = runSourceIndices,
                     useSelectedSourceIndices = true,
-                    // 废文来源：逆序显示方便挑选，但始终按正序插入
-                    reverseSelectedOrder = !sosadMode && runSourceOrderReversed,
+                    // 逆序显示方便挑选，但始终按正序插入
+                    reverseSelectedOrder = false,
                     onProgress = ::updateProgress
                 )
             }
