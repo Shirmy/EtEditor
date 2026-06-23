@@ -260,7 +260,7 @@ private fun epubTitleFormatVolumeGroups(
     parameters: TitleFormatParameters,
     targetIndices: List<Int>
 ): List<List<Int>>? {
-    if (kind != DocumentKind.Epub || parameters.scope == TITLE_FORMAT_SCOPE_SELECTED) return null
+    if (kind != DocumentKind.Epub || parameters.scope == TITLE_FORMAT_SCOPE_SELECTED || parameters.mode == TITLE_FORMAT_MODE_UNIFORM) return null
     val chapters = epubChapters ?: return null
 
     val hasExtraVolume = chapters.any { it.isExtraVolumeChapter() }
@@ -299,6 +299,7 @@ private fun epubTitleFormatVolumeGroups(
 }
 
 private fun EpubChapter.isExtraVolumeChapter(): Boolean {
+    if (!isVolumeChapter()) return false
     return (pathAliases + path + originalPath).any { itemPath ->
         val stem = itemPath.substringAfterLast('/').substringBeforeLast('.').lowercase()
         stem == "vol00" || Regex("""^volf\d+$""").matches(stem)
@@ -306,6 +307,7 @@ private fun EpubChapter.isExtraVolumeChapter(): Boolean {
 }
 
 private fun EpubChapter.isNormalVolumeChapter(): Boolean {
+    if (!isVolumeChapter()) return false
     return (pathAliases + path + originalPath).any { itemPath ->
         val stem = itemPath.substringAfterLast('/').substringBeforeLast('.').lowercase()
         stem != "vol00" && Regex("""^vol\d+$""").matches(stem)
