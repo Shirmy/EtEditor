@@ -296,6 +296,17 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.currentTxtFullEditCursorInd
     return runCatching { getCursor().getLeft().coerceAtLeast(0) }.getOrDefault(0)
 }
 
+internal fun adjustPreviewDoubleTapY(
+    y: Float,
+    editorHeight: Int,
+    rowHeight: Int
+): Float {
+    if (editorHeight <= 0 || rowHeight <= 0) return y.coerceAtLeast(0f)
+    val bottomGuard = (rowHeight * 1.5f).coerceAtLeast(24f)
+    val maxY = (editorHeight - bottomGuard).coerceAtLeast(0f)
+    return y.coerceIn(0f, maxY)
+}
+
 private fun io.github.rosemoe.sora.widget.CodeEditor.configureTxtPreviewGestures(
     interactive: Boolean,
     onDoubleTap: ((Int) -> Unit)?,
@@ -311,7 +322,12 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.configureTxtPreviewGestures
                 val visibleOffset = runCatching {
                     val content = editor.getText()
                     if (content.length <= 0) return@runCatching 0
-                    val packed = editor.getPointPositionOnScreen(event.x, event.y)
+                    val tapY = adjustPreviewDoubleTapY(
+                        y = event.y,
+                        editorHeight = editor.height,
+                        rowHeight = editor.getRowHeight()
+                    )
+                    val packed = editor.getPointPositionOnScreen(event.x, tapY)
                     val line = io.github.rosemoe.sora.util.IntPair.getFirst(packed)
                         .coerceIn(0, (content.getLineCount() - 1).coerceAtLeast(0))
                     val column = io.github.rosemoe.sora.util.IntPair.getSecond(packed)
