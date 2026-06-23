@@ -227,18 +227,89 @@ internal fun buildTitleFormatPlanModel(
         }
         return TitleFormatPlanBuildResult(plan = emptyList(), message = message)
     }
-    return TitleFormatPlanBuildResult(
-        plan = buildTitleFormatPlanItems(
+    val titles = titleFormatSourceTitlesModel(kind, epubChapters, txtDocument)
+    val formatChanged: (Int, TitleFormatRendered) -> Boolean = { index, rendered ->
+        epubChapters?.getOrNull(index)?.let { chapter ->
+            kind == DocumentKind.Epub && epubTitleFormatWillChange(chapter, rendered)
+        } ?: false
+    }
+    val groups = epubTitleFormatVolumeGroups(kind, epubChapters, parameters, targetIndices)
+    val plan = if (groups != null) {
+        groups.flatMap { group ->
+            buildTitleFormatPlanItems(
+                parameters = parameters,
+                targetIndices = group,
+                titles = titles,
+                formatChanged = formatChanged
+            )
+        }
+    } else {
+        buildTitleFormatPlanItems(
             parameters = parameters,
             targetIndices = targetIndices,
-            titles = titleFormatSourceTitlesModel(kind, epubChapters, txtDocument),
-            formatChanged = { index, rendered ->
-                epubChapters?.getOrNull(index)?.let { chapter ->
-                    kind == DocumentKind.Epub && epubTitleFormatWillChange(chapter, rendered)
-                } ?: false
-            }
+            titles = titles,
+            formatChanged = formatChanged
         )
-    )
+    }
+    return TitleFormatPlanBuildResult(plan = plan)
+}
+
+private fun epubTitleFormatVolumeGroups(
+    kind: DocumentKind,
+    epubChapters: List<EpubChapter>?,
+    parameters: TitleFormatParameters,
+    targetIndices: List<Int>
+): List<List<Int>>? {
+    if (kind != DocumentKind.Epub || parameters.scope == TITLE_FORMAT_SCOPE_SELECTED) return null
+    val chapters = epubChapters ?: return null
+
+    val hasExtraVolume = chapters.any { it.isExtraVolumeChapter() }
+    if (!hasExtraVolume) return null
+
+    val hasNormalVolume = chapters.any { it.isNormalVolumeChapter() }
+
+    val extraGroup = mutableListOf<Int>()
+    val normalGroup = mutableListOf<Int>()
+    val targetSet = targetIndices.toSet()
+
+    if (hasNormalVolume) {
+        // 有正文卷有番外卷：按所属卷类型分
+        var currentIsExtra = false
+        for (index in chapters.indices) {
+            val chapter = chapters[index]
+            if (chapter.isVolumeChapter()) {
+                currentIsExtra = chapter.isExtraVolumeChapter()
+            } else if (index in targetSet) {
+                if (currentIsExtra) extraGroup += index else normalGroup += index
+            }
+        }
+    } else {
+        // 无正文卷有番外卷：番外卷之前都算正文
+        val firstExtraVolumeIndex = chapters.indexOfFirst { it.isExtraVolumeChapter() }
+        for (index in targetIndices) {
+            if (index < firstExtraVolumeIndex) normalGroup += index else extraGroup += index
+        }
+    }
+
+    if (normalGroup.isEmpty() && extraGroup.isEmpty()) return null
+    val groups = mutableListOf<List<Int>>()
+    if (normalGroup.isNotEmpty()) groups += normalGroup
+    if (extraGroup.isNotEmpty()) groups += extraGroup
+    return groups
+}
+
+private fun EpubChapter.isExtraVolumeChapter(): Boolean {
+    return (pathAliases + path + originalPath).any { itemPath ->
+        val stem = itemPath.substringAfterLast('/').substringBeforeLast('.').lowercase()
+        stem == "vol00" || Regex("""^volf\d+$""").matches(stem)
+    }
+}
+
+private fun EpubChapter.isNormalVolumeChapter(): Boolean {
+    return (pathAliases + path + originalPath).any { itemPath ->
+        val stem = itemPath.substringAfterLast('/').substringBeforeLast('.').lowercase()
+        stem != "vol00" && Regex("""^vol\d+$""").matches(stem)
+    }
 }
 
 private fun epubTitleFormatWillChange(chapter: EpubChapter, rendered: TitleFormatRendered): Boolean {
