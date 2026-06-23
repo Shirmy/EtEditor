@@ -368,7 +368,22 @@ class JjwxcFetcher : FetchInfoFetcher {
                 return@forEach
             }
 
-            if (!row.contains("chapterid=", ignoreCase = true)) return@forEach
+            if (!row.contains("chapterid=", ignoreCase = true)) {
+                // 锁章行：晋江保留整行但去掉跳转链接（带 redmanagertext 标记）。
+                // 用空标题占位，避免后续章节按位置错位，最终只保留 EPUB 本地前缀。
+                if (row.contains("redmanagertext", ignoreCase = true)) {
+                    val lockedSequence = Regex(
+                        """<td\b[^>]*>(.*?)</td>""",
+                        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+                    ).find(row)?.groupValues?.getOrNull(1)?.cleanHtmlText().orEmpty()
+                    items += FetchedCatalogItem(
+                        index = items.size + 1,
+                        title = "",
+                        sequence = lockedSequence
+                    )
+                }
+                return@forEach
+            }
             val cells = Regex(
                 """<td\b[^>]*>(.*?)</td>""",
                 setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
