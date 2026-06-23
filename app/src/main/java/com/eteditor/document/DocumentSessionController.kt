@@ -107,9 +107,16 @@ suspend fun EditorController.openTxt(uri: Uri) = runBusy("打开 TXT") {
     subtitle = "${document.encoding} | ${compactByteSize(bytes.size)} | 目录识别中"
     checkReport = null
     previewChapterIndex = 0
-    txtPreviewMode = TXT_PREVIEW_MODE_FULL
+    previewChapterCount = 0
+    previewVisibleSourceOffset = 0
+    previewVisibleSourceLineOffset = 0
+    previewTitle = "TXT 正文预览"
+    previewText = ""
+    previewHighlightStart = -1
+    previewHighlightEnd = -1
+    txtPreviewMode = TXT_PREVIEW_MODE_CHAPTER
     resetDocumentSessionRuntimeState()
-    refreshChapters()
+    chapters = emptyList()
     subtitle = "${document.encoding} | ${compactByteSize(bytes.size)} | 目录识别中"
     hasUnsavedChanges = false
     selectedScreen = AppScreen.Files
