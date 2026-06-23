@@ -281,7 +281,7 @@ private fun epubTitleFormatVolumeGroups(
     epubChapters: List<EpubChapter>?,
     parameters: TitleFormatParameters,
     targetIndices: List<Int>
-): List<List<Int>>? {
+): List<TitleFormatVolumeGroup>? {
     if (kind != DocumentKind.Epub || parameters.scope == TITLE_FORMAT_SCOPE_SELECTED || parameters.mode == TITLE_FORMAT_MODE_UNIFORM) return null
     val chapters = epubChapters ?: return null
 

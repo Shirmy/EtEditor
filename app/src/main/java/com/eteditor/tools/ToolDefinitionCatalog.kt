@@ -239,11 +239,6 @@ internal fun defaultEditorToolDefinitions(): List<ToolDefinition> {
                     defaultValue = ""
                 ),
                 ToolParameterDefinition(
-                    key = FETCH_INFO_PARAM_INTRO_TARGET,
-                    label = "简介文件路径",
-                    defaultValue = DEFAULT_FETCH_INFO_INTRO_TARGET
-                ),
-                ToolParameterDefinition(
                     key = FETCH_INFO_PARAM_CATALOG_FILTER,
                     label = "目录过滤",
                     defaultValue = ""

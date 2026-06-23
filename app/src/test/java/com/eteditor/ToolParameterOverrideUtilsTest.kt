@@ -369,10 +369,10 @@ class ToolParameterOverrideUtilsTest {
             )
         )
 
-        val htmlFallback = cleanToolParameterOverrides(
+        val xhtmlDefault = cleanToolParameterOverrides(
             toolId = "fetch_info",
             definitions = definitions,
-            overrides = mapOf(FETCH_INFO_PARAM_INTRO_TARGET to "OEBPS/Text/Section0002.html"),
+            overrides = mapOf(FETCH_INFO_PARAM_INTRO_TARGET to "OEBPS/Text/Section0002.xhtml"),
             textReplaceScopeOptionKeys = emptySet()
         )
         val customPath = cleanToolParameterOverrides(
@@ -382,7 +382,7 @@ class ToolParameterOverrideUtilsTest {
             textReplaceScopeOptionKeys = emptySet()
         )
 
-        assertEquals(mapOf(FETCH_INFO_PARAM_INTRO_TARGET to "OEBPS/Text/Section0002.html"), htmlFallback)
+        assertEquals(emptyMap<String, String>(), xhtmlDefault)
         assertEquals(mapOf(FETCH_INFO_PARAM_INTRO_TARGET to "OEBPS/Text/custom-intro.xhtml"), customPath)
     }
 

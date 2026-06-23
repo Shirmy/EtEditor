@@ -172,25 +172,25 @@ class FetchInfoTargetUtilsTest {
         )
 
         assertEquals("OEBPS/Text/Section0002.html", defaultFetchInfoIntroTarget(book))
-        assertEquals("OEBPS/Text/Section0002.xhtml", resolveFetchInfoIntroTarget("OEBPS/Text/Section0002.xhtml", book))
+        assertEquals("OEBPS/Text/Section0002.html", resolveFetchInfoIntroTarget("OEBPS/Text/Section0002.xhtml", book))
         assertEquals("OEBPS/Text/Section0002.html", existingEpubPath("oebps/text/section0002.HTML", book))
         assertEquals("OEBPS/Text/new.xhtml", resolveFetchInfoIntroTarget("OEBPS/./Text/new.xhtml", book))
         assertTrue(isDefaultFetchInfoIntroTargetOverride(""))
         assertTrue(isDefaultFetchInfoIntroTargetOverride("OEBPS/Text/Section0002.xhtml"))
-        assertFalse(isDefaultFetchInfoIntroTargetOverride("OEBPS/Text/Section0002.html"))
+        assertTrue(isDefaultFetchInfoIntroTargetOverride("OEBPS/Text/Section0002.html"))
         assertTrue(isSection0001Path("OEBPS/Text/Section0001.xhtml#toc"))
         assertTrue(isSection0001Path("Section0001.html"))
         assertEquals(
             listOf(
                 "OEBPS/Text/Chapter0001.xhtml",
-                "OEBPS/Text/Section0002.xhtml",
                 "OEBPS/Text/Section0002.html",
+                "OEBPS/Text/Section0002.xhtml",
                 "OEBPS/Text/custom.htm"
             ),
             buildFetchInfoIntroTargetOptions(book, "OEBPS/Text/Chapter0001.xhtml").map { it.first }
         )
         assertEquals(
-            listOf("Chapter0001.xhtml", "Section0002.xhtml", "Section0002.html", "custom.htm"),
+            listOf("Chapter0001.xhtml", "Section0002.html", "Section0002.xhtml", "custom.htm"),
             buildFetchInfoIntroTargetOptions(book, "OEBPS/Text/Chapter0001.xhtml").map { it.second }
         )
         assertTrue(epubExportOptions(hideSection0001FromNcx = false).ncxFollowHtmlFileTitle)
@@ -198,14 +198,25 @@ class FetchInfoTargetUtilsTest {
     }
 
     @Test
-    fun fetchInfoIntroDefaultPrefersExistingXhtmlBeforeHtmlFallback() {
+    fun fetchInfoIntroDefaultPrefersExistingHtmlBeforeXhtmlFallback() {
         val book = sampleBook(
             chapters = emptyList(),
-            extraEntries = listOf("OEBPS/Text/SECTION0002.HTML", DEFAULT_FETCH_INFO_INTRO_TARGET)
+            extraEntries = listOf("OEBPS/Text/SECTION0002.HTML", "OEBPS/Text/Section0002.xhtml")
         )
 
-        assertEquals(DEFAULT_FETCH_INFO_INTRO_TARGET, defaultFetchInfoIntroTarget(book))
-        assertEquals(DEFAULT_FETCH_INFO_INTRO_TARGET, resolveFetchInfoIntroTarget("", book))
+        assertEquals("OEBPS/Text/SECTION0002.HTML", defaultFetchInfoIntroTarget(book))
+        assertEquals("OEBPS/Text/SECTION0002.HTML", resolveFetchInfoIntroTarget("", book))
+    }
+
+    @Test
+    fun fetchInfoIntroDefaultFallsBackToXhtmlWhenOnlyXhtmlExists() {
+        val book = sampleBook(
+            chapters = emptyList(),
+            extraEntries = listOf("OEBPS/Text/Section0002.xhtml")
+        )
+
+        assertEquals("OEBPS/Text/Section0002.xhtml", defaultFetchInfoIntroTarget(book))
+        assertEquals("OEBPS/Text/Section0002.xhtml", resolveFetchInfoIntroTarget("", book))
     }
 
     @Test
@@ -217,12 +228,12 @@ class FetchInfoTargetUtilsTest {
             listOf(
                 "OEBPS/Text/custom.xhtml",
                 DEFAULT_FETCH_INFO_INTRO_TARGET,
-                "OEBPS/Text/Section0002.html"
+                "OEBPS/Text/Section0002.xhtml"
             ),
             buildFetchInfoIntroTargetOptions(null, "OEBPS/Text/custom.xhtml").map { it.first }
         )
         assertEquals(
-            listOf(DEFAULT_FETCH_INFO_INTRO_TARGET, "OEBPS/Text/Section0002.html"),
+            listOf(DEFAULT_FETCH_INFO_INTRO_TARGET, "OEBPS/Text/Section0002.xhtml"),
             buildFetchInfoIntroTargetOptions(null, "OEBPS/Text/intro.txt").map { it.first }
         )
     }
@@ -238,11 +249,11 @@ class FetchInfoTargetUtilsTest {
         val options = buildFetchInfoIntroTargetOptions(book, "oebps/text/intro.xhtml")
 
         assertEquals(
-            listOf("OEBPS/Text/Intro.xhtml", DEFAULT_FETCH_INFO_INTRO_TARGET, "OEBPS/Text/Section0002.html"),
+            listOf("OEBPS/Text/Intro.xhtml", DEFAULT_FETCH_INFO_INTRO_TARGET, "OEBPS/Text/Section0002.xhtml"),
             options.map { it.first }
         )
         assertEquals(
-            listOf("Intro.xhtml", "Section0002.xhtml", "Section0002.html"),
+            listOf("Intro.xhtml", "Section0002.html", "Section0002.xhtml"),
             options.map { it.second }
         )
     }
@@ -262,7 +273,7 @@ class FetchInfoTargetUtilsTest {
         assertEquals(
             listOf(
                 DEFAULT_FETCH_INFO_INTRO_TARGET,
-                "OEBPS/Text/Section0002.html",
+                "OEBPS/Text/Section0002.xhtml",
                 "OEBPS/Text/ManifestOnly.xhtml"
             ),
             options.map { it.first }

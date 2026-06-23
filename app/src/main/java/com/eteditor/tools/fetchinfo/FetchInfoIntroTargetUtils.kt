@@ -2,11 +2,11 @@
 
 import com.eteditor.core.EpubBook
 
-private const val DEFAULT_FETCH_INFO_INTRO_TARGET_HTML = "OEBPS/Text/Section0002.html"
+private const val DEFAULT_FETCH_INFO_INTRO_TARGET_XHTML = "OEBPS/Text/Section0002.xhtml"
 
 internal fun resolveFetchInfoIntroTarget(rawPath: String, book: EpubBook?): String {
     val path = normalizeEpubPath(rawPath.trim())
-    if (path.isBlank()) {
+    if (isDefaultFetchInfoIntroTargetOverride(path)) {
         return defaultFetchInfoIntroTarget(book)
     }
     return existingEpubPath(path, book) ?: path
@@ -15,7 +15,7 @@ internal fun resolveFetchInfoIntroTarget(rawPath: String, book: EpubBook?): Stri
 internal fun defaultFetchInfoIntroTarget(book: EpubBook?): String {
     return listOf(
         DEFAULT_FETCH_INFO_INTRO_TARGET,
-        DEFAULT_FETCH_INFO_INTRO_TARGET_HTML
+        DEFAULT_FETCH_INFO_INTRO_TARGET_XHTML
     ).firstNotNullOfOrNull { candidate -> existingEpubPath(candidate, book) }
         ?: DEFAULT_FETCH_INFO_INTRO_TARGET
 }
@@ -37,7 +37,7 @@ internal fun buildFetchInfoIntroTargetOptions(
 
     addPath(currentPath)
     addPath(DEFAULT_FETCH_INFO_INTRO_TARGET)
-    addPath(DEFAULT_FETCH_INFO_INTRO_TARGET_HTML)
+    addPath(DEFAULT_FETCH_INFO_INTRO_TARGET_XHTML)
     if (book != null) {
         book.chapters.forEach { chapter -> addPath(chapter.path) }
         book.entries.keys.forEach(::addPath)
@@ -58,5 +58,6 @@ internal fun existingEpubPath(candidate: String, book: EpubBook?): String? {
 internal fun isDefaultFetchInfoIntroTargetOverride(path: String): Boolean {
     val normalized = normalizeEpubPath(path.trim())
     return normalized.isBlank() ||
-        normalized.equals(DEFAULT_FETCH_INFO_INTRO_TARGET, ignoreCase = true)
+        normalized.equals(DEFAULT_FETCH_INFO_INTRO_TARGET, ignoreCase = true) ||
+        normalized.equals(DEFAULT_FETCH_INFO_INTRO_TARGET_XHTML, ignoreCase = true)
 }

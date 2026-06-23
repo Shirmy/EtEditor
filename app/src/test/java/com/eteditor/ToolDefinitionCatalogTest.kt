@@ -82,7 +82,6 @@ class ToolDefinitionCatalogTest {
         assertEquals(FETCH_INFO_SEARCH_TITLE, parameters[FETCH_INFO_PARAM_SEARCH_MODE]?.defaultValue)
         assertEquals(FETCH_INFO_CONTENT_CATALOG, parameters[FETCH_INFO_PARAM_CONTENT]?.defaultValue)
         assertEquals(FETCH_INFO_CONTENT_OPTIONS, parameters[FETCH_INFO_PARAM_CONTENT]?.options)
-        assertEquals(DEFAULT_FETCH_INFO_INTRO_TARGET, parameters[FETCH_INFO_PARAM_INTRO_TARGET]?.defaultValue)
         assertEquals("trim\ncompressBlankLines", parameters[FETCH_INFO_PARAM_INTRO_FILTER]?.defaultValue)
         assertEquals(BOOL_FALSE, parameters[FETCH_INFO_PARAM_AUTO_TITLE_FORMAT]?.defaultValue)
         assertEquals(BOOLEAN_OPTIONS, parameters[FETCH_INFO_PARAM_AUTO_TITLE_FORMAT]?.options)

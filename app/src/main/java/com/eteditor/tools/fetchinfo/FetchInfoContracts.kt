@@ -19,7 +19,7 @@ internal const val FETCH_INFO_SEARCH_KEYWORD = "keyword"
 internal const val FETCH_INFO_CONTENT_CATALOG = "catalog"
 internal const val FETCH_INFO_CONTENT_INTRO = "intro"
 internal const val FETCH_INFO_CONTENT_COVER = "cover"
-internal const val DEFAULT_FETCH_INFO_INTRO_TARGET = "OEBPS/Text/Section0002.xhtml"
+internal const val DEFAULT_FETCH_INFO_INTRO_TARGET = "OEBPS/Text/Section0002.html"
 
 object FetchInfoSources {
     const val JJWXC = "jjwxc"
