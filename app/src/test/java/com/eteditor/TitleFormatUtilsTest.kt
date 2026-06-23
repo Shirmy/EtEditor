@@ -362,6 +362,135 @@ class TitleFormatUtilsTest {
         assertTrue(updated.contains("<body>\n<h1 class=\"chapter-title_01\">第1章<br/>标题 &amp; 注</h1><p>正文</p>"))
     }
 
+    @Test
+    fun buildTitleFormatPlanModelGroupsByVolumeInPerChapterModeWithNormalAndExtraVolumes() {
+        val book = sampleBook(
+            mutableListOf(
+                chapter("v1", "OEBPS/Text/Vol01.xhtml", "第一卷", "<html><body><h1>第一卷</h1></body></html>"),
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章 很长的标题文字", "<html><body><h1>第1章 很长的标题文字</h1></body></html>"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章 也很长的标题文字", "<html><body><h1>第2章 也很长的标题文字</h1></body></html>"),
+                chapter("v0", "OEBPS/Text/Vol00.xhtml", "番外卷", "<html><body><h1>番外卷</h1></body></html>"),
+                chapter("c3", "OEBPS/Text/Chapter0003.xhtml", "第3章", "<html><body><h1>第3章</h1></body></html>"),
+                chapter("c4", "OEBPS/Text/Chapter0004.xhtml", "第4章", "<html><body><h1>第4章</h1></body></html>")
+            )
+        )
+
+        val result = buildTitleFormatPlanModel(
+            kind = DocumentKind.Epub,
+            epubChapters = book.chapters,
+            txtDocument = null,
+            parameters = TitleFormatParameters(
+                mode = TITLE_FORMAT_MODE_PER_CHAPTER,
+                style = TITLE_FORMAT_STYLE_DOUBLE,
+                preview = true,
+                scope = TITLE_FORMAT_SCOPE_ALL,
+                selectedChapterIndices = emptySet()
+            )
+        )
+
+        assertEquals(listOf(1, 2, 4, 5), result.plan.map { it.chapterIndex })
+        assertEquals(listOf(1, 2, 1, 2), result.plan.map { it.sequenceNumber })
+        val bodyStyles = result.plan.filter { it.chapterIndex in listOf(1, 2) }.map { it.styleCode }
+        val extraStyles = result.plan.filter { it.chapterIndex in listOf(4, 5) }.map { it.styleCode }
+        assertEquals(listOf(TITLE_FORMAT_STYLE_LEFT, TITLE_FORMAT_STYLE_LEFT), bodyStyles)
+        assertEquals(listOf(TITLE_FORMAT_STYLE_NONE, TITLE_FORMAT_STYLE_NONE), extraStyles)
+    }
+
+    @Test
+    fun buildTitleFormatPlanModelTreatsChaptersBeforeExtraAsBodyWhenNoNormalVolume() {
+        val book = sampleBook(
+            mutableListOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章 很长的标题文字", "<html><body><h1>第1章 很长的标题文字</h1></body></html>"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章 也很长的标题文字", "<html><body><h1>第2章 也很长的标题文字</h1></body></html>"),
+                chapter("v0", "OEBPS/Text/Vol00.xhtml", "番外卷", "<html><body><h1>番外卷</h1></body></html>"),
+                chapter("c3", "OEBPS/Text/Chapter0003.xhtml", "第3章", "<html><body><h1>第3章</h1></body></html>"),
+                chapter("c4", "OEBPS/Text/Chapter0004.xhtml", "第4章", "<html><body><h1>第4章</h1></body></html>")
+            )
+        )
+
+        val result = buildTitleFormatPlanModel(
+            kind = DocumentKind.Epub,
+            epubChapters = book.chapters,
+            txtDocument = null,
+            parameters = TitleFormatParameters(
+                mode = TITLE_FORMAT_MODE_PER_CHAPTER,
+                style = TITLE_FORMAT_STYLE_DOUBLE,
+                preview = true,
+                scope = TITLE_FORMAT_SCOPE_ALL,
+                selectedChapterIndices = emptySet()
+            )
+        )
+
+        assertEquals(listOf(0, 1, 3, 4), result.plan.map { it.chapterIndex })
+        assertEquals(listOf(1, 2, 1, 2), result.plan.map { it.sequenceNumber })
+        val bodyStyles = result.plan.filter { it.chapterIndex in listOf(0, 1) }.map { it.styleCode }
+        val extraStyles = result.plan.filter { it.chapterIndex in listOf(3, 4) }.map { it.styleCode }
+        assertEquals(listOf(TITLE_FORMAT_STYLE_LEFT, TITLE_FORMAT_STYLE_LEFT), bodyStyles)
+        assertEquals(listOf(TITLE_FORMAT_STYLE_NONE, TITLE_FORMAT_STYLE_NONE), extraStyles)
+    }
+
+    @Test
+    fun buildTitleFormatPlanModelDoesNotGroupWithoutExtraVolume() {
+        val book = sampleBook(
+            mutableListOf(
+                chapter("v1", "OEBPS/Text/Vol01.xhtml", "第一卷", "<html><body><h1>第一卷</h1></body></html>"),
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章 标题", "<html><body><h1>第1章 标题</h1></body></html>"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章 标题", "<html><body><h1>第2章 标题</h1></body></html>"),
+                chapter("c3", "OEBPS/Text/Chapter0003.xhtml", "第3章 标题", "<html><body><h1>第3章 标题</h1></body></html>")
+            )
+        )
+
+        val result = buildTitleFormatPlanModel(
+            kind = DocumentKind.Epub,
+            epubChapters = book.chapters,
+            txtDocument = null,
+            parameters = TitleFormatParameters(
+                mode = TITLE_FORMAT_MODE_PER_CHAPTER,
+                style = TITLE_FORMAT_STYLE_DOUBLE,
+                preview = true,
+                scope = TITLE_FORMAT_SCOPE_ALL,
+                selectedChapterIndices = emptySet()
+            )
+        )
+
+        assertEquals(listOf(1, 2, 3), result.plan.map { it.chapterIndex })
+        assertEquals(listOf(1, 2, 3), result.plan.map { it.sequenceNumber })
+    }
+
+    @Test
+    fun buildTitleFormatPlanModelDoesNotGroupInUniformModeWithExtraVolume() {
+        val book = sampleBook(
+            mutableListOf(
+                chapter("v1", "OEBPS/Text/Vol01.xhtml", "第一卷", "<html><body><h1>第一卷</h1></body></html>"),
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章 标题", "<html><body><h1>第1章 标题</h1></body></html>"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章 标题", "<html><body><h1>第2章 标题</h1></body></html>"),
+                chapter("v0", "OEBPS/Text/Vol00.xhtml", "番外卷", "<html><body><h1>番外卷</h1></body></html>"),
+                chapter("c3", "OEBPS/Text/Chapter0003.xhtml", "第3章 标题", "<html><body><h1>第3章 标题</h1></body></html>"),
+                chapter("c4", "OEBPS/Text/Chapter0004.xhtml", "第4章 标题", "<html><body><h1>第4章 标题</h1></body></html>")
+            )
+        )
+
+        val result = buildTitleFormatPlanModel(
+            kind = DocumentKind.Epub,
+            epubChapters = book.chapters,
+            txtDocument = null,
+            parameters = TitleFormatParameters(
+                mode = TITLE_FORMAT_MODE_UNIFORM,
+                style = TITLE_FORMAT_STYLE_DOUBLE,
+                preview = true,
+                scope = TITLE_FORMAT_SCOPE_ALL,
+                selectedChapterIndices = emptySet()
+            )
+        )
+
+        assertEquals(listOf(1, 2, 4, 5), result.plan.map { it.chapterIndex })
+        assertEquals(listOf(1, 2, 3, 4), result.plan.map { it.sequenceNumber })
+        assertEquals(
+            listOf(TITLE_FORMAT_STYLE_DOUBLE, TITLE_FORMAT_STYLE_DOUBLE, TITLE_FORMAT_STYLE_DOUBLE, TITLE_FORMAT_STYLE_DOUBLE),
+            result.plan.map { it.styleCode }
+        )
+    }
+
     private fun detectTxtChapters(text: String): List<TxtChapter> {
         return ChapterDetector.detectTxtChapters(
             text = text,
