@@ -36,6 +36,13 @@ class FetchInfoSearchUtilsTest {
     }
 
     @Test
+    fun jjwxcSearchHelpersExtractNovelIdFromWapBook2Url() {
+        assertEquals("8610357", extractJjwxcNovelId("https://wap.jjwxc.net/book2/8610357?more=0&whole=1"))
+        assertEquals("8610357", extractJjwxcNovelId("book2/8610357"))
+        assertFalse(needsJjwxcSearch("https://wap.jjwxc.net/book2/8610357?more=0&whole=1"))
+    }
+
+    @Test
     fun gongzicpSearchHelpersNormalizeIdsAndUrls() {
         assertTrue(needsGongzicpSearch("作品名"))
         assertFalse(needsGongzicpSearch(""))

@@ -124,7 +124,7 @@ internal fun extractGongzicpNovelId(value: String): String? {
 }
 
 internal fun extractJjwxcNovelId(value: String): String? {
-    return Regex("""(?:[?&]novelid=|novelid=)(\d+)""", RegexOption.IGNORE_CASE)
+    return Regex("""(?:[?&]novelid=|novelid=|book2/)(\d+)""", RegexOption.IGNORE_CASE)
         .find(value)
         ?.groupValues
         ?.getOrNull(1)
