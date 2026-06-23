@@ -85,6 +85,10 @@ class TitleFormatUtilsTest {
             "判断原因：自动：判断为双横线，所以无需修改（检查 0 章，修改 0 章）",
             titleFormatNoChangeMessage(emptyList())
         )
+        assertEquals(
+            "标题格式完成：处理 5 章，修改 2 章",
+            titleFormatCompletionMessage(plan, changed = 2)
+        )
     }
 
     @Test
@@ -374,18 +378,19 @@ class TitleFormatUtilsTest {
                 chapter("c4", "OEBPS/Text/Chapter0004.xhtml", "第4章", "<html><body><h1>第4章</h1></body></html>")
             )
         )
+        val parameters = TitleFormatParameters(
+            mode = TITLE_FORMAT_MODE_PER_CHAPTER,
+            style = TITLE_FORMAT_STYLE_DOUBLE,
+            preview = true,
+            scope = TITLE_FORMAT_SCOPE_ALL,
+            selectedChapterIndices = emptySet()
+        )
 
         val result = buildTitleFormatPlanModel(
             kind = DocumentKind.Epub,
             epubChapters = book.chapters,
             txtDocument = null,
-            parameters = TitleFormatParameters(
-                mode = TITLE_FORMAT_MODE_PER_CHAPTER,
-                style = TITLE_FORMAT_STYLE_DOUBLE,
-                preview = true,
-                scope = TITLE_FORMAT_SCOPE_ALL,
-                selectedChapterIndices = emptySet()
-            )
+            parameters = parameters
         )
 
         assertEquals(listOf(1, 2, 4, 5), result.plan.map { it.chapterIndex })
@@ -394,6 +399,15 @@ class TitleFormatUtilsTest {
         val extraStyles = result.plan.filter { it.chapterIndex in listOf(4, 5) }.map { it.styleCode }
         assertEquals(listOf(TITLE_FORMAT_STYLE_LEFT, TITLE_FORMAT_STYLE_LEFT), bodyStyles)
         assertEquals(listOf(TITLE_FORMAT_STYLE_NONE, TITLE_FORMAT_STYLE_NONE), extraStyles)
+        assertEquals("自动：正文左竖线，番外无横线", titleFormatLogicText(parameters, result.plan))
+        assertEquals(
+            "判断原因：自动：正文左竖线，番外无横线，所以无需修改（检查 4 章，修改 0 章）",
+            titleFormatNoChangeMessage(result.plan)
+        )
+        assertEquals(
+            "标题格式完成：自动：正文左竖线，番外无横线；处理 4 章，修改 2 章",
+            titleFormatCompletionMessage(result.plan, changed = 2)
+        )
     }
 
     @Test

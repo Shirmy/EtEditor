@@ -104,7 +104,7 @@ internal fun EditorController.applyTitleFormatPlan(plan: List<TitleFormatPlanIte
     checkReport = null
     markDocumentChanged()
     refreshChapters()
-    statusMessage = "标题格式完成：处理 ${plan.size} 章，修改 $changed 章"
+    statusMessage = titleFormatCompletionMessage(plan, changed)
     log(statusMessage)
     clearTitleFormatPlan()
     return changed
@@ -200,7 +200,7 @@ private suspend fun EditorController.applyTitleFormatPlanWithProgress(
     checkReport = null
     markDocumentChanged()
     refreshChapters()
-    statusMessage = "标题格式完成：处理 ${plan.size} 章，修改 $changed 章"
+    statusMessage = titleFormatCompletionMessage(plan, changed)
     log(statusMessage)
     clearTitleFormatPlan()
     return changed

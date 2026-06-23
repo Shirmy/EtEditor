@@ -34,7 +34,8 @@ data class TitleFormatPlanItem(
     val styleName: String,
     val reason: String,
     val newTitle: String,
-    val formatChanged: Boolean = false
+    val formatChanged: Boolean = false,
+    val autoGroupName: String = ""
 ) {
     val changed: Boolean get() = formatChanged || ChapterDetector.cleanTitle(oldTitle) != ChapterDetector.cleanTitle(newTitle)
 }
@@ -42,6 +43,11 @@ data class TitleFormatPlanItem(
 internal data class TitleFormatPlanBuildResult(
     val plan: List<TitleFormatPlanItem>,
     val message: String = ""
+)
+
+private data class TitleFormatVolumeGroup(
+    val name: String,
+    val indices: List<Int>
 )
 
 internal const val DEFAULT_TITLE_FORMAT_SHORT_THRESHOLD = 6
@@ -170,7 +176,8 @@ internal fun buildTitleFormatPlanItems(
     targetIndices: List<Int>,
     titles: List<String>,
     formatChanged: (Int, TitleFormatRendered) -> Boolean = { _, _ -> false },
-    autoDecisionByIndex: Map<Int, TitleFormatAutoDecision>? = null
+    autoDecisionByIndex: Map<Int, TitleFormatAutoDecision>? = null,
+    autoGroupNameByIndex: Map<Int, String> = emptyMap()
 ): List<TitleFormatPlanItem> {
     if (targetIndices.isEmpty()) return emptyList()
     val partsByIndex = targetIndices.associateWith { index ->
@@ -204,7 +211,8 @@ internal fun buildTitleFormatPlanItems(
             styleName = titleFormatStyleLabel(style),
             reason = reason,
             newTitle = rendered.plainTitle,
-            formatChanged = formatChanged(index, rendered)
+            formatChanged = formatChanged(index, rendered),
+            autoGroupName = autoGroupNameByIndex[index].orEmpty()
         )
     }
 }
@@ -238,19 +246,24 @@ internal fun buildTitleFormatPlanModel(
     val groups = epubTitleFormatVolumeGroups(kind, epubChapters, parameters, targetIndices)
     val plan = if (groups != null) {
         val autoDecisionByIndex = mutableMapOf<Int, TitleFormatAutoDecision>()
+        val autoGroupNameByIndex = mutableMapOf<Int, String>()
         for (group in groups) {
-            val groupParts = group.mapNotNull { index ->
+            val groupParts = group.indices.mapNotNull { index ->
                 parseTitleFormatParts(titles.getOrNull(index).orEmpty())
             }
             val decision = titleFormatAutoDecision(groupParts, DEFAULT_TITLE_FORMAT_SHORT_THRESHOLD)
-            group.forEach { index -> autoDecisionByIndex[index] = decision }
+            group.indices.forEach { index ->
+                autoDecisionByIndex[index] = decision
+                autoGroupNameByIndex[index] = group.name
+            }
         }
         buildTitleFormatPlanItems(
             parameters = parameters,
             targetIndices = targetIndices,
             titles = titles,
             formatChanged = formatChanged,
-            autoDecisionByIndex = autoDecisionByIndex
+            autoDecisionByIndex = autoDecisionByIndex,
+            autoGroupNameByIndex = autoGroupNameByIndex
         )
     } else {
         buildTitleFormatPlanItems(
@@ -301,9 +314,9 @@ private fun epubTitleFormatVolumeGroups(
     }
 
     if (normalGroup.isEmpty() && extraGroup.isEmpty()) return null
-    val groups = mutableListOf<List<Int>>()
-    if (normalGroup.isNotEmpty()) groups += normalGroup
-    if (extraGroup.isNotEmpty()) groups += extraGroup
+    val groups = mutableListOf<TitleFormatVolumeGroup>()
+    if (normalGroup.isNotEmpty()) groups += TitleFormatVolumeGroup("正文", normalGroup)
+    if (extraGroup.isNotEmpty()) groups += TitleFormatVolumeGroup("番外", extraGroup)
     return groups
 }
 
@@ -378,8 +391,17 @@ private fun titleFormatTargetIndicesModel(
 }
 
 internal fun titleFormatNoChangeMessage(plan: List<TitleFormatPlanItem>): String {
-    val reason = plan.firstOrNull()?.reason ?: "自动：判断为${titleFormatShortStyleLabel(TITLE_FORMAT_STYLE_DOUBLE)}"
+    val reason = titleFormatPlanSummaryReason(plan)
     return "判断原因：${reason}，所以无需修改（检查 ${plan.size} 章，修改 0 章）"
+}
+
+internal fun titleFormatCompletionMessage(plan: List<TitleFormatPlanItem>, changed: Int): String {
+    val groupedReason = titleFormatGroupedSummaryReason(plan)
+    return if (groupedReason != null) {
+        "标题格式完成：$groupedReason；处理 ${plan.size} 章，修改 $changed 章"
+    } else {
+        "标题格式完成：处理 ${plan.size} 章，修改 $changed 章"
+    }
 }
 
 internal fun titleFormatLogicText(
@@ -389,9 +411,34 @@ internal fun titleFormatLogicText(
     return when (parameters.mode) {
         TITLE_FORMAT_MODE_UNIFORM -> "统一：${titleFormatShortStyleLabel(parameters.style)}"
         else -> {
-            plan.firstOrNull()?.reason ?: "自动：判断为${titleFormatShortStyleLabel(TITLE_FORMAT_STYLE_DOUBLE)}"
+            titleFormatPlanSummaryReason(plan)
         }
     }
+}
+
+private fun titleFormatPlanSummaryReason(plan: List<TitleFormatPlanItem>): String {
+    if (plan.isEmpty()) return "自动：判断为${titleFormatShortStyleLabel(TITLE_FORMAT_STYLE_DOUBLE)}"
+    titleFormatGroupedSummaryReason(plan)?.let { return it }
+    return plan.firstOrNull()?.reason ?: "自动：判断为${titleFormatShortStyleLabel(TITLE_FORMAT_STYLE_DOUBLE)}"
+}
+
+private fun titleFormatGroupedSummaryReason(plan: List<TitleFormatPlanItem>): String? {
+    val grouped = plan
+        .filter { item -> item.autoGroupName.isNotBlank() }
+        .groupBy { item -> item.autoGroupName }
+    if (grouped.isNotEmpty()) {
+        val parts = listOf("正文", "番外").mapNotNull { groupName ->
+            val items = grouped[groupName].orEmpty()
+            if (items.isEmpty()) return@mapNotNull null
+            val styleNames = items
+                .map { item -> titleFormatShortStyleLabel(item.styleCode) }
+                .distinct()
+            val styleText = if (styleNames.size == 1) styleNames.single() else styleNames.joinToString("/")
+            "$groupName$styleText"
+        }
+        if (parts.isNotEmpty()) return "自动：${parts.joinToString("，")}"
+    }
+    return null
 }
 
 private fun titleFormatNumbers(targetIndices: List<Int>): Map<Int, Int> {
