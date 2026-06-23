@@ -67,7 +67,7 @@ fun EditorController.updateEditableBodyText(text: String): Boolean {
             chapter.wordCount = ChapterDetector.countHtmlChars(chapter.html)
             checkReport = null
             markDocumentChanged()
-            clearTextSearchState()
+            clearTextSearchStateAfterBodyTextChange()
             refreshEpubChapterInfoAt(chapterIndex, refreshPreview = false)
             statusMessage = "正文已更新"
             true
@@ -84,7 +84,7 @@ fun EditorController.updateEditableBodyText(text: String): Boolean {
                 document.chapters = detectCurrentTxtChapters(document.text)
                 checkReport = null
                 markDocumentChanged()
-                clearTextSearchState()
+                clearTextSearchStateAfterBodyTextChange()
                 refreshPreview()
                 statusMessage = "全文正文已更新，正在重建目录"
                 startTxtCatalogDetection(
@@ -105,7 +105,7 @@ fun EditorController.updateEditableBodyText(text: String): Boolean {
                 previewChapterIndex = 0
                 checkReport = null
                 markDocumentChanged()
-                clearTextSearchState()
+                clearTextSearchStateAfterBodyTextChange()
                 refreshPreview()
                 statusMessage = "正文已更新，正在重建目录"
                 startTxtCatalogDetection(
@@ -129,7 +129,7 @@ fun EditorController.updateEditableBodyText(text: String): Boolean {
                 previewChapterIndex = if (txtHasPreface()) -1 else 0
                 checkReport = null
                 markDocumentChanged()
-                clearTextSearchState()
+                clearTextSearchStateAfterBodyTextChange()
                 previewTitle = "前言"
                 previewChapterCount = document.chapters.size + if (txtHasPreface()) 1 else 0
                 setPreviewTextFromSource(text, -1)
@@ -154,7 +154,7 @@ fun EditorController.updateEditableBodyText(text: String): Boolean {
             document.chapters = detectCurrentTxtChapters(document.text)
             checkReport = null
             markDocumentChanged()
-            clearTextSearchState()
+            clearTextSearchStateAfterBodyTextChange()
             previewTitle = text.lineSequence().firstOrNull().orEmpty().trim()
                 .ifBlank { chapter.title.ifBlank { "\u65e0\u6807\u9898" } }
             previewChapterCount = document.chapters.size + if (txtHasPreface()) 1 else 0

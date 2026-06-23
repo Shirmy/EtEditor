@@ -12,6 +12,22 @@ internal fun EditorController.clearTextSearchState() {
     clearPreviewHighlight()
 }
 
+internal fun EditorController.clearTextSearchStateAfterBodyTextChange() {
+    val previousReplacementPreview = replacementFilePreview
+    clearTextSearchState()
+    replacementFilePreview = replacementPreviewAfterBodyTextChange(
+        previousReplacementPreview,
+        ::rebuildReplacementFilePreviewAfterBodyTextChange
+    )
+}
+
+internal fun replacementPreviewAfterBodyTextChange(
+    previousPreview: ReplacementFilePreview?,
+    rebuildPreview: (ReplacementFilePreview) -> ReplacementFilePreview?
+): ReplacementFilePreview? {
+    return previousPreview?.let(rebuildPreview)
+}
+
 internal fun EditorController.clearPreviewHighlight() {
     selectedTextSearchResultId = null
     selectedReplacementPreviewMatchId = null

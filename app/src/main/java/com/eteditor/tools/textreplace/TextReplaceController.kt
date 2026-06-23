@@ -357,6 +357,32 @@ private fun EditorController.textReplaceToolForPreview(toolId: String): EditorTo
     }
 }
 
+internal fun EditorController.rebuildReplacementFilePreviewAfterBodyTextChange(
+    previousPreview: ReplacementFilePreview
+): ReplacementFilePreview? {
+    val tool = textReplaceToolForPreview(previousPreview.toolId) ?: return null
+    val parameters = effectiveTextReplaceParameters(tool)
+    return buildReplacementFilePreview(
+        toolId = previousPreview.toolId,
+        parameters = parameters,
+        parsedRules = replacementPreviewSourceRules(previousPreview),
+        skippedRules = previousPreview.skippedRules
+    )
+}
+
+internal fun replacementPreviewSourceRules(preview: ReplacementFilePreview): List<ParsedReplacementRule> {
+    return (preview.multiRules + preview.singleRules + preview.zeroRules)
+        .sortedBy { it.lineNo }
+        .map { rule ->
+            ParsedReplacementRule(
+                lineNo = rule.lineNo,
+                pattern = rule.pattern,
+                replacement = rule.replacement,
+                regex = rule.regex
+            )
+        }
+}
+
 internal fun EditorController.rebuildCurrentTextSearchPreviewAfterDocumentChange(): Boolean {
     val toolId = textSearchToolId ?: return false
     if (replacementFilePreview != null) return false
