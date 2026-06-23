@@ -169,13 +169,14 @@ internal fun buildTitleFormatPlanItems(
     parameters: TitleFormatParameters,
     targetIndices: List<Int>,
     titles: List<String>,
-    formatChanged: (Int, TitleFormatRendered) -> Boolean = { _, _ -> false }
+    formatChanged: (Int, TitleFormatRendered) -> Boolean = { _, _ -> false },
+    autoDecisionByIndex: Map<Int, TitleFormatAutoDecision>? = null
 ): List<TitleFormatPlanItem> {
     if (targetIndices.isEmpty()) return emptyList()
     val partsByIndex = targetIndices.associateWith { index ->
         parseTitleFormatParts(titles.getOrNull(index).orEmpty())
     }
-    val autoDecision = if (parameters.mode == TITLE_FORMAT_MODE_PER_CHAPTER) {
+    val fallbackAutoDecision = if (autoDecisionByIndex == null && parameters.mode == TITLE_FORMAT_MODE_PER_CHAPTER) {
         titleFormatAutoDecision(partsByIndex.values, DEFAULT_TITLE_FORMAT_SHORT_THRESHOLD)
     } else {
         null
@@ -185,6 +186,7 @@ internal fun buildTitleFormatPlanItems(
         val parts = partsByIndex[index] ?: return@mapNotNull null
         val number = numberByIndex[index] ?: return@mapNotNull null
         val prefix = parts.prefix ?: "第${number}章"
+        val autoDecision = autoDecisionByIndex?.get(index) ?: fallbackAutoDecision
         val style = when (parameters.mode) {
             TITLE_FORMAT_MODE_PER_CHAPTER -> autoDecision?.style ?: TITLE_FORMAT_STYLE_DOUBLE
             TITLE_FORMAT_MODE_UNIFORM -> parameters.style
@@ -235,14 +237,21 @@ internal fun buildTitleFormatPlanModel(
     }
     val groups = epubTitleFormatVolumeGroups(kind, epubChapters, parameters, targetIndices)
     val plan = if (groups != null) {
-        groups.flatMap { group ->
-            buildTitleFormatPlanItems(
-                parameters = parameters,
-                targetIndices = group,
-                titles = titles,
-                formatChanged = formatChanged
-            )
+        val autoDecisionByIndex = mutableMapOf<Int, TitleFormatAutoDecision>()
+        for (group in groups) {
+            val groupParts = group.mapNotNull { index ->
+                parseTitleFormatParts(titles.getOrNull(index).orEmpty())
+            }
+            val decision = titleFormatAutoDecision(groupParts, DEFAULT_TITLE_FORMAT_SHORT_THRESHOLD)
+            group.forEach { index -> autoDecisionByIndex[index] = decision }
         }
+        buildTitleFormatPlanItems(
+            parameters = parameters,
+            targetIndices = targetIndices,
+            titles = titles,
+            formatChanged = formatChanged,
+            autoDecisionByIndex = autoDecisionByIndex
+        )
     } else {
         buildTitleFormatPlanItems(
             parameters = parameters,

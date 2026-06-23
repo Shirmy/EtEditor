@@ -389,7 +389,7 @@ class TitleFormatUtilsTest {
         )
 
         assertEquals(listOf(1, 2, 4, 5), result.plan.map { it.chapterIndex })
-        assertEquals(listOf(1, 2, 1, 2), result.plan.map { it.sequenceNumber })
+        assertEquals(listOf(1, 2, 3, 4), result.plan.map { it.sequenceNumber })
         val bodyStyles = result.plan.filter { it.chapterIndex in listOf(1, 2) }.map { it.styleCode }
         val extraStyles = result.plan.filter { it.chapterIndex in listOf(4, 5) }.map { it.styleCode }
         assertEquals(listOf(TITLE_FORMAT_STYLE_LEFT, TITLE_FORMAT_STYLE_LEFT), bodyStyles)
@@ -422,7 +422,7 @@ class TitleFormatUtilsTest {
         )
 
         assertEquals(listOf(0, 1, 3, 4), result.plan.map { it.chapterIndex })
-        assertEquals(listOf(1, 2, 1, 2), result.plan.map { it.sequenceNumber })
+        assertEquals(listOf(1, 2, 3, 4), result.plan.map { it.sequenceNumber })
         val bodyStyles = result.plan.filter { it.chapterIndex in listOf(0, 1) }.map { it.styleCode }
         val extraStyles = result.plan.filter { it.chapterIndex in listOf(3, 4) }.map { it.styleCode }
         assertEquals(listOf(TITLE_FORMAT_STYLE_LEFT, TITLE_FORMAT_STYLE_LEFT), bodyStyles)
@@ -489,6 +489,38 @@ class TitleFormatUtilsTest {
             listOf(TITLE_FORMAT_STYLE_DOUBLE, TITLE_FORMAT_STYLE_DOUBLE, TITLE_FORMAT_STYLE_DOUBLE, TITLE_FORMAT_STYLE_DOUBLE),
             result.plan.map { it.styleCode }
         )
+    }
+
+    @Test
+    fun buildTitleFormatPlanModelKeepsExtraTitlePrefixOnGroupingWithoutReset() {
+        val book = sampleBook(
+            mutableListOf(
+                chapter("v1", "OEBPS/Text/Vol01.xhtml", "第一卷", "<html><body><h1>第一卷</h1></body></html>"),
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章 很长的标题文字", "<html><body><h1>第1章 很长的标题文字</h1></body></html>"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章 也很长的标题文字", "<html><body><h1>第2章 也很长的标题文字</h1></body></html>"),
+                chapter("v0", "OEBPS/Text/Vol00.xhtml", "番外卷", "<html><body><h1>番外卷</h1></body></html>"),
+                chapter("c3", "OEBPS/Text/Chapter0003.xhtml", "生日番外", "<html><body><h1>生日番外</h1></body></html>"),
+                chapter("c4", "OEBPS/Text/Chapter0004.xhtml", "特别篇", "<html><body><h1>特别篇</h1></body></html>")
+            )
+        )
+
+        val result = buildTitleFormatPlanModel(
+            kind = DocumentKind.Epub,
+            epubChapters = book.chapters,
+            txtDocument = null,
+            parameters = TitleFormatParameters(
+                mode = TITLE_FORMAT_MODE_PER_CHAPTER,
+                style = TITLE_FORMAT_STYLE_DOUBLE,
+                preview = true,
+                scope = TITLE_FORMAT_SCOPE_ALL,
+                selectedChapterIndices = emptySet()
+            )
+        )
+
+        val extraItems = result.plan.filter { it.chapterIndex in listOf(4, 5) }
+        assertEquals(listOf(3, 4), extraItems.map { it.sequenceNumber })
+        assertEquals(listOf("第3章", "第4章"), extraItems.map { it.newTitle })
+        assertEquals(listOf(TITLE_FORMAT_STYLE_NONE, TITLE_FORMAT_STYLE_NONE), extraItems.map { it.styleCode })
     }
 
     private fun detectTxtChapters(text: String): List<TxtChapter> {
