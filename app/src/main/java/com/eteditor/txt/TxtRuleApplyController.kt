@@ -42,14 +42,6 @@ fun EditorController.applyTxtPurifyRules(): Boolean {
     )
 }
 
-internal fun EditorController.applyTxtPurifyRulesAfterOpen(): Boolean {
-    return applyTxtPurifyRulesInternal(
-        showNoopMessage = false,
-        successOnNoop = false,
-        successMessage = { catalogCount, bodyCount -> "打开 TXT 自动净化：目录 $catalogCount 个，正文 $bodyCount 处" }
-    )
-}
-
 internal suspend fun EditorController.applyTxtPurifyRulesAfterOpenInBackground(
     document: TxtDocument,
     sessionKey: Int
