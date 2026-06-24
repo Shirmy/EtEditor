@@ -29,21 +29,21 @@ internal fun fetchedIntroBodyHtml(intro: String, source: String): String {
     val lines = intro.lines()
         .map { it.trim() }
         .filter { it.isNotBlank() }
-    if (lines.isEmpty()) return "  <p></p>"
+    if (lines.isEmpty()) return "<p></p>"
     return buildList {
         lines.forEachIndexed { index, line ->
             when {
                 source == FETCH_INFO_SOURCE_JJWXC && line.startsWith(JJWXC_CONTENT_TAG_LABEL) -> {
-                    add("  <hr/>")
+                    add("<hr/>")
                     add(introParagraphHtml(line))
                 }
                 source == FETCH_INFO_SOURCE_GONGZICP && line.startsWith(GONGZICP_TAG_LABEL) -> {
-                    add("  <hr/>")
+                    add("<hr/>")
                     add(introParagraphHtml(line))
                 }
                 source == FETCH_INFO_SOURCE_SOSAD && index == 0 && isSosadIntroTagLine(line) -> {
                     add(introParagraphHtml(line))
-                    add("  <hr/>")
+                    add("<hr/>")
                 }
                 else -> add(introParagraphHtml(line))
             }
@@ -149,7 +149,7 @@ private fun isSosadIntroTagLine(line: String): Boolean {
 }
 
 private fun introParagraphHtml(line: String): String {
-    return "  <p>${line.escapeXmlText()}</p>"
+    return "<p>${line.escapeXmlText()}</p>"
 }
 
 private fun chapterBodyBlocksHtml(
