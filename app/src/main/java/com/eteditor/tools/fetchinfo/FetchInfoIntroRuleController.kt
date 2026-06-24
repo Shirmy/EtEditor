@@ -24,13 +24,15 @@ private fun EditorController.commitFetchInfoIntroRules(newIntroFilter: String) {
         filtered = filtered,
         filterIssues = issues
     )
+    // 规则是 fetch_info 工具的全局默认设置，必须以工具真实 id "fetch_info" 存取；
+    // preview.toolId 是预览实例 id（内置工具为 "builtin-fetch_info"），用它会导致写回与落盘全部落空。
     updateBuiltInToolParameter(
-        preview.toolId,
+        "fetch_info",
         FETCH_INFO_PARAM_INTRO_FILTER,
         newIntroFilter,
         clearPreview = false
     )
-    persistFetchInfoIntroRulesToDisk(preview.toolId, newIntroFilter)
+    persistFetchInfoIntroRulesToDisk("fetch_info", newIntroFilter)
 }
 
 // 把简介规则写进落盘的内置默认值，重启/换书后由启动加载流程自动恢复。
