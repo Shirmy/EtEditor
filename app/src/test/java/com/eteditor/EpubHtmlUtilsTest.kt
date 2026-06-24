@@ -171,11 +171,11 @@ class EpubHtmlUtilsTest {
     @Test
     fun epubIntroTemplateAddsSourceSpecificSeparators() {
         assertEquals(
-            "  <p>第一段</p>\n  <hr/>\n  <p>内容标签：幻想</p>",
+            "<p>第一段</p>\n<hr/>\n<p>内容标签：幻想</p>",
             fetchedIntroBodyHtml("第一段\n内容标签：幻想", FETCH_INFO_SOURCE_JJWXC)
         )
         assertEquals(
-            "  <p>幻想、剧情</p>\n  <hr/>\n  <p>简介正文</p>",
+            "<p>幻想、剧情</p>\n<hr/>\n<p>简介正文</p>",
             fetchedIntroBodyHtml("幻想、剧情\n简介正文", FETCH_INFO_SOURCE_SOSAD)
         )
     }
@@ -183,7 +183,7 @@ class EpubHtmlUtilsTest {
     @Test
     fun epubIntroTemplateAddsGongzicpSeparatorBeforeTagLine() {
         assertEquals(
-            "  <p>第一段</p>\n  <hr/>\n  <p>标签：幻想</p>",
+            "<p>第一段</p>\n<hr/>\n<p>标签：幻想</p>",
             fetchedIntroBodyHtml("第一段\n标签：幻想", FETCH_INFO_SOURCE_GONGZICP)
         )
     }
@@ -196,16 +196,16 @@ class EpubHtmlUtilsTest {
             source = FETCH_INFO_SOURCE_JJWXC
         )
 
-        assertTrue(html.contains("<title>书名 &amp; &lt;副题&gt;</title>"))
+        assertTrue(!html.contains("<title>"))
         assertTrue(html.contains("<h1 class=\"centered-text_01\">书名 &amp; &lt;副题&gt;</h1>"))
-        assertTrue(html.contains("  <p></p>"))
+        assertTrue(html.contains("<p></p>"))
     }
 
     @Test
-    fun volumeHtmlNormalizesRawLineBreakHeadingAndPlainDocumentTitle() {
+    fun volumeHtmlNormalizesRawLineBreakHeadingAndOmitsDocumentTitle() {
         val html = volumeHtml("第一卷\n副标题 & <x>")
 
-        assertTrue(html.contains("<title>第一卷 副标题 &amp; &lt;x&gt;</title>"))
+        assertTrue(!html.contains("<title>"))
         assertTrue(html.contains("<h1 class=\"centered-text_01\">第一卷 副标题 &amp; &lt;x&gt;</h1>"))
     }
 
@@ -216,7 +216,7 @@ class EpubHtmlUtilsTest {
             paragraphs = listOf("  副题 & 说明  ", " ", "<原文标签>")
         )
 
-        assertTrue(html.contains("<title>第一卷 &amp; &lt;标题&gt;</title>"))
+        assertTrue(!html.contains("<title>"))
         assertTrue(html.contains("<h1 class=\"centered-text_01\">第一卷 &amp; &lt;标题&gt;</h1>"))
         assertTrue(html.contains("<p>副题 &amp; 说明</p>"))
         assertTrue(html.contains("<p>&lt;原文标签&gt;</p>"))

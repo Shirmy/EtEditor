@@ -194,7 +194,7 @@ class FetchInfoEpubWriteUtilsTest {
         val html = decodeEpubHtmlBytes(book.entries.getValue("OEBPS/Text/intro.xhtml"))
         val manifestItem = book.manifest.values.single { it.path == "OEBPS/Text/intro.xhtml" }
 
-        assertTrue(html.contains("<title>简介 &amp; 书名</title>"))
+        assertTrue(!html.contains("<title>"))
         assertTrue(html.contains("<p>第一段</p>"))
         assertTrue(html.contains("<hr/>"))
         assertEquals("Text/intro.xhtml", manifestItem.href)
