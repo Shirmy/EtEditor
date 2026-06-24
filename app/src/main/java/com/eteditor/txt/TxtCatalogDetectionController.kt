@@ -246,6 +246,9 @@ internal fun buildEpubChapterInfos(
     book: com.eteditor.core.EpubBook,
     exportOptions: com.eteditor.core.EpubExportOptions
 ): List<ChapterInfo> {
+    if (book.chapters.any { it.isVolumeChapter() }) {
+        applyVolumeTocLevels(book)
+    }
     val useOwnSection0001Title = !exportOptions.hideSection0001FromNcx
     val chapterInfos = book.chapters.mapIndexed { index, chapter ->
         chapter.syncEpubDirectoryTitleFromHtml(useOwnSection0001Title)
