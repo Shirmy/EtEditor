@@ -16,7 +16,6 @@ internal fun introHtml(title: String, intro: String, source: String): String {
         |<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
         |<head>
         |  <link href="../Styles/main.css" type="text/css" rel="stylesheet"/>
-        |  <title>$escapedTitle</title>
         |</head>
         |<body>
         |  <h1 class="centered-text_01">$escapedTitle</h1>
@@ -54,7 +53,6 @@ internal fun fetchedIntroBodyHtml(intro: String, source: String): String {
 
 internal fun volumeHtml(title: String): String {
     val escapedTitle = ChapterDetector.titleHeadingHtmlWithLineBreaks(title).ifBlank { title.escapeXmlText() }
-    val documentTitle = ChapterDetector.cleanTitleLineBreaksAsSpace(title).escapeXmlText()
     return """
         |<?xml version="1.0" encoding="utf-8"?>
         |<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
@@ -63,7 +61,6 @@ internal fun volumeHtml(title: String): String {
         |<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
         |<head>
         |  <link href="../Styles/main.css" type="text/css" rel="stylesheet"/>
-        |<title>$documentTitle</title>
         |</head>
         |<body>
         |  <h1 class="centered-text_01">$escapedTitle</h1>
@@ -74,7 +71,6 @@ internal fun volumeHtml(title: String): String {
 
 internal fun volumeHtml(title: String, paragraphs: List<String>): String {
     val escapedTitle = title.escapeXmlText()
-    val documentTitle = ChapterDetector.cleanTitleLineBreaksAsSpace(title).escapeXmlText()
     val body = paragraphs
         .map { line -> line.trim() }
         .filter { it.isNotBlank() }
@@ -88,7 +84,6 @@ internal fun volumeHtml(title: String, paragraphs: List<String>): String {
         |<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
         |<head>
         |  <link href="../Styles/main.css" type="text/css" rel="stylesheet"/>
-        |<title>$documentTitle</title>
         |</head>
         |<body>
         |  <h1 class="centered-text_01">$escapedTitle</h1>$bodySuffix
