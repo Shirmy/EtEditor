@@ -34,9 +34,6 @@ suspend fun EditorController.openEpub(uri: Uri) = runBusy("打开 EPUB") {
     val exportOptions = epubExportOptions(epubHideSection0001FromNcx)
     val opened = withContext(Dispatchers.Default) {
         val book = EpubToolkit.parse(bytes, name, calculateChapterWordCount = false)
-        if (book.chapters.any { it.isVolumeChapter() }) {
-            applyVolumeTocLevels(book)
-        }
         OpenedEpubDocument(
             book = book,
             chapters = buildEpubChapterInfos(book, exportOptions),
