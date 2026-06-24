@@ -100,6 +100,11 @@ fun EditorController.fetchInfoWritableChapterCount(): Int {
     return fetchInfoCatalogTargetChapters(book).size
 }
 
+fun EditorController.fetchInfoExistingIntroText(preview: FetchInfoPreview): String {
+    val book = epub ?: return ""
+    return extractEpubIntroText(book, preview.parameters.introTargetPath)
+}
+
 fun EditorController.fetchInfoCatalogSummary(preview: FetchInfoPreview): String {
     return buildFetchInfoCatalogSummary(fetchInfoWritableChapterCount(), preview)
 }

@@ -206,6 +206,9 @@ fun FetchInfoPreviewPane(
     }
     val isCoverPreview = preview.parameters.fetchCover
     val isIntroPreview = preview.parameters.fetchIntro
+    val existingIntroText = remember(preview) {
+        if (isIntroPreview) controller.fetchInfoExistingIntroText(preview) else ""
+    }
     val headingTitle = preview.filtered.title.ifBlank { preview.raw.title }
     val headingAuthor = preview.filtered.author.ifBlank { preview.raw.author }
     val headingText = listOf(headingTitle, headingAuthor)
@@ -358,8 +361,8 @@ fun FetchInfoPreviewPane(
                                 horizontalArrangement = Arrangement.spacedBy(gap)
                             ) {
                                 FetchedInfoBlock(
-                                    title = if (isIntroPreview) "原始简介" else "原始结果",
-                                    info = preview.raw,
+                                    title = if (isIntroPreview) "epub 原简介" else "原始结果",
+                                    info = if (isIntroPreview) preview.raw.copy(intro = existingIntroText) else preview.raw,
                                     introMaxHeight = if (isIntroPreview) 330.dp else 220.dp,
                                     modifier = Modifier.width(columnWidth)
                                 )

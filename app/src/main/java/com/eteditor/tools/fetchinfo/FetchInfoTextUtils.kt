@@ -116,6 +116,15 @@ internal fun String.cleanGongzicpIntro(): String {
         .trimPresaleBlock()
 }
 
+internal fun extractEpubIntroBodyText(html: String): String {
+    val body = htmlVisibleBodyContent(html)
+    val withoutHeadings = body.replace(
+        Regex("""<h[1-6]\b[^>]*>.*?</h[1-6]\s*>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)),
+        ""
+    )
+    return withoutHeadings.cleanHtmlBlock()
+}
+
 internal fun String.cleanHtmlBlock(): String {
     return replace(Regex("""<br\s*/?>""", RegexOption.IGNORE_CASE), "\n")
         .replace(Regex("""</p\s*>""", RegexOption.IGNORE_CASE), "\n")

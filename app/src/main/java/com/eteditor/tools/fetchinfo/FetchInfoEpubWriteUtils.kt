@@ -107,6 +107,13 @@ private fun updateFetchedCatalogChapterFormattedTitle(chapter: EpubChapter, rend
     chapter.wordCount = ChapterDetector.countHtmlChars(chapter.html)
 }
 
+// 读取 epub 当前简介文件（默认 section0002）的正文纯文本，去掉书名标题行，用于抓取预览左栏对照。
+internal fun extractEpubIntroText(book: EpubBook, targetPath: String): String {
+    val path = resolveFetchInfoIntroTarget(targetPath, book)
+    val bytes = book.entries[path] ?: return ""
+    return extractEpubIntroBodyText(decodeEpubHtmlBytes(bytes))
+}
+
 internal fun writeFetchInfoIntroFileToEpub(book: EpubBook, targetPath: String, info: FetchedInfo, source: String) {
     val path = resolveFetchInfoIntroTarget(targetPath, book)
     val html = if (book.entries.containsKey(path)) {
