@@ -224,7 +224,7 @@ internal fun fetchInfoCatalogWriteBackRenderedTitle(
 }
 
 internal fun fetchInfoChapterNumberPrefix(title: String): String {
-    val clean = ChapterDetector.cleanTitle(title)
+    val clean = title.trim()
     return FETCH_INFO_CHAPTER_PREFIX_REGEX
         .find(clean)
         ?.groupValues

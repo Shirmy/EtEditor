@@ -181,7 +181,7 @@ class FetchInfoTextUtilsTest {
 
     @Test
     fun fetchInfoChapterNumberPrefixHandlesChineseAndArabicNumbers() {
-        assertEquals("第十二章", fetchInfoChapterNumberPrefix("第 十二 章 旧标题"))
+        assertEquals("第 十二 章", fetchInfoChapterNumberPrefix("第 十二 章 旧标题"))
         assertEquals("第9章", fetchInfoChapterNumberPrefix("第9章 旧标题"))
         assertEquals("", fetchInfoChapterNumberPrefix("序章"))
     }
