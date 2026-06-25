@@ -433,6 +433,12 @@ suspend fun EditorController.reselectFetchInfoBook(toolId: String): Boolean {
         )
         if (choices.isEmpty()) {
             statusMessage = "${sourceLabel}没有搜到可换的书"
+            fetchInfoPreview = null
+            fetchInfoRetryRequest = FetchInfoRetryRequest(
+                toolId = toolId,
+                parameters = searchParameters,
+                message = statusMessage
+            )
             fetchInfoProgress = 0f
             false
         } else {
