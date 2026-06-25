@@ -562,7 +562,8 @@ private fun ToolsPanel(
                     controller = controller,
                     toolId = request.toolId,
                     onDismiss = { controller.clearFetchInfoSearchChoiceRequest(request.toolId) },
-                    onPrepared = { fetchInfoPreviewToolId = request.toolId }
+                    onPrepared = { fetchInfoPreviewToolId = request.toolId },
+                    onManualUrl = { controller.openFetchInfoManualUrlRetry(request.toolId) }
                 )
             }
         controller.fetchInfoRetryRequest

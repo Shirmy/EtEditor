@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -82,6 +83,7 @@ fun FetchInfoSearchChoiceDialog(
     onDismiss: () -> Unit,
     onPrepared: () -> Unit,
     preparingLabel: String = "正在读取详情页",
+    onManualUrl: (() -> Unit)? = null,
     onSelectChoice: suspend (FetchInfoSearchChoice) -> Boolean = { choice ->
         controller.selectFetchInfoSearchChoice(toolId, choice)
     }
@@ -121,6 +123,16 @@ fun FetchInfoSearchChoiceDialog(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    if (onManualUrl != null) {
+                        IconButton(
+                            onClick = onManualUrl,
+                            enabled = selectingUrl == null,
+                            colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Outlined.Edit, contentDescription = "填写详情页地址", modifier = Modifier.size(19.dp))
+                        }
+                    }
                     IconButton(
                         onClick = onDismiss,
                         enabled = selectingUrl == null,
@@ -212,6 +224,7 @@ fun FetchInfoRetryDialog(
     val scope = rememberCoroutineScope()
     var urlText by remember(toolId) { mutableStateOf("") }
     var retrying by remember(toolId) { mutableStateOf(false) }
+    val manualInput = request.message == "请填写详情页网址"
 
     AlertDialog(
         onDismissRequest = {
@@ -223,7 +236,7 @@ fun FetchInfoRetryDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
             Text(
-                text = "抓取失败",
+                text = if (manualInput) "填写详情页地址" else "抓取失败",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )

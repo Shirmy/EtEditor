@@ -426,7 +426,8 @@ private fun AutomationFetchInfoConfirmation(
             controller = controller,
             toolId = pendingChoice.toolId,
             onDismiss = { controller.clearFetchInfoSearchChoiceRequest(pendingChoice.toolId) },
-            onPrepared = { errorMessage = null }
+            onPrepared = { errorMessage = null },
+            onManualUrl = { controller.openFetchInfoManualUrlRetry(pendingChoice.toolId) }
         )
     }
     controller.fetchInfoRetryRequest

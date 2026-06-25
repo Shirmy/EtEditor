@@ -396,6 +396,20 @@ suspend fun EditorController.selectFetchInfoSearchChoice(toolId: String, choice:
     )
 }
 
+fun EditorController.openFetchInfoManualUrlRetry(toolId: String): Boolean {
+    val request = fetchInfoSearchChoiceRequest ?: return false
+    if (request.toolId != toolId) return false
+    fetchInfoSearchChoiceRequest = null
+    statusMessage = "请填写详情页网址"
+    fetchInfoRetryRequest = FetchInfoRetryRequest(
+        toolId = toolId,
+        parameters = request.parameters,
+        message = statusMessage
+    )
+    fetchInfoProgress = 0f
+    return true
+}
+
 // 换书：在已有预览的基础上，按当前来源重新搜索候选，并弹出选择框让用户重选。
 // 重选后会经由 selectFetchInfoSearchChoice 用新书的详情页地址重抓三样内容，并刷新运行级缓存。
 suspend fun EditorController.reselectFetchInfoBook(toolId: String): Boolean {

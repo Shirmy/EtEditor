@@ -582,7 +582,8 @@ internal fun ToolParameterPanel(
                 controller = controller,
                 toolId = request.toolId,
                 onDismiss = { controller.clearFetchInfoSearchChoiceRequest(request.toolId) },
-                onPrepared = { onFetchInfoPreview(request.toolId) }
+                onPrepared = { onFetchInfoPreview(request.toolId) },
+                onManualUrl = { controller.openFetchInfoManualUrlRetry(request.toolId) }
             )
         }
     controller.fetchInfoRetryRequest
