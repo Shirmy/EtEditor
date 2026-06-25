@@ -62,11 +62,14 @@ fun EditorController.clearFetchInfoRetryRequest(toolId: String? = null) {
 }
 
 internal fun EditorController.fetchInfoParameters(tool: EditorTool? = null): FetchInfoParameters {
-    val values = if (tool == null) {
+    val baseValues = if (tool == null) {
         defaultToolParameters("fetch_info")
     } else {
         mergedToolParameters(tool)
     }
+    // 目录/简介规则是 fetch_info 的全局设置，统一以全局值为准（内存优先，回退落盘默认），
+    // 避免自动化步骤里残留的旧快照覆盖掉功能页里编辑/导入的最新规则。
+    val values = withGlobalFetchInfoRules(baseValues)
     return buildFetchInfoParameters(
         values = values,
         sourceOptions = FETCH_INFO_SOURCE_OPTIONS,
@@ -77,6 +80,22 @@ internal fun EditorController.fetchInfoParameters(tool: EditorTool? = null): Fet
         introTargetPath = resolveFetchInfoIntroTarget(values[FETCH_INFO_PARAM_INTRO_TARGET].orEmpty(), epub),
         trueValue = BOOL_TRUE
     )
+}
+
+// 以全局 fetch_info 设置里的目录/简介规则覆盖传入值：内存覆盖优先，回退落盘默认。
+private fun EditorController.withGlobalFetchInfoRules(values: Map<String, String>): Map<String, String> {
+    val memory = builtInParameterOverrides["fetch_info"].orEmpty()
+    val saved = savedBuiltInDefaultOverrides["fetch_info"].orEmpty()
+    val result = values.toMutableMap()
+    listOf(FETCH_INFO_PARAM_CATALOG_FILTER, FETCH_INFO_PARAM_INTRO_FILTER).forEach { key ->
+        val globalValue = memory[key] ?: saved[key]
+        if (globalValue != null) {
+            result[key] = globalValue
+        } else {
+            result.remove(key)
+        }
+    }
+    return result
 }
 
 fun EditorController.defaultFetchInfoQuery(): String {
@@ -210,6 +229,31 @@ private suspend fun EditorController.prepareFetchInfoPreview(tool: EditorTool): 
     return prepareFetchInfoPreviewFromParameters(tool.id, fetchInfoParameters(tool))
 }
 
+// 只有正在运行的 fetch_info 自动化步骤才共享认书结果：toolId 必须等于当前确认步骤的 stepId。
+private fun EditorController.isFetchInfoAutomationRun(toolId: String): Boolean {
+    val request = automationConfirmationRequest ?: return false
+    return request.toolId == "fetch_info" && request.stepId == toolId
+}
+
+// 读取本次运行里同源已认好的书（详情页地址）；非自动化运行或无缓存时返回 null。
+private fun EditorController.fetchInfoRunCachedUrl(toolId: String, source: String): String? {
+    if (!isFetchInfoAutomationRun(toolId)) return null
+    return fetchInfoRunResolvedUrls[source]?.takeIf { it.isNotBlank() }
+}
+
+// 把刚认好的书写入运行级缓存（按 source）；非自动化运行时不缓存，避免影响手动单次抓取。
+private fun EditorController.cacheFetchInfoRunResolvedUrl(toolId: String, source: String, url: String) {
+    if (url.isBlank() || !isFetchInfoAutomationRun(toolId)) return
+    fetchInfoRunResolvedUrls = fetchInfoRunResolvedUrls + (source to url)
+}
+
+// 缓存的书抓不到当前内容时清掉，回退到正常搜索认书。
+private fun EditorController.clearFetchInfoRunCachedUrl(source: String) {
+    if (fetchInfoRunResolvedUrls.containsKey(source)) {
+        fetchInfoRunResolvedUrls = fetchInfoRunResolvedUrls - source
+    }
+}
+
 private suspend fun EditorController.prepareFetchInfoPreviewFromParameters(
     toolId: String,
     baseParameters: FetchInfoParameters,
@@ -248,6 +292,28 @@ private suspend fun EditorController.prepareFetchInfoPreviewFromParameters(
             return false
         }
         try {
+            val cachedUrl = fetchInfoRunCachedUrl(toolId, parameters.source)
+            if (cachedUrl != null) {
+                // 本次运行已认好同源的书：直接读详情页，跳过搜索认书。
+                val cachedParameters = parameters.copy(
+                    searchMode = FETCH_INFO_SEARCH_KEYWORD,
+                    query = cachedUrl
+                )
+                if (prepareFetchInfoPreviewWithParameters(
+                        toolId,
+                        cachedParameters,
+                        requireRequestedContent = true,
+                        sourceIndex = sourceIndex,
+                        sourceTotal = sources.size
+                    )
+                ) {
+                    return true
+                }
+                // 缓存的书抓不到当前内容：清掉缓存，回退到正常搜索认书。
+                clearFetchInfoRunCachedUrl(parameters.source)
+                fetchInfoPreview = null
+                fetchInfoSearchChoiceRequest = null
+            }
             val fetcher = FetchInfoFetcherFactory.create(parameters.source)
             val sourceProgress = fetchInfoProgressForAutoSource(parameters.source, sourceIndex, sources.size)
             updateFetchInfoProgress(
@@ -328,6 +394,68 @@ suspend fun EditorController.selectFetchInfoSearchChoice(toolId: String, choice:
         parameters = request.parameters.copy(query = choice.detailUrl),
         requireRequestedContent = true
     )
+}
+
+// 换书：在已有预览的基础上，按当前来源重新搜索候选，并弹出选择框让用户重选。
+// 重选后会经由 selectFetchInfoSearchChoice 用新书的详情页地址重抓三样内容，并刷新运行级缓存。
+suspend fun EditorController.reselectFetchInfoBook(toolId: String): Boolean {
+    val preview = fetchInfoPreview?.takeIf { it.toolId == toolId } ?: run {
+        statusMessage = "没有可换书的抓取预览"
+        return false
+    }
+    if (kind != DocumentKind.Epub) {
+        statusMessage = "抓取信息仅支持 EPUB"
+        return false
+    }
+    networkUnavailableMessageForContext(appContext, "抓取失败")?.let { message ->
+        statusMessage = message
+        return false
+    }
+    val source = preview.parameters.source
+    // 先清掉本次运行里该来源的缓存：换书意味着之前认的书作废，避免后续步骤继续复用旧书。
+    clearFetchInfoRunCachedUrl(source)
+    // 用当前书名按书名模式重新搜索，拿到候选书列表。
+    val searchParameters = fetchInfoParametersForSource(preview.parameters, source).copy(
+        searchMode = FETCH_INFO_SEARCH_TITLE,
+        query = defaultFetchInfoQuery(FETCH_INFO_SEARCH_TITLE)
+    )
+    val sourceLabel = FetchInfoSources.label(source)
+    if (searchParameters.query.isBlank()) {
+        statusMessage = "没有可用于搜索的书名"
+        return false
+    }
+    fetchInfoProgress = 0f
+    updateFetchInfoProgress(source, "搜索中...", 0.16f)
+    return try {
+        val fetcher = FetchInfoFetcherFactory.create(searchParameters.source)
+        val choices = distinctVisibleSearchChoices(
+            fetcher.searchChoices(searchParameters, fetchInfoProgressForSource(searchParameters.source))
+        )
+        if (choices.isEmpty()) {
+            statusMessage = "${sourceLabel}没有搜到可换的书"
+            fetchInfoProgress = 0f
+            false
+        } else {
+            // 换书一律弹框让用户重选，不做自动认书。
+            fetchInfoPreview = null
+            fetchInfoRetryRequest = null
+            fetchInfoSearchChoiceRequest = FetchInfoSearchChoiceRequest(
+                toolId = toolId,
+                parameters = searchParameters,
+                choices = choices
+            )
+            statusMessage = "请选择${sourceLabel}搜索结果"
+            fetchInfoProgress = 0f
+            true
+        }
+    } catch (error: Throwable) {
+        statusMessage = networkAwareErrorMessage("${sourceLabel}搜索失败", error)
+        if (searchParameters.source == FETCH_INFO_SOURCE_SOSAD) {
+            markSosadLoginInvalidIfNeeded(statusMessage, error)
+        }
+        fetchInfoProgress = 0f
+        false
+    }
 }
 
 suspend fun EditorController.retryFetchInfoAfterFailure(toolId: String, urlText: String): Boolean {
@@ -416,6 +544,8 @@ private suspend fun EditorController.prepareFetchInfoPreviewWithParameters(
             filtered = filtered,
             filterIssues = issues
         )
+        // 认书成功后把详情页地址写入运行级缓存，供后续同源步骤复用（仅自动化运行内生效）。
+        cacheFetchInfoRunResolvedUrl(toolId, parameters.source, raw.resolvedUrl)
         fetchInfoSearchChoiceRequest = null
         fetchInfoRetryRequest = null
         clearTextSearchState()

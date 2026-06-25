@@ -17,6 +17,9 @@ internal class EditorAutomationState {
     var automationRunExecuted = 0
     var automationRunSkipped = 0
     var automationRunFailed = 0
+    // 同一次自动化运行内，按 source 缓存已认好的书的详情页地址（resolvedUrl）。
+    // 后续同源 fetch_info 步骤直接复用，跳过搜索认书，避免同一本书被反复认。
+    var fetchInfoRunResolvedUrls by mutableStateOf<Map<String, String>>(emptyMap())
     var draftAutomationChain by mutableStateOf<AutomationChain?>(null)
     var draftAutomationChainPreviousSelectionId: String = ""
     var nextAutomationChainNumber = 2

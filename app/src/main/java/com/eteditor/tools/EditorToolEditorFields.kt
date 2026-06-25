@@ -378,7 +378,8 @@ internal fun EditorToolEditor(
                 controller.clearFetchInfoPreview(toolId)
                 fetchInfoPreviewToolId = null
             },
-            onApplyStarted = { fetchInfoPreviewToolId = null }
+            onApplyStarted = { fetchInfoPreviewToolId = null },
+            onReselected = { fetchInfoPreviewToolId = null }
         )
     }
     coverPreviewToolId?.let {

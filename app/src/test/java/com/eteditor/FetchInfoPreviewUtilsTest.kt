@@ -101,15 +101,15 @@ class FetchInfoPreviewUtilsTest {
     @Test
     fun buildFetchInfoCatalogSummaryReportsMoreLessOrEqualCounts() {
         assertEquals(
-            "范围内共 1 章，抓取到 2 章；超出 1 章不写回",
+            "原章节 1 章  抓取章节 2 章",
             buildFetchInfoCatalogSummary(1, previewWithCatalog(nonVolumeCount = 2))
         )
         assertEquals(
-            "范围内共 3 章，抓取到 1 章；少 2 章，剩余位置为空",
+            "原章节 3 章  抓取章节 1 章",
             buildFetchInfoCatalogSummary(3, previewWithCatalog(nonVolumeCount = 1))
         )
         assertEquals(
-            "范围内共 2 章，抓取到 2 章；数量一致",
+            "原章节 2 章  抓取章节 2 章",
             buildFetchInfoCatalogSummary(2, previewWithCatalog(nonVolumeCount = 2))
         )
     }
@@ -464,7 +464,7 @@ class FetchInfoPreviewUtilsTest {
         assertEquals(
             listOf(
                 FetchInfoCatalogPreviewRow("Chapter0001.xhtml", "第1章 旧", "第1章 第1章 新", isVolume = false, chapterPosition = 0),
-                FetchInfoCatalogPreviewRow("Chapter0002.xhtml", "第2章 旧", "", isVolume = false)
+                FetchInfoCatalogPreviewRow("Chapter0002.xhtml", "第2章 旧", "", isVolume = false, missingFetch = true)
             ),
             rows
         )

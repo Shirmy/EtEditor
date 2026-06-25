@@ -157,7 +157,7 @@ internal fun parseSosadIntroCover(introBlock: String, baseUrl: String): String {
 
 internal fun parseSosadTitle(html: String): String {
     return Regex(
-        """<(?:h1|[^>]+class=["'][^"']*(?:thread-title|title)[^"']*["'][^>]*)>(.*?)</[^>]+>""",
+        """<(?:h1|[^>]+class=["'][^"']*(?:thread-title|(?<!chapter-)title)[^"']*["'][^>]*)>(.*?)</[^>]+>""",
         setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
     ).find(html)?.groupValues?.getOrNull(1)?.cleanHtmlText()?.takeIf { it.isNotBlank() }
         ?: Regex("""<title>(.*?)</title>""", RegexOption.IGNORE_CASE)

@@ -73,6 +73,7 @@ internal fun EditorController.resetAutomationRunRuntimeState() {
     automationRunExecuted = 0
     automationRunSkipped = 0
     automationRunFailed = 0
+    fetchInfoRunResolvedUrls = emptyMap()
     clearBodyOperationProgress()
 }
 

@@ -509,7 +509,8 @@ private fun ToolsPanel(
                 controller.clearFetchInfoPreview(toolId)
                 fetchInfoPreviewToolId = null
             },
-            onApplyStarted = { fetchInfoPreviewToolId = null }
+            onApplyStarted = { fetchInfoPreviewToolId = null },
+            onReselected = { fetchInfoPreviewToolId = null }
         )
     }
     coverPreviewToolId?.let { toolId ->

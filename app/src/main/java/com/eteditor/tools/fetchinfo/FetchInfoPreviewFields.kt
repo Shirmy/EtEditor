@@ -33,6 +33,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Save
+import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -79,7 +80,8 @@ fun FetchInfoPreviewDialog(
     toolId: String,
     onDismiss: () -> Unit,
     onApplied: (() -> Unit)? = null,
-    onApplyStarted: (() -> Unit)? = null
+    onApplyStarted: (() -> Unit)? = null,
+    onReselected: (() -> Unit)? = null
 ) {
     val configuration = LocalConfiguration.current
     val dialogHeight = (configuration.screenHeightDp.dp * 0.86f).coerceAtLeast(320.dp)
@@ -105,6 +107,7 @@ fun FetchInfoPreviewDialog(
                 onDismiss = onDismiss,
                 onApplied = onApplied,
                 onApplyStarted = onApplyStarted,
+                onReselected = onReselected,
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -118,6 +121,7 @@ fun FetchInfoPreviewPane(
     onDismiss: () -> Unit,
     onApplied: (() -> Unit)? = null,
     onApplyStarted: (() -> Unit)? = null,
+    onReselected: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val preview = controller.fetchInfoPreview
@@ -136,6 +140,7 @@ fun FetchInfoPreviewPane(
     }
     val scope = rememberCoroutineScope()
     var writing by remember(preview) { mutableStateOf(false) }
+    var reselecting by remember(preview) { mutableStateOf(false) }
     var writingProgress by remember(preview) { mutableStateOf(0f) }
     var writingLabel by remember(preview) { mutableStateOf("应用抓取信息") }
     var catalogOrderReversed by remember(preview) { mutableStateOf(false) }
@@ -277,6 +282,24 @@ fun FetchInfoPreviewPane(
                         }
                     }
                     IconButton(
+                        onClick = {
+                            if (!writing && !reselecting) {
+                                reselecting = true
+                                scope.launch {
+                                    yieldToAppUiBeforeHeavyWork()
+                                    val prompted = controller.reselectFetchInfoBook(toolId)
+                                    reselecting = false
+                                    if (prompted) onReselected?.invoke()
+                                }
+                            }
+                        },
+                        enabled = !writing && !reselecting && !controller.busy,
+                        colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(Icons.Outlined.SwapHoriz, contentDescription = "换书", modifier = Modifier.size(19.dp))
+                    }
+                    IconButton(
                         onClick = onDismiss,
                         enabled = !writing,
                         colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
@@ -389,6 +412,11 @@ fun FetchInfoPreviewPane(
                 ToolRunProgress(
                     toolName = writingLabel,
                     progress = writingProgress
+                )
+            } else if (reselecting) {
+                ToolRunProgress(
+                    toolName = fetchProgressDisplayText(controller.statusMessage).ifBlank { "正在重新搜索" },
+                    progress = controller.fetchInfoProgress.takeIf { it > 0f } ?: 0.16f
                 )
             }
             ButtonRow {

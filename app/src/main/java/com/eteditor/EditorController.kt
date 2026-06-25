@@ -409,6 +409,9 @@ class EditorController(internal val appContext: Context) {
     internal var nextAutomationStepNumber: Int
         get() = automationState.nextAutomationStepNumber
         set(value) { automationState.nextAutomationStepNumber = value }
+    internal var fetchInfoRunResolvedUrls: Map<String, String>
+        get() = automationState.fetchInfoRunResolvedUrls
+        set(value) { automationState.fetchInfoRunResolvedUrls = value }
 
     val selectedAutomationChain: AutomationChain?
         get() = draftAutomationChain?.takeIf { it.id == selectedAutomationChainId }
