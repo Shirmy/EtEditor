@@ -242,10 +242,28 @@ fun FetchInfoPreviewPane(
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    IconButton(
+                        onClick = {
+                            if (!writing && !reselecting) {
+                                reselecting = true
+                                scope.launch {
+                                    yieldToAppUiBeforeHeavyWork()
+                                    val prompted = controller.reselectFetchInfoBook(toolId)
+                                    reselecting = false
+                                    if (prompted) onReselected?.invoke()
+                                }
+                            }
+                        },
+                        enabled = !writing && !reselecting && !controller.busy,
+                        colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(Icons.Outlined.SwapHoriz, contentDescription = "换书", modifier = Modifier.size(19.dp))
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
                     if (preview.parameters.fetchCatalog) {
                         IconButton(
                             onClick = { showRulePanel = true },
@@ -280,24 +298,6 @@ fun FetchInfoPreviewPane(
                         ) {
                             Icon(Icons.Outlined.Tune, contentDescription = "规则", modifier = Modifier.size(19.dp))
                         }
-                    }
-                    IconButton(
-                        onClick = {
-                            if (!writing && !reselecting) {
-                                reselecting = true
-                                scope.launch {
-                                    yieldToAppUiBeforeHeavyWork()
-                                    val prompted = controller.reselectFetchInfoBook(toolId)
-                                    reselecting = false
-                                    if (prompted) onReselected?.invoke()
-                                }
-                            }
-                        },
-                        enabled = !writing && !reselecting && !controller.busy,
-                        colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(Icons.Outlined.SwapHoriz, contentDescription = "换书", modifier = Modifier.size(19.dp))
                     }
                     IconButton(
                         onClick = onDismiss,
