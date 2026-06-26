@@ -23,6 +23,9 @@ replay_pid*.log
 .claude/
 .codex/
 
+# Agent rules (local only)
+AGENTS.md
+
 # Local planning notes
 docs/superpowers/
 
