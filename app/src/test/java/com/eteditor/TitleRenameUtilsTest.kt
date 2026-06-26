@@ -10,6 +10,7 @@ import com.eteditor.core.TxtChapter
 import com.eteditor.core.TxtDocument
 import com.eteditor.core.decodeEpubHtmlBytes
 import java.nio.charset.StandardCharsets
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -226,6 +227,23 @@ class TitleRenameUtilsTest {
         // 回归：重命名后必须同步进 book.entries。否则执行链里后续读取 entries 的文本替换/批量替换
         // 会基于旧标题原始字节重写章节，把新标题清空。
         val entryHtml = decodeEpubHtmlBytes(book.entries.getValue("OEBPS/Text/chapter1.xhtml"))
+        assertTrue(entryHtml.contains("<h1>新标题</h1>"))
+        assertTrue(!entryHtml.contains("旧标题"))
+    }
+
+    @Test
+    fun applyRenamedTitlesToEpubWithProgressSyncsRenamedTitleIntoEntryBytes() = runBlocking {
+        val book = sampleBook()
+        val progress = mutableListOf<Pair<Int, Int>>()
+        val count = applyRenamedTitlesToEpubWithProgress(
+            book = book,
+            newTitles = listOf(0 to "新标题"),
+            onProgress = { completed, total -> progress += completed to total }
+        )
+
+        val entryHtml = decodeEpubHtmlBytes(book.entries.getValue("OEBPS/Text/chapter1.xhtml"))
+        assertEquals(1, count)
+        assertEquals(listOf(1 to 1), progress)
         assertTrue(entryHtml.contains("<h1>新标题</h1>"))
         assertTrue(!entryHtml.contains("旧标题"))
     }

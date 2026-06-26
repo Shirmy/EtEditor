@@ -8,6 +8,7 @@ import com.eteditor.core.EpubChapter
 import com.eteditor.core.TxtChapter
 import com.eteditor.core.TxtDocument
 import com.eteditor.core.updateEpubChapterHtmlEntry
+import kotlinx.coroutines.yield
 
 data class TitleRenamePlanItem(
     val chapterIndex: Int,
@@ -201,16 +202,65 @@ internal fun applyRenamedTitlesToEpub(
     if (cleaned.isEmpty()) return TitleRenameApplyResult(count = 0, attempted = false)
     var count = 0
     cleaned.forEach { (index, title) ->
-        val chapter = book.chapters.getOrNull(index) ?: return@forEach
-        chapter.title = title
-        chapter.html = ChapterDetector.updateHtmlTitle(chapter.html, title)
-        chapter.wordCount = ChapterDetector.countHtmlChars(chapter.html)
-        // 标题改写后必须同步回 book.entries：否则后续读取 entries 的步骤（如执行链里的文本替换/批量替换）
-        // 会用旧标题的原始字节重写章节，把这里写入的标题清空。
-        updateEpubChapterHtmlEntry(book, chapter)
-        count += 1
+        if (applyRenamedTitleToEpubChapter(book, index, title)) {
+            count += 1
+        }
     }
     return TitleRenameApplyResult(count = count, attempted = true)
+}
+
+internal suspend fun applyRenamedTitlesToEpubWithProgress(
+    book: EpubBook,
+    newTitles: List<Pair<Int, String>>,
+    onProgress: (completed: Int, total: Int) -> Unit
+): Int {
+    val cleaned = cleanTitleRenamePairs(newTitles)
+    if (cleaned.isEmpty()) return 0
+    var count = 0
+    cleaned.forEachIndexed { index, (chapterIndex, title) ->
+        if (applyRenamedTitleToEpubChapter(book, chapterIndex, title)) {
+            count += 1
+        }
+        onProgress(index + 1, cleaned.size)
+        yield()
+    }
+    return count
+}
+
+private fun applyRenamedTitleToEpubChapter(book: EpubBook, index: Int, title: String): Boolean {
+    val chapter = book.chapters.getOrNull(index) ?: return false
+    chapter.title = title
+    chapter.html = ChapterDetector.updateHtmlTitle(chapter.html, title)
+    chapter.wordCount = ChapterDetector.countHtmlChars(chapter.html)
+    // 标题改写后必须同步回 book.entries：否则后续读取 entries 的步骤（如执行链里的文本替换/批量替换）
+    // 会用旧标题的原始字节重写章节，把这里写入的标题清空。
+    updateEpubChapterHtmlEntry(book, chapter)
+    return true
+}
+
+internal suspend fun applyRenamedTitlesToTxtWithProgress(
+    document: TxtDocument,
+    newTitles: List<Pair<Int, String>>,
+    detectChapters: (String) -> List<TxtChapter>,
+    onProgress: (completed: Int, total: Int) -> Unit
+): Int {
+    val cleaned = cleanTitleRenamePairs(newTitles)
+    if (cleaned.isEmpty()) return 0
+    var text = document.text
+    var count = 0
+    val sortedTitles = cleaned.sortedByDescending { it.first }
+    sortedTitles.forEachIndexed { index, (chapterIndex, title) ->
+        val chapter = document.chapters.getOrNull(chapterIndex)
+        if (chapter != null) {
+            text = ChapterDetector.updateTxtTitle(text, chapter.lineIndex, title)
+            count += 1
+        }
+        onProgress(index + 1, sortedTitles.size)
+        yield()
+    }
+    document.text = text
+    document.chapters = detectChapters(text)
+    return count
 }
 
 internal fun applyRenamedTitlesToTxt(

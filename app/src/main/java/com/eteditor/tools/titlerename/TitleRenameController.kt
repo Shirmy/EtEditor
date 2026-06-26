@@ -1,6 +1,5 @@
 package com.eteditor
 
-import com.eteditor.core.ChapterDetector
 import com.eteditor.core.DocumentKind
 import kotlinx.coroutines.yield
 
@@ -120,42 +119,12 @@ private suspend fun EditorController.applyTitleRenamePlanWithProgress(
     val changed = when (kind) {
         DocumentKind.Epub -> {
             val book = epub ?: return 0
-            var count = 0
-            for ((index, pair) in changedTitles.withIndex()) {
-                val (chapterIndex, rawTitle) = pair
-                val title = ChapterDetector.cleanTitle(rawTitle)
-                val chapter = book.chapters.getOrNull(chapterIndex)
-                if (chapter != null && title.isNotBlank()) {
-                    chapter.title = title
-                    chapter.html = ChapterDetector.updateHtmlTitle(chapter.html, title)
-                    chapter.wordCount = ChapterDetector.countHtmlChars(chapter.html)
-                    count += 1
-                }
-                onProgress(index + 1, changedTitles.size)
-                yield()
-            }
-            count
+            applyRenamedTitlesToEpubWithProgress(book, changedTitles, onProgress)
         }
         DocumentKind.Txt -> {
             if (warnTxtMoveChapterSyncPending("写回标题")) return 0
             val document = txt ?: return 0
-            var text = document.text
-            var count = 0
-            val sortedTitles = changedTitles.sortedByDescending { it.first }
-            for ((index, pair) in sortedTitles.withIndex()) {
-                val (chapterIndex, rawTitle) = pair
-                val title = ChapterDetector.cleanTitle(rawTitle)
-                val chapter = document.chapters.getOrNull(chapterIndex)
-                if (chapter != null && title.isNotBlank()) {
-                    text = ChapterDetector.updateTxtTitle(text, chapter.lineIndex, title)
-                    count += 1
-                }
-                onProgress(index + 1, sortedTitles.size)
-                yield()
-            }
-            document.text = text
-            document.chapters = detectCurrentTxtChapters(text)
-            count
+            applyRenamedTitlesToTxtWithProgress(document, changedTitles, ::detectCurrentTxtChapters, onProgress)
         }
         DocumentKind.None -> 0
     }
