@@ -204,7 +204,7 @@ class JjwxcFetcher : FetchInfoFetcher {
             ?: ""
     }
 
-    private fun parseJjwxcIntro(html: String): String {
+    internal fun parseJjwxcIntro(html: String): String {
         val lines = mutableListOf<String>()
         val introText = extractJjwxcIntroElement(html)
             .cleanHtmlBlock()
@@ -277,13 +277,19 @@ class JjwxcFetcher : FetchInfoFetcher {
     }
 
     private fun findJjwxcIntroInfoBlock(html: String): String {
-        return Regex(
-            """<([a-z0-9]+)\b[^>]*class=["'][^"']*smallreadbody[^"']*["'][^>]*>(.*?)</\1>""",
+        // 内容标签块内部可能嵌套 div（晋江新版把主角/配角做成图片角色卡），
+        // 不能用非贪婪 (.*?)</div> 截取——那样会停在第一个嵌套 </div> 处，
+        // 丢掉块尾的“一句话简介”“立意”。改为定位 smallreadbody 起始标签后做平衡匹配，取完整块。
+        val openTagRegex = Regex(
+            """<([a-z0-9]+)\b[^>]*class=["'][^"']*smallreadbody[^"']*["'][^>]*>""",
             setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
-        ).findAll(html)
-            .map { it.groupValues[2] }
-            .firstOrNull { it.cleanHtmlText().contains("内容标签：") }
-            .orEmpty()
+        )
+        openTagRegex.findAll(html).forEach { match ->
+            val element = extractBalancedHtmlElement(html, match.range.first, match.groupValues[1])
+                ?: return@forEach
+            if (element.cleanHtmlText().contains("内容标签：")) return element
+        }
+        return ""
     }
 
     private fun getJjwxcContentTagLine(infoBlock: String): String {
