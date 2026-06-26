@@ -7,6 +7,7 @@ import com.eteditor.core.EpubBook
 import com.eteditor.core.EpubChapter
 import com.eteditor.core.TxtChapter
 import com.eteditor.core.TxtDocument
+import com.eteditor.core.updateEpubChapterHtmlEntry
 
 data class TitleRenamePlanItem(
     val chapterIndex: Int,
@@ -204,6 +205,9 @@ internal fun applyRenamedTitlesToEpub(
         chapter.title = title
         chapter.html = ChapterDetector.updateHtmlTitle(chapter.html, title)
         chapter.wordCount = ChapterDetector.countHtmlChars(chapter.html)
+        // 标题改写后必须同步回 book.entries：否则后续读取 entries 的步骤（如执行链里的文本替换/批量替换）
+        // 会用旧标题的原始字节重写章节，把这里写入的标题清空。
+        updateEpubChapterHtmlEntry(book, chapter)
         count += 1
     }
     return TitleRenameApplyResult(count = count, attempted = true)

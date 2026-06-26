@@ -8,6 +8,7 @@ import com.eteditor.core.EpubChapter
 import com.eteditor.core.ManifestItem
 import com.eteditor.core.TxtChapter
 import com.eteditor.core.TxtDocument
+import com.eteditor.core.decodeEpubHtmlBytes
 import java.nio.charset.StandardCharsets
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -215,6 +216,18 @@ class TitleRenameUtilsTest {
         assertTrue(book.chapters[0].html.contains("<title>新 &lt;标题&gt;</title>"))
         assertTrue(book.chapters[0].html.contains("<h1>新 &lt;标题&gt;</h1>"))
         assertTrue(book.chapters[0].wordCount > 0)
+    }
+
+    @Test
+    fun applyRenamedTitlesToEpubSyncsRenamedTitleIntoEntryBytes() {
+        val book = sampleBook()
+        applyRenamedTitlesToEpub(book, listOf(0 to "新标题"))
+
+        // 回归：重命名后必须同步进 book.entries。否则执行链里后续读取 entries 的文本替换/批量替换
+        // 会基于旧标题原始字节重写章节，把新标题清空。
+        val entryHtml = decodeEpubHtmlBytes(book.entries.getValue("OEBPS/Text/chapter1.xhtml"))
+        assertTrue(entryHtml.contains("<h1>新标题</h1>"))
+        assertTrue(!entryHtml.contains("旧标题"))
     }
 
     @Test
