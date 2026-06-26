@@ -7,6 +7,7 @@ import com.eteditor.core.ManifestItem
 import com.eteditor.core.decodeEpubHtmlBytes
 import com.eteditor.core.encodeEpubHtmlUtf8
 import com.eteditor.core.normalizeEpubHtmlUtf8Declaration
+import com.eteditor.core.updateEpubChapterHtmlEntry
 
 internal data class FetchInfoCatalogWriteResult(
     val changed: Int,
@@ -49,7 +50,7 @@ internal fun applyFetchedCatalogToEpub(
             if (volumeChapter != null) {
                 usedVolumePaths += volumeChapter.path
                 if (volumeChapter.title != title) {
-                    updateFetchedCatalogChapterTitle(volumeChapter, title)
+                    updateFetchedCatalogChapterTitle(book, volumeChapter, title)
                     if (volumeChapter === currentChapter) touchedCurrent = true
                 }
                 changed += 1
@@ -64,7 +65,7 @@ internal fun applyFetchedCatalogToEpub(
                 // 用户手动输入的重命名保持原样，仅去首尾空白。
                 val cleanRenamed = renamed.trim()
                 if (cleanRenamed.isBlank()) return@forEach
-                updateFetchedCatalogChapterTitle(chapter, cleanRenamed)
+                updateFetchedCatalogChapterTitle(book, chapter, cleanRenamed)
                 if (chapter === currentChapter) touchedCurrent = true
                 changed += 1
                 return@forEach
@@ -73,9 +74,9 @@ internal fun applyFetchedCatalogToEpub(
             val title = rendered.plainTitle
             if (title.isBlank()) return@forEach
             if (autoStyle != null && fetchInfoChapterNumberPrefix(chapter.title).isNotBlank()) {
-                updateFetchedCatalogChapterFormattedTitle(chapter, rendered)
+                updateFetchedCatalogChapterFormattedTitle(book, chapter, rendered)
             } else {
-                updateFetchedCatalogChapterTitle(chapter, title)
+                updateFetchedCatalogChapterTitle(book, chapter, title)
             }
             if (chapter === currentChapter) touchedCurrent = true
             changed += 1
@@ -86,7 +87,7 @@ internal fun applyFetchedCatalogToEpub(
     return FetchInfoCatalogWriteResult(changed = changed, touchedCurrentChapter = touchedCurrent)
 }
 
-private fun updateFetchedCatalogChapterTitle(chapter: EpubChapter, title: String) {
+private fun updateFetchedCatalogChapterTitle(book: EpubBook, chapter: EpubChapter, title: String) {
     chapter.title = title
     chapter.html = if (chapter.isVolumeChapter()) {
         ChapterDetector.updateHtmlTitleWithLineBreaks(chapter.html, title)
@@ -94,9 +95,12 @@ private fun updateFetchedCatalogChapterTitle(chapter: EpubChapter, title: String
         ChapterDetector.updateHtmlTitle(chapter.html, title)
     }
     chapter.wordCount = ChapterDetector.countHtmlChars(chapter.html)
+    // 标题改写后必须同步回 book.entries：否则后续读取 entries 的步骤（如执行链里的文本替换/批量替换）
+    // 会用旧标题的原始字节重写章节，把这里写入的目录标题清空，只剩简介与卷。
+    updateEpubChapterHtmlEntry(book, chapter)
 }
 
-private fun updateFetchedCatalogChapterFormattedTitle(chapter: EpubChapter, rendered: TitleFormatRendered) {
+private fun updateFetchedCatalogChapterFormattedTitle(book: EpubBook, chapter: EpubChapter, rendered: TitleFormatRendered) {
     chapter.title = rendered.plainTitle
     chapter.html = updateHtmlTitleForFormat(
         html = chapter.html,
@@ -105,6 +109,7 @@ private fun updateFetchedCatalogChapterFormattedTitle(chapter: EpubChapter, rend
         styleCode = rendered.styleCode
     )
     chapter.wordCount = ChapterDetector.countHtmlChars(chapter.html)
+    updateEpubChapterHtmlEntry(book, chapter)
 }
 
 // 读取 epub 当前简介文件（默认 section0002）的正文纯文本，去掉书名标题行，用于抓取预览左栏对照。

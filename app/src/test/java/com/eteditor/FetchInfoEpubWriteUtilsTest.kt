@@ -32,6 +32,26 @@ class FetchInfoEpubWriteUtilsTest {
     }
 
     @Test
+    fun applyFetchedCatalogToEpubSyncsRenamedTitleIntoEntryBytes() {
+        val book = sampleBook(
+            listOf(chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章 旧标题"))
+        )
+
+        applyFetchedCatalogToEpub(
+            book = book,
+            parameters = fetchParameters(autoTitleFormat = false),
+            catalog = listOf(FetchedCatalogItem(index = 1, title = "新标题", sequence = "001")),
+            currentChapterIndex = 0
+        )
+
+        // 回归：目录标题必须同步进 book.entries。否则执行链里后续读取 entries 的文本替换/批量替换
+        // 会基于旧标题原始字节重写章节，把目录标题清空。
+        val entryHtml = decodeEpubHtmlBytes(book.entries.getValue("OEBPS/Text/Chapter0001.xhtml"))
+        assertTrue(entryHtml.contains("<h1>第1章 新标题</h1>"))
+        assertTrue(!entryHtml.contains("旧标题"))
+    }
+
+    @Test
     fun applyFetchedCatalogToEpubHonorsRenameAndDeleteByChapterPosition() {
         val book = sampleBook(
             listOf(
