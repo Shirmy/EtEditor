@@ -128,7 +128,7 @@ internal fun writeFetchInfoIntroFileToEpub(book: EpubBook, targetPath: String, i
     } else {
         introHtml(info.title.ifBlank { "\u7b80\u4ecb" }, info.intro, source)
     }
-    val normalizedHtml = normalizeEpubHtmlUtf8Declaration(html)
+    val normalizedHtml = normalizeEpubHtmlUtf8Declaration(html).toCrlfLineEndings()
     book.entries[path] = encodeEpubHtmlUtf8(normalizedHtml)
     book.chapters.firstOrNull { chapter ->
         normalizeEpubPath(chapter.path).equals(path, ignoreCase = true) ||
