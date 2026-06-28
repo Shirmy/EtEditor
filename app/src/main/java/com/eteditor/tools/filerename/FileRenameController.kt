@@ -56,14 +56,18 @@ private fun EditorController.buildFileRenamePlan(parameters: FileRenameParameter
 }
 
 internal fun EditorController.applyFileRenamePlan(plan: List<FileRenamePlanItem>): Int {
-    val book = epub ?: run {
+    val source = epub ?: run {
         statusMessage = "\u6ca1\u6709\u53ef\u91cd\u547d\u540d\u7684 EPUB"
         return 0
     }
     if (plan.isEmpty()) return 0
+    val book = source.mutableDeepCopy()
     val renamed = applyFileRenamePlanToEpub(book, plan)
     checkReport = null
-    if (renamed > 0) markDocumentChanged()
+    if (renamed > 0) {
+        epub = book
+        markDocumentChanged()
+    }
     refreshChapters()
     if (renamed == 0) {
         statusMessage = "\u6587\u4ef6\u91cd\u547d\u540d\uff1a\u5904\u7406 ${plan.size} \u4e2a\u6587\u4ef6\uff0c\u4fee\u6539 0 \u4e2a\uff0c\u65e0\u9700\u4fee\u6539"
@@ -90,11 +94,12 @@ private suspend fun EditorController.applyFileRenamePlanWithProgress(
     plan: List<FileRenamePlanItem>,
     onProgress: (completed: Int, total: Int) -> Unit
 ): Int {
-    val book = epub ?: run {
+    val source = epub ?: run {
         statusMessage = "\u6ca1\u6709\u53ef\u91cd\u547d\u540d\u7684 EPUB"
         return 0
     }
     if (plan.isEmpty()) return 0
+    val book = source.mutableDeepCopy()
     val total = plan.size.coerceAtLeast(1)
     onProgress(0, total)
     yield()
@@ -126,7 +131,10 @@ private suspend fun EditorController.applyFileRenamePlanWithProgress(
         book.manifest[chapter.id]?.href = newHref
     }
     checkReport = null
-    if (renamed > 0) markDocumentChanged()
+    if (renamed > 0) {
+        epub = book
+        markDocumentChanged()
+    }
     refreshChapters()
     if (renamed == 0) {
         statusMessage = "\u6587\u4ef6\u91cd\u547d\u540d\uff1a\u5904\u7406 ${plan.size} \u4e2a\u6587\u4ef6\uff0c\u4fee\u6539 0 \u4e2a\uff0c\u65e0\u9700\u4fee\u6539"

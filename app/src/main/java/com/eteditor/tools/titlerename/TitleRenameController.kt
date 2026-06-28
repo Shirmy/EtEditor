@@ -118,8 +118,11 @@ private suspend fun EditorController.applyTitleRenamePlanWithProgress(
     }
     val changed = when (kind) {
         DocumentKind.Epub -> {
-            val book = epub ?: return 0
-            applyRenamedTitlesToEpubWithProgress(book, changedTitles, onProgress)
+            val source = epub ?: return 0
+            val book = source.mutableDeepCopy()
+            val count = applyRenamedTitlesToEpubWithProgress(book, changedTitles, onProgress)
+            if (count > 0) epub = book
+            count
         }
         DocumentKind.Txt -> {
             if (warnTxtMoveChapterSyncPending("写回标题")) return 0
@@ -144,10 +147,14 @@ private suspend fun EditorController.applyTitleRenamePlanWithProgress(
 private fun EditorController.applyTitlesToIndices(newTitles: List<Pair<Int, String>>): Int {
     when (kind) {
         DocumentKind.Epub -> {
-            val book = epub ?: return 0
+            val source = epub ?: return 0
+            val book = source.mutableDeepCopy()
             val result = applyRenamedTitlesToEpub(book, newTitles)
             if (!result.attempted) return 0
-            if (result.count > 0) markDocumentChanged()
+            if (result.count > 0) {
+                epub = book
+                markDocumentChanged()
+            }
             refreshChapters()
             return result.count
         }
