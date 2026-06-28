@@ -115,6 +115,60 @@ fun DeleteConfirmDialog(
     )
 }
 
+data class ConfirmActionRequest(
+    val title: String,
+    val message: String,
+    val confirmLabel: String = "\u7ee7\u7eed",
+    val onConfirm: () -> Unit
+)
+
+@Composable
+fun ConfirmActionDialog(
+    request: ConfirmActionRequest,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier
+            .adaptiveDialogWidth(AdaptiveDialogWidth.Compact)
+            .dialogBorder(),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        title = {
+            Text(
+                text = request.title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+        },
+        text = {
+            Text(
+                text = request.message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    request.onConfirm()
+                    onDismiss()
+                },
+                shape = ControlShape,
+                contentPadding = CompactButtonPadding
+            ) {
+                Text(request.confirmLabel)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, shape = ControlShape, contentPadding = CompactButtonPadding) {
+                Text("取消", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        },
+        shape = PreviewShape,
+        containerColor = MaterialTheme.colorScheme.surface
+    )
+}
+
 @Composable
 fun SavePresetNameDialog(
     initialName: String,

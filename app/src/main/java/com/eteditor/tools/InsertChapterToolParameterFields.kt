@@ -76,6 +76,7 @@ internal fun InsertChapterToolParameterPanel(
     var insertProgressTotal by remember(documentSessionKey, resetKey, tool.id) { mutableStateOf(0) }
     var showManualRangeDialog by remember(documentSessionKey, resetKey, tool.id) { mutableStateOf(false) }
     var manualRangePreview by remember(documentSessionKey, resetKey, tool.id) { mutableStateOf<InsertChapterSourcePreview?>(null) }
+    var sosadInsertConfirmCount by remember(documentSessionKey, resetKey, tool.id) { mutableStateOf<Int?>(null) }
     val context = LocalContext.current
     val previewEnabled = !sosadMode && controller
         .builtInToolParameterValue(tool.id, INSERT_CHAPTER_PARAM_PREVIEW)
@@ -311,9 +312,27 @@ internal fun InsertChapterToolParameterPanel(
             confirmProgressLabel = insertProgressLabel(),
             confirmProgress = runProgress(),
             onConfirm = {
-                showManualRangeDialog = false
-                runInsertChapters(useSelectedSourceIndices = true)
+                if (sosadMode) {
+                    sosadInsertConfirmCount = selectedSourceIndices.size
+                } else {
+                    showManualRangeDialog = false
+                    runInsertChapters(useSelectedSourceIndices = true)
+                }
             }
+        )
+    }
+    sosadInsertConfirmCount?.let { count ->
+        ConfirmActionDialog(
+            request = ConfirmActionRequest(
+                title = "确认插入",
+                message = "本次要插入 $count 章，需逐章联网抓取正文，可能较久。确定继续？",
+                confirmLabel = "继续",
+                onConfirm = {
+                    showManualRangeDialog = false
+                    runInsertChapters(useSelectedSourceIndices = true)
+                }
+            ),
+            onDismiss = { sosadInsertConfirmCount = null }
         )
     }
     controller.fetchInfoSearchChoiceRequest
