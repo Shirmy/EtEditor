@@ -1,6 +1,7 @@
 package com.eteditor
 
 import android.annotation.SuppressLint
+import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -29,6 +30,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -139,6 +141,19 @@ fun SosadLoginDialog(
         configuration.screenHeightDp < 640 -> 360.dp
         configuration.screenHeightDp < 800 -> 460.dp
         else -> 560.dp
+    }
+
+    // 登录窗关闭(离开组合)时,主动销毁内嵌小浏览器并清空持有,及时释放占用,
+    // 避免反复开关登录窗后留下未回收的网页组件。
+    DisposableEffect(Unit) {
+        onDispose {
+            webViewHolder[0]?.let { webView ->
+                (webView.parent as? ViewGroup)?.removeView(webView)
+                webView.stopLoading()
+                webView.destroy()
+            }
+            webViewHolder[0] = null
+        }
     }
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
