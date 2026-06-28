@@ -7,7 +7,8 @@ import com.eteditor.core.TxtDocument
 internal fun EditorController.setPreviewTextFromSource(
     source: String,
     chapterIndex: Int,
-    highlightRange: Pair<Int, Int>? = null
+    highlightRange: Pair<Int, Int>? = null,
+    showFull: Boolean = false
 ) {
     val sourceHighlightStart = highlightRange?.first ?: previewHighlightSourceStart
     val sourceHighlightEnd = highlightRange?.second ?: previewHighlightSourceEnd
@@ -18,18 +19,22 @@ internal fun EditorController.setPreviewTextFromSource(
     if (!hasHighlight) {
         previewVisibleSourceOffset = 0
         previewVisibleSourceLineOffset = 0
-        previewText = source.take(PREVIEW_LIMIT)
+        previewText = if (showFull) source else source.take(PREVIEW_LIMIT)
         previewHighlightStart = -1
         previewHighlightEnd = -1
         return
     }
 
-    val visibleStart = if (source.length <= PREVIEW_LIMIT) {
+    val visibleStart = if (showFull || source.length <= PREVIEW_LIMIT) {
         0
     } else {
         (sourceHighlightStart - PREVIEW_CONTEXT_BEFORE).coerceAtLeast(0)
     }
-    val visibleEnd = (visibleStart + PREVIEW_LIMIT).coerceAtMost(source.length)
+    val visibleEnd = if (showFull) {
+        source.length
+    } else {
+        (visibleStart + PREVIEW_LIMIT).coerceAtMost(source.length)
+    }
     previewVisibleSourceOffset = visibleStart
     previewVisibleSourceLineOffset = source
         .take(visibleStart.coerceIn(0, source.length))
@@ -155,7 +160,7 @@ internal fun EditorController.refreshPreview() {
                 previewChapterCount = book.chapters.size
                 val chapter = book.chapters[displayChapterIndex]
                 previewTitle = chapter.title.ifBlank { "无标题" }
-                setPreviewTextFromSource(htmlVisibleBodyContent(chapter.html), displayChapterIndex)
+                setPreviewTextFromSource(htmlVisibleBodyContent(chapter.html), displayChapterIndex, showFull = true)
             }
         }
         DocumentKind.Txt -> {
@@ -191,7 +196,7 @@ internal fun EditorController.refreshPreview() {
                 val end = firstChapter.startIndex
                 previewChapterCount = document.chapters.size + 1
                 previewTitle = "前言"
-                setPreviewTextFromSource(document.text.substring(0, end.coerceAtMost(document.text.length)), -1)
+                setPreviewTextFromSource(document.text.substring(0, end.coerceAtMost(document.text.length)), -1, showFull = true)
             } else {
                 previewChapterIndex = previewChapterIndex.coerceIn(0, document.chapters.lastIndex)
                 val displayChapterIndex = previewDisplayChapterIndexOverride
@@ -205,7 +210,7 @@ internal fun EditorController.refreshPreview() {
                 val chapter = document.chapters[displayChapterIndex]
                 previewTitle = chapter.title.ifBlank { "无标题" }
                 val source = mappedTxtChapterPreviewSource(document, chapter, displayChapterIndex)
-                setPreviewTextFromSource(source.text, displayChapterIndex, source.highlightRange)
+                setPreviewTextFromSource(source.text, displayChapterIndex, source.highlightRange, showFull = true)
             }
         }
         DocumentKind.None -> {

@@ -132,7 +132,7 @@ fun EditorController.updateEditableBodyText(text: String): Boolean {
                 clearTextSearchStateAfterBodyTextChange()
                 previewTitle = "前言"
                 previewChapterCount = document.chapters.size + if (txtHasPreface()) 1 else 0
-                setPreviewTextFromSource(text, -1)
+                setPreviewTextFromSource(text, -1, showFull = true)
                 statusMessage = "前言已更新，正在重建目录"
                 startTxtCatalogDetection(
                     document,
@@ -158,7 +158,7 @@ fun EditorController.updateEditableBodyText(text: String): Boolean {
             previewTitle = text.lineSequence().firstOrNull().orEmpty().trim()
                 .ifBlank { chapter.title.ifBlank { "\u65e0\u6807\u9898" } }
             previewChapterCount = document.chapters.size + if (txtHasPreface()) 1 else 0
-            setPreviewTextFromSource(text, previewChapterIndex)
+            setPreviewTextFromSource(text, previewChapterIndex, showFull = true)
             statusMessage = "正文已更新，正在重建目录"
             startTxtCatalogDetection(
                 document,
