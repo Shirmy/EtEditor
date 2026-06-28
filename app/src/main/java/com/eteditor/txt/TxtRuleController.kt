@@ -491,7 +491,6 @@ fun EditorController.updateTxtChapterThresholds(shortThreshold: Int, longThresho
 }
 
 fun EditorController.updateTxtChapterHintSettings(
-    wordCountHintsEnabled: Boolean,
     shortHintEnabled: Boolean,
     longHintEnabled: Boolean,
     shortThreshold: Int,
@@ -499,14 +498,12 @@ fun EditorController.updateTxtChapterHintSettings(
     hintMode: String
 ) {
     if (warnTxtMoveChapterSyncPending("\u4fee\u6539\u7ae0\u8282\u63d0\u793a\u8bbe\u7f6e")) return
-    txtChapterWordCountHintsEnabled = true
     txtShortChapterHintEnabled = shortHintEnabled
     txtLongChapterHintEnabled = longHintEnabled
     txtShortChapterThreshold = shortThreshold.coerceAtLeast(0)
     txtLongChapterThreshold = longThreshold.coerceAtLeast(0)
     txtChapterHintMode = hintMode.takeIf { it in TXT_CHAPTER_HINT_MODES } ?: TXT_CHAPTER_HINT_MODE_AUTO
     settingsPreferences.saveTxtChapterHintSettings(
-        wordCountHintsEnabled = true,
         shortHintEnabled = txtShortChapterHintEnabled,
         longHintEnabled = txtLongChapterHintEnabled,
         shortThreshold = txtShortChapterThreshold,
@@ -516,15 +513,6 @@ fun EditorController.updateTxtChapterHintSettings(
     refreshTxtDocumentChapters()
     refreshChapters()
     statusMessage = "TXT \u7ae0\u8282\u63d0\u793a\u8bbe\u7f6e\u5df2\u4fdd\u5b58"
-}
-
-fun EditorController.updateTxtChapterWordCountHintsEnabled(enabled: Boolean) {
-    if (warnTxtMoveChapterSyncPending("\u4fee\u6539\u7ae0\u8282\u63d0\u793a\u8bbe\u7f6e")) return
-    txtChapterWordCountHintsEnabled = true
-    settingsPreferences.saveTxtChapterWordCountHintsEnabled(true)
-    refreshTxtDocumentChapters()
-    refreshChapters()
-    statusMessage = "\u7ae0\u8282\u5b57\u6570\u63d0\u793a\u5df2\u5f00\u542f"
 }
 
 fun EditorController.updateTxtShortChapterHintEnabled(enabled: Boolean) {

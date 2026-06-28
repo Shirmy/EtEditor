@@ -21,7 +21,6 @@ internal class EditorTxtState(initialSettings: EditorSettingsPreferenceState) {
     var txtBookTitleRulesText by mutableStateOf(initialSettings.txtBookTitleRulesText)
     var txtShortChapterThreshold by mutableStateOf(initialSettings.txtShortChapterThreshold)
     var txtLongChapterThreshold by mutableStateOf(initialSettings.txtLongChapterThreshold)
-    var txtChapterWordCountHintsEnabled by mutableStateOf(initialSettings.txtChapterWordCountHintsEnabled)
     var txtShortChapterHintEnabled by mutableStateOf(initialSettings.txtShortChapterHintEnabled)
     var txtLongChapterHintEnabled by mutableStateOf(initialSettings.txtLongChapterHintEnabled)
     var txtChapterHintMode by mutableStateOf(initialSettings.txtChapterHintMode)

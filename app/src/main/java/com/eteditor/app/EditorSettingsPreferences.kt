@@ -18,7 +18,6 @@ internal data class EditorSettingsPreferenceState(
     val txtBookTitleRulesText: String,
     val txtShortChapterThreshold: Int,
     val txtLongChapterThreshold: Int,
-    val txtChapterWordCountHintsEnabled: Boolean,
     val txtShortChapterHintEnabled: Boolean,
     val txtLongChapterHintEnabled: Boolean,
     val txtChapterHintMode: String,
@@ -66,7 +65,6 @@ internal class EditorSettingsPreferences(
             txtBookTitleRulesText = prefs.getString(KEY_TXT_BOOK_TITLE_RULES, "") ?: "",
             txtShortChapterThreshold = prefs.getInt(KEY_TXT_SHORT_CHAPTER_THRESHOLD, 1000),
             txtLongChapterThreshold = prefs.getInt(KEY_TXT_LONG_CHAPTER_THRESHOLD, 10000),
-            txtChapterWordCountHintsEnabled = true,
             txtShortChapterHintEnabled = prefs.getBoolean(KEY_TXT_SHORT_CHAPTER_HINT_ENABLED, true),
             txtLongChapterHintEnabled = prefs.getBoolean(KEY_TXT_LONG_CHAPTER_HINT_ENABLED, true),
             txtChapterHintMode = prefs.getString(KEY_TXT_CHAPTER_HINT_MODE, TXT_CHAPTER_HINT_MODE_AUTO)
@@ -132,7 +130,6 @@ internal class EditorSettingsPreferences(
     }
 
     fun saveTxtChapterHintSettings(
-        wordCountHintsEnabled: Boolean,
         shortHintEnabled: Boolean,
         longHintEnabled: Boolean,
         shortThreshold: Int,
@@ -140,17 +137,12 @@ internal class EditorSettingsPreferences(
         hintMode: String
     ) {
         prefs.edit()
-            .putBoolean(KEY_TXT_CHAPTER_WORD_COUNT_HINTS_ENABLED, wordCountHintsEnabled)
             .putBoolean(KEY_TXT_SHORT_CHAPTER_HINT_ENABLED, shortHintEnabled)
             .putBoolean(KEY_TXT_LONG_CHAPTER_HINT_ENABLED, longHintEnabled)
             .putInt(KEY_TXT_SHORT_CHAPTER_THRESHOLD, shortThreshold)
             .putInt(KEY_TXT_LONG_CHAPTER_THRESHOLD, longThreshold)
             .putString(KEY_TXT_CHAPTER_HINT_MODE, hintMode.takeIf { it in TXT_CHAPTER_HINT_MODES } ?: TXT_CHAPTER_HINT_MODE_AUTO)
             .apply()
-    }
-
-    fun saveTxtChapterWordCountHintsEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_TXT_CHAPTER_WORD_COUNT_HINTS_ENABLED, enabled).apply()
     }
 
     fun saveTxtShortChapterHintEnabled(enabled: Boolean) {
@@ -202,7 +194,6 @@ internal fun editorSettingsConfigPreferenceKeys(): SettingsConfigPreferenceKeys 
         txtDoubleTapTitleEdit = KEY_TXT_DOUBLE_TAP_TITLE_EDIT,
         txtShortChapterThreshold = KEY_TXT_SHORT_CHAPTER_THRESHOLD,
         txtLongChapterThreshold = KEY_TXT_LONG_CHAPTER_THRESHOLD,
-        txtChapterWordCountHintsEnabled = KEY_TXT_CHAPTER_WORD_COUNT_HINTS_ENABLED,
         txtShortChapterHintEnabled = KEY_TXT_SHORT_CHAPTER_HINT_ENABLED,
         txtLongChapterHintEnabled = KEY_TXT_LONG_CHAPTER_HINT_ENABLED,
         txtChapterHintMode = KEY_TXT_CHAPTER_HINT_MODE
@@ -227,7 +218,6 @@ private const val KEY_TXT_PURIFY_RULES = "txt_purify_rules"
 private const val KEY_TXT_BOOK_TITLE_RULES = "txt_book_title_rules"
 private const val KEY_TXT_SHORT_CHAPTER_THRESHOLD = "txt_short_chapter_threshold"
 private const val KEY_TXT_LONG_CHAPTER_THRESHOLD = "txt_long_chapter_threshold"
-private const val KEY_TXT_CHAPTER_WORD_COUNT_HINTS_ENABLED = "txt_chapter_word_count_hints_enabled"
 private const val KEY_TXT_SHORT_CHAPTER_HINT_ENABLED = "txt_short_chapter_hint_enabled"
 private const val KEY_TXT_LONG_CHAPTER_HINT_ENABLED = "txt_long_chapter_hint_enabled"
 private const val KEY_TXT_CHAPTER_HINT_MODE = "txt_chapter_hint_mode"

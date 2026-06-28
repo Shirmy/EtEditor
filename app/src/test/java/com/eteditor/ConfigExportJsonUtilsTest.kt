@@ -55,7 +55,6 @@ class ConfigExportJsonUtilsTest {
                 chapterRules = "chapter",
                 purifyRules = "purify",
                 chapterHints = TxtChapterHintsConfigSnapshot(
-                    wordCountHintsEnabled = true,
                     shortHintEnabled = true,
                     longHintEnabled = false,
                     shortThreshold = 800,
@@ -75,7 +74,6 @@ class ConfigExportJsonUtilsTest {
         assertFalse(settings.has("txtSupplementLongPressMode"))
         assertEquals(TXT_CHAPTER_HINT_MODE_AUTO, settings.getString("txtChapterHintMode"))
         val chapterHints = root.getJSONObject("txt").getJSONObject("chapterHints")
-        assertTrue(chapterHints.getBoolean("wordCountHintsEnabled"))
         assertEquals(TXT_CHAPTER_HINT_MODE_AUTO, chapterHints.getString("mode"))
         assertEquals(800, chapterHints.getInt("shortThreshold"))
         assertEquals(9000, chapterHints.getInt("longThreshold"))
@@ -110,9 +108,8 @@ class ConfigExportJsonUtilsTest {
     }
 
     @Test
-    fun parseSettingsConfigImportMarksTxtCatalogChangedWhenThresholdChangesWithHintsAlwaysOn() {
+    fun parseSettingsConfigImportMarksTxtCatalogChangedWhenThresholdChanges() {
         val current = settingsSnapshot().copy(
-            txtChapterWordCountHintsEnabled = false,
             txtShortChapterThreshold = 1000
         )
         val result = parseSettingsConfigImport(
@@ -164,32 +161,6 @@ class ConfigExportJsonUtilsTest {
         assertEquals("preview", result.snapshot.epubRightPanelMode)
         assertEquals(
             listOf(SettingsPreferenceValue.StringValue("epubRightPanelMode", "preview")),
-            result.preferences
-        )
-        assertFalse(result.txtCatalogChanged)
-    }
-
-    @Test
-    fun parseSettingsConfigImportForcesTxtChapterWordCountHintsOnWithoutCatalogChange() {
-        val result = parseSettingsConfigImport(
-            settings = JSONObject()
-                .put("txtChapterWordCountHintsEnabled", false),
-            current = settingsSnapshot().copy(
-                txtChapterWordCountHintsEnabled = false,
-                txtShortChapterHintEnabled = true,
-                txtLongChapterHintEnabled = true,
-                txtShortChapterThreshold = 800,
-                txtLongChapterThreshold = 8000
-            ),
-            prefKeys = prefKeys(),
-            leftPanelModes = setOf("catalog", "tools"),
-            rightPanelModes = setOf("preview", "log"),
-            txtRightPanelModes = setOf("preview", "search")
-        )
-
-        assertEquals(true, result.snapshot.txtChapterWordCountHintsEnabled)
-        assertEquals(
-            listOf(SettingsPreferenceValue.BooleanValue("txtChapterWordCountHintsEnabled", true)),
             result.preferences
         )
         assertFalse(result.txtCatalogChanged)
@@ -262,7 +233,6 @@ class ConfigExportJsonUtilsTest {
                 .put(
                     "chapterHints",
                     JSONObject()
-                        .put("wordCountHintsEnabled", true)
                         .put("shortHintEnabled", false)
                         .put("longHintEnabled", true)
                         .put("shortThreshold", -10)
@@ -273,7 +243,6 @@ class ConfigExportJsonUtilsTest {
         )
 
         val hints = result.chapterHints
-        assertEquals(true, hints?.wordCountHintsEnabled)
         assertEquals(false, hints?.shortHintEnabled)
         assertEquals(true, hints?.longHintEnabled)
         assertEquals(0, hints?.shortThreshold)
@@ -435,7 +404,6 @@ class ConfigExportJsonUtilsTest {
             txtDoubleTapTitleEdit = true,
             txtShortChapterThreshold = 1000,
             txtLongChapterThreshold = 10000,
-            txtChapterWordCountHintsEnabled = true,
             txtShortChapterHintEnabled = true,
             txtLongChapterHintEnabled = false,
             txtChapterHintMode = TXT_CHAPTER_HINT_MODE_AUTO
@@ -454,7 +422,6 @@ class ConfigExportJsonUtilsTest {
             txtDoubleTapTitleEdit = "txtDoubleTapTitleEdit",
             txtShortChapterThreshold = "txtShortChapterThreshold",
             txtLongChapterThreshold = "txtLongChapterThreshold",
-            txtChapterWordCountHintsEnabled = "txtChapterWordCountHintsEnabled",
             txtShortChapterHintEnabled = "txtShortChapterHintEnabled",
             txtLongChapterHintEnabled = "txtLongChapterHintEnabled",
             txtChapterHintMode = "txtChapterHintMode"

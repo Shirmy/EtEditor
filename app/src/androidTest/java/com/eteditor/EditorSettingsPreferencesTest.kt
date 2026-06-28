@@ -44,7 +44,6 @@ class EditorSettingsPreferencesTest {
         writer.saveTxtPurifyRules("purify-rules")
         writer.saveTxtBookTitleRules("book-title-rules")
         writer.saveTxtChapterHintSettings(
-            wordCountHintsEnabled = false,
             shortHintEnabled = false,
             longHintEnabled = true,
             shortThreshold = 321,

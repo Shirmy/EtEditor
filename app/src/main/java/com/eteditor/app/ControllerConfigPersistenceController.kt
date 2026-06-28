@@ -155,7 +155,6 @@ private fun EditorController.buildConfigExportJson(): JSONObject {
 
 private fun EditorController.txtChapterHintsConfigSnapshot(): TxtChapterHintsConfigSnapshot {
     return TxtChapterHintsConfigSnapshot(
-        wordCountHintsEnabled = true,
         shortHintEnabled = txtShortChapterHintEnabled,
         longHintEnabled = txtLongChapterHintEnabled,
         shortThreshold = txtShortChapterThreshold,
@@ -165,14 +164,12 @@ private fun EditorController.txtChapterHintsConfigSnapshot(): TxtChapterHintsCon
 }
 
 private fun EditorController.applyTxtChapterHintsConfig(config: TxtChapterHintsConfigSnapshot) {
-    txtChapterWordCountHintsEnabled = true
     txtShortChapterHintEnabled = config.shortHintEnabled
     txtLongChapterHintEnabled = config.longHintEnabled
     txtShortChapterThreshold = config.shortThreshold.coerceAtLeast(0)
     txtLongChapterThreshold = config.longThreshold.coerceAtLeast(0)
     txtChapterHintMode = config.txtChapterHintMode.takeIf { it in TXT_CHAPTER_HINT_MODES } ?: TXT_CHAPTER_HINT_MODE_AUTO
     settingsPreferences.saveTxtChapterHintSettings(
-        wordCountHintsEnabled = true,
         shortHintEnabled = txtShortChapterHintEnabled,
         longHintEnabled = txtLongChapterHintEnabled,
         shortThreshold = txtShortChapterThreshold,
@@ -193,7 +190,6 @@ private fun EditorController.settingsConfigSnapshot(): SettingsConfigSnapshot {
         txtDoubleTapTitleEdit = txtDoubleTapTitleEdit,
         txtShortChapterThreshold = txtShortChapterThreshold,
         txtLongChapterThreshold = txtLongChapterThreshold,
-        txtChapterWordCountHintsEnabled = true,
         txtShortChapterHintEnabled = txtShortChapterHintEnabled,
         txtLongChapterHintEnabled = txtLongChapterHintEnabled,
         txtChapterHintMode = txtChapterHintMode.takeIf { it in TXT_CHAPTER_HINT_MODES } ?: TXT_CHAPTER_HINT_MODE_AUTO
@@ -225,7 +221,6 @@ private fun EditorController.applySettingsConfigSnapshot(snapshot: SettingsConfi
     txtDoubleTapTitleEdit = snapshot.txtDoubleTapTitleEdit
     txtShortChapterThreshold = snapshot.txtShortChapterThreshold
     txtLongChapterThreshold = snapshot.txtLongChapterThreshold
-    txtChapterWordCountHintsEnabled = true
     txtShortChapterHintEnabled = snapshot.txtShortChapterHintEnabled
     txtLongChapterHintEnabled = snapshot.txtLongChapterHintEnabled
     txtChapterHintMode = snapshot.txtChapterHintMode.takeIf { it in TXT_CHAPTER_HINT_MODES } ?: TXT_CHAPTER_HINT_MODE_AUTO

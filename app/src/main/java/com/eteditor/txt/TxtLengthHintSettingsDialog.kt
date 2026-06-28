@@ -67,8 +67,7 @@ fun TxtLengthHintSettingsDialog(
         val effectiveLongHintEnabled = if (autoMode) true else longChapterHintEnabledDraft
         val effectiveShortThreshold = if (autoMode && shortThreshold <= 0) 1000 else shortThreshold
         val effectiveLongThreshold = if (autoMode && longThreshold <= 0) 10000 else longThreshold
-        val changed = !controller.txtChapterWordCountHintsEnabled ||
-            effectiveShortHintEnabled != controller.txtShortChapterHintEnabled ||
+        val changed = effectiveShortHintEnabled != controller.txtShortChapterHintEnabled ||
             effectiveLongHintEnabled != controller.txtLongChapterHintEnabled ||
             effectiveShortThreshold != controller.txtShortChapterThreshold ||
             effectiveLongThreshold != controller.txtLongChapterThreshold ||
@@ -79,7 +78,6 @@ fun TxtLengthHintSettingsDialog(
         }
         scope.launchAfterTxtMoveChapterSync(controller, "\u4fee\u6539\u7ae0\u8282\u63d0\u793a\u8bbe\u7f6e") {
             controller.updateTxtChapterHintSettings(
-                wordCountHintsEnabled = true,
                 shortHintEnabled = effectiveShortHintEnabled,
                 longHintEnabled = effectiveLongHintEnabled,
                 shortThreshold = effectiveShortThreshold,

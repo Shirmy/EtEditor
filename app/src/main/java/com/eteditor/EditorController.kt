@@ -167,9 +167,6 @@ class EditorController(internal val appContext: Context) {
     var txtLongChapterThreshold: Int
         get() = txtState.txtLongChapterThreshold
         internal set(value) { txtState.txtLongChapterThreshold = value }
-    var txtChapterWordCountHintsEnabled: Boolean
-        get() = txtState.txtChapterWordCountHintsEnabled
-        internal set(value) { txtState.txtChapterWordCountHintsEnabled = value }
     var txtShortChapterHintEnabled: Boolean
         get() = txtState.txtShortChapterHintEnabled
         internal set(value) { txtState.txtShortChapterHintEnabled = value }

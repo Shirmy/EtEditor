@@ -14,7 +14,6 @@ internal data class SettingsConfigSnapshot(
     val txtDoubleTapTitleEdit: Boolean,
     val txtShortChapterThreshold: Int,
     val txtLongChapterThreshold: Int,
-    val txtChapterWordCountHintsEnabled: Boolean,
     val txtShortChapterHintEnabled: Boolean,
     val txtLongChapterHintEnabled: Boolean,
     val txtChapterHintMode: String
@@ -37,7 +36,6 @@ internal data class TxtConfigExportSnapshot(
 )
 
 internal data class TxtChapterHintsConfigSnapshot(
-    val wordCountHintsEnabled: Boolean,
     val shortHintEnabled: Boolean,
     val longHintEnabled: Boolean,
     val shortThreshold: Int,
@@ -46,7 +44,6 @@ internal data class TxtChapterHintsConfigSnapshot(
 )
 
 internal data class TxtChapterHintsConfigImport(
-    val wordCountHintsEnabled: Boolean? = null,
     val shortHintEnabled: Boolean? = null,
     val longHintEnabled: Boolean? = null,
     val shortThreshold: Int? = null,
@@ -54,8 +51,7 @@ internal data class TxtChapterHintsConfigImport(
     val txtChapterHintMode: String? = null
 ) {
     val hasValues: Boolean
-        get() = wordCountHintsEnabled != null ||
-            shortHintEnabled != null ||
+        get() = shortHintEnabled != null ||
             longHintEnabled != null ||
             shortThreshold != null ||
             longThreshold != null ||
@@ -63,7 +59,6 @@ internal data class TxtChapterHintsConfigImport(
 
     fun mergeWith(current: TxtChapterHintsConfigSnapshot): TxtChapterHintsConfigSnapshot {
         return TxtChapterHintsConfigSnapshot(
-            wordCountHintsEnabled = true,
             shortHintEnabled = shortHintEnabled ?: current.shortHintEnabled,
             longHintEnabled = longHintEnabled ?: current.longHintEnabled,
             shortThreshold = shortThreshold ?: current.shortThreshold,
@@ -108,7 +103,6 @@ internal data class SettingsConfigPreferenceKeys(
     val txtDoubleTapTitleEdit: String,
     val txtShortChapterThreshold: String,
     val txtLongChapterThreshold: String,
-    val txtChapterWordCountHintsEnabled: String,
     val txtShortChapterHintEnabled: String,
     val txtLongChapterHintEnabled: String,
     val txtChapterHintMode: String
@@ -249,10 +243,6 @@ internal fun parseSettingsConfigImport(
     importInt("txtLongChapterThreshold", prefKeys.txtLongChapterThreshold, current.txtLongChapterThreshold) { state, value ->
         state.copy(txtLongChapterThreshold = value)
     }
-    if (settings.has("txtChapterWordCountHintsEnabled")) {
-        next = next.copy(txtChapterWordCountHintsEnabled = true)
-        preferences += SettingsPreferenceValue.BooleanValue(prefKeys.txtChapterWordCountHintsEnabled, true)
-    }
     importBoolean("txtShortChapterHintEnabled", prefKeys.txtShortChapterHintEnabled, current.txtShortChapterHintEnabled) { state, value ->
         state.copy(txtShortChapterHintEnabled = value)
     }
@@ -333,7 +323,6 @@ internal fun parseTxtConfigImport(
 private fun parseTxtChapterHintsConfigImport(config: JSONObject?): TxtChapterHintsConfigImport? {
     if (config == null) return null
     val result = TxtChapterHintsConfigImport(
-        wordCountHintsEnabled = config.optBooleanIfPresent("wordCountHintsEnabled"),
         shortHintEnabled = config.optBooleanIfPresent("shortHintEnabled"),
         longHintEnabled = config.optBooleanIfPresent("longHintEnabled"),
         shortThreshold = config.optIntIfPresent("shortThreshold")?.coerceAtLeast(0),
@@ -389,7 +378,6 @@ internal fun SettingsConfigSnapshot.toJson(): JSONObject {
         .put("txtDoubleTapTitleEdit", txtDoubleTapTitleEdit)
         .put("txtShortChapterThreshold", txtShortChapterThreshold)
         .put("txtLongChapterThreshold", txtLongChapterThreshold)
-        .put("txtChapterWordCountHintsEnabled", true)
         .put("txtShortChapterHintEnabled", txtShortChapterHintEnabled)
         .put("txtLongChapterHintEnabled", txtLongChapterHintEnabled)
         .put("txtChapterHintMode", txtChapterHintMode)
@@ -415,7 +403,6 @@ private fun TxtConfigExportSnapshot.toJson(): JSONObject {
 
 private fun TxtChapterHintsConfigSnapshot.toJson(): JSONObject {
     return JSONObject()
-        .put("wordCountHintsEnabled", true)
         .put("shortHintEnabled", shortHintEnabled)
         .put("longHintEnabled", longHintEnabled)
         .put("shortThreshold", shortThreshold)
