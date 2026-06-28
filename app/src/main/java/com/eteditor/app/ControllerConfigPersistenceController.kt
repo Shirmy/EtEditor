@@ -166,11 +166,10 @@ private fun EditorController.txtChapterHintsConfigSnapshot(): TxtChapterHintsCon
 private fun EditorController.applyTxtChapterHintsConfig(config: TxtChapterHintsConfigSnapshot) {
     txtShortChapterHintEnabled = config.shortHintEnabled
     txtLongChapterHintEnabled = config.longHintEnabled
-    val importedShort = config.shortThreshold.coerceAtLeast(0)
-    val importedLong = config.longThreshold.coerceAtLeast(0)
-    // 导入若把短/长章门槛填反了（短≥长），自动对调，避免长短章提示失去意义
-    txtShortChapterThreshold = minOf(importedShort, importedLong)
-    txtLongChapterThreshold = maxOf(importedShort, importedLong)
+    // 对调已在 TxtChapterHintsConfigImport.mergeWith 完成（仅当两项均 >0 时对调），
+    // 这里直接写入结果，不再重复排序，避免长章门槛为 0（表示未设）时被当成最小值搅乱短章门槛
+    txtShortChapterThreshold = config.shortThreshold.coerceAtLeast(0)
+    txtLongChapterThreshold = config.longThreshold.coerceAtLeast(0)
     txtChapterHintMode = config.txtChapterHintMode.takeIf { it in TXT_CHAPTER_HINT_MODES } ?: TXT_CHAPTER_HINT_MODE_AUTO
     settingsPreferences.saveTxtChapterHintSettings(
         shortHintEnabled = txtShortChapterHintEnabled,

@@ -492,6 +492,22 @@ class ConfigExportJsonUtilsTest {
         assertEquals(10000, partial.longThreshold)
     }
 
+    @Test
+    fun txtChapterHintsImportMergeDoesNotSwapWhenLongThresholdIsZero() {
+        val current = TxtChapterHintsConfigSnapshot(
+            shortHintEnabled = true,
+            longHintEnabled = true,
+            shortThreshold = 1000,
+            longThreshold = 10000,
+            txtChapterHintMode = TXT_CHAPTER_HINT_MODE_AUTO
+        )
+
+        val merged = TxtChapterHintsConfigImport(shortThreshold = 5000, longThreshold = 0).mergeWith(current)
+
+        assertEquals(5000, merged.shortThreshold)
+        assertEquals(0, merged.longThreshold)
+    }
+
     private fun settingsSnapshot(): SettingsConfigSnapshot {
         return SettingsConfigSnapshot(
             leftRailExpanded = false,
