@@ -96,7 +96,9 @@ internal fun EditorController.applyTitleFormatPlan(plan: List<TitleFormatPlanIte
         DocumentKind.None -> 0
     }
     if (changed <= 0) {
-        statusMessage = titleFormatNoChangeMessage(plan)
+        if (!txtMoveChapterSyncPending) {
+            statusMessage = titleFormatNoChangeMessage(plan)
+        }
         clearTitleFormatPlan()
         return 0
     }
