@@ -98,55 +98,75 @@ internal fun refreshTxtChapterStatuses(
     chapters: List<TxtChapter>,
     config: TxtChapterDetectionConfig
 ): List<TxtChapter> {
+    if (chapters.isEmpty()) return chapters
+
+    // Precompute, in a single linear pass, the per-chapter signals that previously
+    // required re-scanning all earlier chapters (O(n^2)) and re-parsing numbers repeatedly:
+    //   - each chapter's number (parsed once instead of once per comparison),
+    //   - whether its title already appeared earlier (重名),
+    //   - whether any earlier chapter carried a number (used by the 疑似缺章 check).
+    val numbers = chapters.map { ChapterDetector.txtChapterNumberFromTitle(it.title) }
+    val duplicateFlags = ArrayList<Boolean>(chapters.size)
+    val hasPreviousNumberedFlags = ArrayList<Boolean>(chapters.size)
+    run {
+        val seenTitleKeys = HashSet<String>(chapters.size * 2)
+        var seenNumbered = false
+        for (index in chapters.indices) {
+            val key = txtChapterStatusTitleKey(chapters[index].title)
+            duplicateFlags += key in seenTitleKeys
+            seenTitleKeys += key
+            hasPreviousNumberedFlags += seenNumbered
+            if (numbers[index] != null) seenNumbered = true
+        }
+    }
+
+    // First pass computes only the threshold-independent statuses (重名/缺章/重号/回退); it feeds
+    // the auto length-hint threshold derivation. 短章/超长章 stay empty here (thresholds = 0).
     val baseStatusChapters = chapters.mapIndexed { index, chapter ->
-        val number = ChapterDetector.txtChapterNumberFromTitle(chapter.title)
         chapter.copy(
-            number = number,
-            status = txtChapterStatusForRefresh(
-                chapters = chapters,
-                currentIndex = index,
+            number = numbers[index],
+            status = refreshChapterStatus(
+                isDuplicateTitle = duplicateFlags[index],
+                wordCount = chapter.wordCount,
                 shortThreshold = 0,
-                longThreshold = 0
+                longThreshold = 0,
+                number = numbers[index],
+                previousNumber = numbers.getOrNull(index - 1),
+                hasPreviousNumberedChapter = hasPreviousNumberedFlags[index]
             )
         )
     }
     val effectiveConfig = resolveTxtChapterLengthHintConfig(config, baseStatusChapters)
     return chapters.mapIndexed { index, chapter ->
-        val number = ChapterDetector.txtChapterNumberFromTitle(chapter.title)
         chapter.copy(
-            number = number,
-            status = txtChapterStatusForRefresh(
-                chapters = chapters,
-                currentIndex = index,
+            number = numbers[index],
+            status = refreshChapterStatus(
+                isDuplicateTitle = duplicateFlags[index],
+                wordCount = chapter.wordCount,
                 shortThreshold = effectiveConfig.shortThreshold,
-                longThreshold = effectiveConfig.longThreshold
+                longThreshold = effectiveConfig.longThreshold,
+                number = numbers[index],
+                previousNumber = numbers.getOrNull(index - 1),
+                hasPreviousNumberedChapter = hasPreviousNumberedFlags[index]
             )
         )
     }
 }
 
-private fun txtChapterStatusForRefresh(
-    chapters: List<TxtChapter>,
-    currentIndex: Int,
+private fun refreshChapterStatus(
+    isDuplicateTitle: Boolean,
+    wordCount: Int,
     shortThreshold: Int,
-    longThreshold: Int
+    longThreshold: Int,
+    number: Int?,
+    previousNumber: Int?,
+    hasPreviousNumberedChapter: Boolean
 ): List<String> {
-    val chapter = chapters[currentIndex]
     val statuses = mutableListOf<String>()
-    val normalizedTitle = txtChapterStatusTitleKey(chapter.title)
-    if (chapters.take(currentIndex).any { previous -> txtChapterStatusTitleKey(previous.title) == normalizedTitle }) {
-        statuses += "重名"
-    }
-    if (chapter.wordCount in 1 until shortThreshold) statuses += "短章"
-    if (longThreshold > 0 && chapter.wordCount > longThreshold) statuses += "超长章"
+    if (isDuplicateTitle) statuses += "重名"
+    if (wordCount in 1 until shortThreshold) statuses += "短章"
+    if (longThreshold > 0 && wordCount > longThreshold) statuses += "超长章"
 
-    val number = ChapterDetector.txtChapterNumberFromTitle(chapter.title)
-    val previousNumber = chapters.getOrNull(currentIndex - 1)
-        ?.title
-        ?.let { ChapterDetector.txtChapterNumberFromTitle(it) }
-    val hasPreviousNumberedChapter = chapters
-        .take(currentIndex)
-        .any { previous -> ChapterDetector.txtChapterNumberFromTitle(previous.title) != null }
     if (number != null && !hasPreviousNumberedChapter && number > 1) {
         statuses += "疑似缺章"
     } else if (number != null && previousNumber != null) {
@@ -210,8 +230,10 @@ private fun txtSaveChapterTitles(
     }
 }
 
+private val txtRefreshWhitespaceRegex = Regex("""\s+""")
+
 private fun txtChapterStatusTitleKey(title: String): String {
-    return title.replace(Regex("""\s+"""), "").lowercase()
+    return title.replace(txtRefreshWhitespaceRegex, "").lowercase()
 }
 
 private fun parseTxtSaveNumberedTitle(title: String): TxtSaveChapterTitleParts? {
