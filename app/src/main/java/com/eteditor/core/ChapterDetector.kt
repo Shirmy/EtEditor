@@ -68,19 +68,38 @@ object ChapterDetector {
         }
         val titleNumbers = titles.map { txtChapterNumberFromTitle(it) }
 
+        // Precompute, in a single linear pass, the two per-chapter signals that
+        // previously required re-scanning all earlier chapters (O(n^2) each):
+        //   - whether this chapter's whitespace-normalized title already appeared earlier (重名);
+        //   - whether any earlier chapter carried a number (used by the 疑似缺章 check).
+        val normalizedTitles = titles.map { it.replace(whitespaceRegex, "").lowercase() }
+        val duplicateTitleFlags = ArrayList<Boolean>(titles.size)
+        val hasPreviousNumberedFlags = ArrayList<Boolean>(titles.size)
+        run {
+            val seenTitles = HashSet<String>(titles.size * 2)
+            var seenNumbered = false
+            for (idx in titles.indices) {
+                val normalized = normalizedTitles[idx]
+                duplicateTitleFlags += normalized in seenTitles
+                seenTitles += normalized
+                hasPreviousNumberedFlags += seenNumbered
+                if (titleNumbers[idx] != null) seenNumbered = true
+            }
+        }
+
         return hits.mapIndexed { idx, hit ->
             val endLineIndex = hits.getOrNull(idx + 1)?.lineIndex ?: lines.size
             val endIndex = hits.getOrNull(idx + 1)?.startIndex ?: text.length
             val content = text.substring(hit.bodyStartIndex.coerceAtMost(text.length), endIndex.coerceAtMost(text.length))
             val wordCount = countVisibleChars(content)
             val status = txtChapterStatus(
-                hits = hits,
-                titles = titles,
                 titleNumbers = titleNumbers,
                 currentIndex = idx,
                 wordCount = wordCount,
                 shortThreshold = shortThreshold,
-                longThreshold = longThreshold
+                longThreshold = longThreshold,
+                isDuplicateTitle = duplicateTitleFlags[idx],
+                hasPreviousNumberedChapter = hasPreviousNumberedFlags[idx]
             )
             TxtChapter(
                 index = idx + 1,
@@ -603,18 +622,16 @@ object ChapterDetector {
     }
 
     private fun txtChapterStatus(
-        hits: List<TxtChapterHit>,
-        titles: List<String>,
         titleNumbers: List<Int?>,
         currentIndex: Int,
         wordCount: Int,
         shortThreshold: Int,
-        longThreshold: Int
+        longThreshold: Int,
+        isDuplicateTitle: Boolean,
+        hasPreviousNumberedChapter: Boolean
     ): List<String> {
-        val hit = hits[currentIndex]
         val statuses = mutableListOf<String>()
-        val normalizedTitle = titles.getOrElse(currentIndex) { hit.rawTitle }.replace(Regex("""\s+"""), "").lowercase()
-        if (titles.take(currentIndex).any { it.replace(Regex("""\s+"""), "").lowercase() == normalizedTitle }) {
+        if (isDuplicateTitle) {
             statuses += "重名"
         }
         if (wordCount in 1 until shortThreshold) statuses += "短章"
@@ -622,7 +639,6 @@ object ChapterDetector {
 
         val number = titleNumbers.getOrNull(currentIndex)
         val previousNumber = titleNumbers.getOrNull(currentIndex - 1)
-        val hasPreviousNumberedChapter = titleNumbers.take(currentIndex).any { it != null }
         if (number != null && !hasPreviousNumberedChapter && number > 1) {
             statuses += "疑似缺章"
         } else if (number != null && previousNumber != null) {
@@ -648,6 +664,7 @@ object ChapterDetector {
     private val headRegex = Regex("""<head\b[^>]*>.*?</head>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
     private val htmlWrapperRegex = Regex("""</?html\b[^>]*>""", RegexOption.IGNORE_CASE)
     private val htmlBreakRegex = Regex("""(?i)<br\s*/?>""")
+    private val whitespaceRegex = Regex("""\s+""")
 
     private fun normalizeTitleHtmlTextWithBreaks(raw: String): String {
         val placeholder = "\u0000BR\u0000"
