@@ -71,11 +71,29 @@ object TextCodec {
         val sampleSize = bytes.size.coerceAtMost(4096)
         var evenZero = 0
         var oddZero = 0
+        // Counters for the CJK-heavy heuristic below (the zero-byte test misses
+        // BOM-less UTF-16 whose content is mostly Chinese, because such text has
+        // almost no ASCII and therefore almost no zero bytes).
+        var leHighInCjk = 0
+        var beHighInCjk = 0
+        var evenLow = 0
+        var evenHigh = 0
+        var oddLow = 0
+        var oddHigh = 0
         var pairs = 0
         var index = 0
         while (index + 1 < sampleSize) {
-            if (bytes[index].toInt() == 0) evenZero += 1
-            if (bytes[index + 1].toInt() == 0) oddZero += 1
+            val even = bytes[index].toInt() and 0xFF
+            val odd = bytes[index + 1].toInt() and 0xFF
+            if (even == 0) evenZero += 1
+            if (odd == 0) oddZero += 1
+            if (even < 0x80) evenLow += 1 else evenHigh += 1
+            if (odd < 0x80) oddLow += 1 else oddHigh += 1
+            // For UTF-16LE the high byte of each unit is the odd byte; for UTF-16BE
+            // it is the even byte. CJK Unified Ideographs (U+4E00..U+9FFF) put that
+            // high byte in 0x4E..0x9F.
+            if (odd in 0x4E..0x9F) leHighInCjk += 1
+            if (even in 0x4E..0x9F) beHighInCjk += 1
             pairs += 1
             index += 2
         }
@@ -85,6 +103,18 @@ object TextCodec {
                 decodeStrict(bytes, StandardCharsets.UTF_16LE)?.let { it to "UTF-16LE" }
             }
             evenZero >= pairs / 4 && evenZero >= oddZero * 4 -> {
+                decodeStrict(bytes, StandardCharsets.UTF_16BE)?.let { it to "UTF-16BE" }
+            }
+            // CJK-heavy UTF-16 without BOM: most units are ideographs (high byte in
+            // 0x4E..0x9F) while the low byte stays mixed. Requiring the low byte to be
+            // genuinely mixed (both halves present) rules out GBK/GB18030 text, whose
+            // lead bytes are always >= 0x81, and plain ASCII, whose bytes are all < 0x80.
+            leHighInCjk * 2 >= pairs && evenLow * 5 >= pairs && evenHigh * 5 >= pairs &&
+                leHighInCjk >= beHighInCjk -> {
+                decodeStrict(bytes, StandardCharsets.UTF_16LE)?.let { it to "UTF-16LE" }
+            }
+            beHighInCjk * 2 >= pairs && oddLow * 5 >= pairs && oddHigh * 5 >= pairs &&
+                beHighInCjk >= leHighInCjk -> {
                 decodeStrict(bytes, StandardCharsets.UTF_16BE)?.let { it to "UTF-16BE" }
             }
             else -> null
