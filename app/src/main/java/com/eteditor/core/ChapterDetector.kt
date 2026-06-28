@@ -1,7 +1,5 @@
 package com.eteditor.core
 
-import kotlin.text.MatchNamedGroupCollection
-
 data class TxtChapterPatternRule(
     val pattern: String,
     val replacement: String = ""
@@ -46,9 +44,7 @@ object ChapterDetector {
                         rawTitle = lineText,
                         chapterMatch = match,
                         startIndex = line.startIndex,
-                        bodyStartIndex = line.nextIndex,
-                        number = txtChapterNumber(match.match),
-                        suppressNumberStatus = match.replacement.contains("{index}")
+                        bodyStartIndex = line.nextIndex
                     )
                 }
             }
@@ -451,9 +447,7 @@ object ChapterDetector {
         val rawTitle: String,
         val chapterMatch: TxtChapterMatch,
         val startIndex: Int,
-        val bodyStartIndex: Int,
-        val number: Int?,
-        val suppressNumberStatus: Boolean
+        val bodyStartIndex: Int
     )
 
     data class TxtFormatResult(
@@ -596,22 +590,6 @@ object ChapterDetector {
             index += 1
         }
         return builder.toString()
-    }
-
-    private fun txtChapterNumber(match: MatchResult): Int? {
-        val named = listOf("num", "num2", "number")
-            .firstNotNullOfOrNull { name ->
-                runCatching {
-                    (match.groups as? MatchNamedGroupCollection)
-                        ?.get(name)
-                        ?.value
-                        ?.takeIf { it.isNotBlank() }
-                }.getOrNull()
-            }
-        if (named != null) return parseNumber(named)
-        return match.groupValues
-            .drop(1)
-            .firstNotNullOfOrNull { value -> if (value.isBlank()) null else parseNumber(value) }
     }
 
     private fun txtChapterStatus(
