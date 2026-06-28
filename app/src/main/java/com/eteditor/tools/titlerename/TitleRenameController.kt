@@ -96,7 +96,9 @@ suspend fun EditorController.applyPreparedTitleRenamePlanWithProgress(
         statusMessage = "\u6ca1\u6709\u53ef\u6267\u884c\u7684\u6807\u9898\u8ba1\u5212"
         return false
     }
-    // 零改动也返回 true：底层已设好"无需修改"提示，自动化成功路径会据此识别为"跳过"而非"失败"
+    // 正文还在后台同步时被挡下：什么都不做并算没通过，避免自动化误判为成功后拿旧内容继续。
+    if (kind == DocumentKind.Txt && warnTxtMoveChapterSyncPending("写回标题")) return false
+    // 真正执行；零改动也返回 true，底层已设好"无需修改"提示，自动化成功路径会据此识别为"跳过"而非"失败"
     applyTitleRenamePlanWithProgress(titleRenamePlan, onProgress)
     return true
 }

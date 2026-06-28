@@ -47,7 +47,12 @@ private fun EditorController.commitFetchInfoIntroRules(newIntroFilter: String) {
                 fetchInfoPreview = current.copy(filtered = filtered, filterIssues = issues)
             }
         } finally {
-            fetchInfoFiltering = false
+            // 仅当本任务仍是最新（未被更晚的编辑覆盖）时才复位"识别中"，
+            // 否则交给更晚的任务自己结束时复位，避免较早任务提前关掉最新任务的提示。
+            val current = fetchInfoPreview
+            if (current != null && current.raw === rawSnapshot && current.parameters == nextParameters) {
+                fetchInfoFiltering = false
+            }
         }
     }
 }
