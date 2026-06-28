@@ -6,12 +6,9 @@ import com.eteditor.core.EpubBook
 import com.eteditor.core.TxtDocument
 
 internal fun lineEndingLabel(text: String): String {
-    val kinds = lineEndingKinds(text)
-    return when (kinds.size) {
-        0 -> "无"
-        1 -> kinds.first()
-        else -> "混合"
-    }
+    val accumulator = LineEndingAccumulator()
+    accumulator.scan(text)
+    return accumulator.label()
 }
 
 internal fun bodyLineEndingHintForDocument(
@@ -20,19 +17,32 @@ internal fun bodyLineEndingHintForDocument(
     txt: TxtDocument?,
     previewChapterIndex: Int
 ): String {
-    val full = lineEndingLabel(fullBodyLineEndingSampleForDocument(kind, epub, txt))
+    val full = fullBodyLineEndingLabelForDocument(kind, epub, txt)
     if (!full.startsWith("混合")) return "全文：$full"
     return "全文：$full | 本章：${lineEndingLabel(currentBodyLineEndingSampleForDocument(kind, epub, txt, previewChapterIndex))}"
 }
 
-private fun fullBodyLineEndingSampleForDocument(kind: DocumentKind, epub: EpubBook?, txt: TxtDocument?): String {
-    return when (kind) {
-        DocumentKind.Epub -> epub?.chapters
-            ?.joinToString("") { chapter -> ChapterDetector.extractBodyMarkup(chapter.html) }
-            .orEmpty()
-        DocumentKind.Txt -> txt?.text.orEmpty()
-        DocumentKind.None -> ""
+// Computes the whole-document line-ending label WITHOUT concatenating the entire book into one
+// huge string: EPUB chapters are scanned one at a time, and scanning stops as soon as two distinct
+// line-ending kinds appear (the label is already "混合" and cannot change). This mirrors the lighter,
+// per-chapter style the background word-count already uses, instead of building a giant text.
+private fun fullBodyLineEndingLabelForDocument(
+    kind: DocumentKind,
+    epub: EpubBook?,
+    txt: TxtDocument?
+): String {
+    val accumulator = LineEndingAccumulator()
+    when (kind) {
+        DocumentKind.Epub -> {
+            for (chapter in epub?.chapters.orEmpty()) {
+                accumulator.scan(ChapterDetector.extractBodyMarkup(chapter.html))
+                if (accumulator.isMixed) break
+            }
+        }
+        DocumentKind.Txt -> accumulator.scan(txt?.text.orEmpty())
+        DocumentKind.None -> {}
     }
+    return accumulator.label()
 }
 
 private fun currentBodyLineEndingSampleForDocument(
@@ -60,32 +70,58 @@ private fun currentBodyLineEndingSampleForDocument(
     }
 }
 
-private fun lineEndingKinds(text: String): List<String> {
-    var hasCrlf = false
-    var hasLf = false
-    var hasCr = false
-    var index = 0
-    while (index < text.length) {
-        when (text[index]) {
-            '\r' -> {
-                if (index + 1 < text.length && text[index + 1] == '\n') {
-                    hasCrlf = true
-                    index += 2
-                } else {
-                    hasCr = true
+// Accumulates which line-ending kinds (CRLF / CR / LF) appear across one or more text segments.
+// Scanning can stop early once two distinct kinds are seen, because the resulting label is then
+// already "混合" and further scanning cannot change it.
+private class LineEndingAccumulator {
+    private var hasCrlf = false
+    private var hasCr = false
+    private var hasLf = false
+
+    val isMixed: Boolean
+        get() = distinctKindCount() >= 2
+
+    fun scan(text: String) {
+        if (isMixed) return
+        var index = 0
+        while (index < text.length) {
+            when (text[index]) {
+                '\r' -> {
+                    if (index + 1 < text.length && text[index + 1] == '\n') {
+                        hasCrlf = true
+                        index += 2
+                    } else {
+                        hasCr = true
+                        index += 1
+                    }
+                }
+                '\n' -> {
+                    hasLf = true
                     index += 1
                 }
+                else -> index += 1
             }
-            '\n' -> {
-                hasLf = true
-                index += 1
-            }
-            else -> index += 1
+            if (isMixed) return
         }
     }
-    return buildList {
-        if (hasCrlf) add("CRLF")
-        if (hasCr) add("CR")
-        if (hasLf) add("LF")
+
+    fun label(): String {
+        return when (distinctKindCount()) {
+            0 -> "无"
+            1 -> when {
+                hasCrlf -> "CRLF"
+                hasCr -> "CR"
+                else -> "LF"
+            }
+            else -> "混合"
+        }
+    }
+
+    private fun distinctKindCount(): Int {
+        var count = 0
+        if (hasCrlf) count += 1
+        if (hasCr) count += 1
+        if (hasLf) count += 1
+        return count
     }
 }
