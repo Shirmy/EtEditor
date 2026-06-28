@@ -80,6 +80,7 @@ internal fun insertChaptersIntoEpubBook(
         .take(insertPosition)
         .count { it.isEpubBodyNumberedChapter() } + 1
     val referenceStyle = epubInsertReferenceTitleStyle(book, insertPosition)
+    val referenceNumbered = epubInsertReferenceIsNumbered(book, insertPosition)
     val defaultLevel = targetTocLevelForInsert(book, insertPosition)
     val opfDir = book.opfPath.substringBeforeLast('/', missingDelimiterValue = "").let {
         if (it.isBlank()) "" else "$it/"
@@ -87,12 +88,19 @@ internal fun insertChaptersIntoEpubBook(
     val importedSourcePathsById = mutableMapOf<String, String>()
     val inserted = selected.mapIndexed { insertOffset, sourceChapter ->
         val isVolume = sourceChapter.isVolume
-        val numberedTitle = if (!isVolume) {
+        val sourceParts = parseTitleFormatParts(sourceChapter.title)
+        val shouldRenumber = !isVolume && referenceNumbered && sourceParts.prefix != null
+        val numberedTitle = if (shouldRenumber) {
             renumberInsertedChapterTitle(sourceChapter.title, number++)
         } else {
             sourceChapter.title
         }
-        val renderedTitle = if (isVolume) null else renderInsertedChapterTitle(numberedTitle, referenceStyle)
+        val renderStyle = if (sourceParts.suffix.isNotBlank() && referenceStyle == TITLE_FORMAT_STYLE_NONE) {
+            TITLE_FORMAT_STYLE_DOUBLE
+        } else {
+            referenceStyle
+        }
+        val renderedTitle = if (shouldRenumber) renderInsertedChapterTitle(numberedTitle, renderStyle) else null
         val title = renderedTitle?.plainTitle ?: numberedTitle
         val path = if (source.sourceType == INSERT_CHAPTER_SOURCE_EPUB && sourceChapter.sourcePath.isNotBlank()) {
             uniqueEpubEntryPath(book, sourceChapter.sourcePath)

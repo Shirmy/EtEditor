@@ -12,12 +12,10 @@ internal data class InsertTxtChaptersResult(
 
 internal fun renumberInsertedChapterTitle(title: String, number: Int): String {
     val cleaned = ChapterDetector.cleanTitle(title)
-    val suffix = Regex("""^第\s*[\d零〇一二两三四五六七八九十百千万亿]+\s*[章节回卷部集]\s*(.*)${'$'}""")
+    val match = Regex("""^第\s*[\d零〇一二两三四五六七八九十百千万亿]+\s*[章节回卷部集]\s*(.*)${'$'}""")
         .find(cleaned)
-        ?.groupValues
-        ?.getOrNull(1)
-        ?.trim()
-        ?: cleaned
+        ?: return cleaned
+    val suffix = match.groupValues.getOrNull(1)?.trim().orEmpty()
     return if (suffix.isBlank()) "第${number}章" else "第${number}章$suffix"
 }
 
@@ -101,18 +99,26 @@ internal fun insertChaptersIntoTxtDocumentText(
     val insertPosition = resolveTxtInsertChapterPosition(document, positionMode, targetChapterIndex, currentChapterIndex)
     var number = document.chapters.take(insertPosition).size + 1
     val referenceStyle = txtInsertReferenceTitleStyle(document, insertPosition)
+    val referenceNumbered = txtInsertReferenceIsNumbered(document, insertPosition)
     var completed = 0
     val chunks = selected
         .map { chapter ->
-            val numberedTitle = if (!chapter.isVolume) {
+            val sourceParts = parseTitleFormatParts(chapter.title)
+            val shouldRenumber = !chapter.isVolume && referenceNumbered && sourceParts.prefix != null
+            val numberedTitle = if (shouldRenumber) {
                 renumberInsertedChapterTitle(chapter.title, number++)
             } else {
                 chapter.title
             }
-            val title = if (chapter.isVolume) {
-                numberedTitle
+            val title = if (shouldRenumber) {
+                val renderStyle = if (sourceParts.suffix.isNotBlank() && referenceStyle == TITLE_FORMAT_STYLE_NONE) {
+                    TITLE_FORMAT_STYLE_DOUBLE
+                } else {
+                    referenceStyle
+                }
+                renderInsertedChapterTitle(numberedTitle, renderStyle).plainTitle
             } else {
-                renderInsertedChapterTitle(numberedTitle, referenceStyle).plainTitle
+                numberedTitle
             }
             buildString {
                 append(title.trim())
