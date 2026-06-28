@@ -30,6 +30,7 @@ internal fun rememberReadableDocumentUri(context: Context, rawUri: String) {
 
 internal fun rememberReadableDocumentUri(context: Context, uri: Uri) {
     runCatching {
+        pruneOldPersistedUriPermissions(context, uri)
         context.contentResolver.takePersistableUriPermission(
             uri,
             Intent.FLAG_GRANT_READ_URI_PERMISSION
@@ -39,12 +40,40 @@ internal fun rememberReadableDocumentUri(context: Context, uri: Uri) {
 
 internal fun rememberWritableDocumentUri(context: Context, uri: Uri) {
     runCatching {
+        pruneOldPersistedUriPermissions(context, uri)
         context.contentResolver.takePersistableUriPermission(
             uri,
             Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
         )
     }
 }
+
+// 系统对每个应用能长期登记多少个"以后还能再访问这个文件"的凭证有上限，只增不减会积满；
+// 到顶后新登记会悄悄失败。这里在登记新文件前先看是否接近软上限，接近就把最久没再打开过的
+// 旧凭证回收掉、留出余量；正在用的（刚登记过=最新的，以及本次要登记的 keep）不会被回收。
+internal fun pruneOldPersistedUriPermissions(context: Context, keep: Uri) {
+    runCatching {
+        val resolver = context.contentResolver
+        val held = resolver.persistedUriPermissions
+        if (held.size < PERSISTED_URI_SOFT_CAP) return
+        val releaseCount = held.size - PERSISTED_URI_PRUNE_TARGET
+        held.asSequence()
+            .filter { it.uri != keep }
+            .sortedBy { it.persistedTime }
+            .take(releaseCount)
+            .forEach { permission ->
+                val flags = (if (permission.isReadPermission) Intent.FLAG_GRANT_READ_URI_PERMISSION else 0) or
+                    (if (permission.isWritePermission) Intent.FLAG_GRANT_WRITE_URI_PERMISSION else 0)
+                if (flags != 0) {
+                    runCatching { resolver.releasePersistableUriPermission(permission.uri, flags) }
+                }
+            }
+    }
+}
+
+// 软上限定在系统硬上限（部分系统约 128）以下、留足余量；触发清理时一次回收到目标值，避免每次都在临界点清理
+private const val PERSISTED_URI_SOFT_CAP = 100
+private const val PERSISTED_URI_PRUNE_TARGET = 80
 
 internal suspend fun writeDocumentBytes(context: Context, uri: Uri, bytes: ByteArray): Unit = withContext(Dispatchers.IO) {
     // 覆盖原文件前，先把原文件现有内容备份到应用私有缓存；写到一半出错时可还原，避免把原文件写坏

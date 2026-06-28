@@ -213,6 +213,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun persistEditableUri(uri: Uri) {
+        pruneOldPersistedUriPermissions(applicationContext, uri)
         val readWrite = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
         runCatching { contentResolver.takePersistableUriPermission(uri, readWrite) }
             .recoverCatching { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
