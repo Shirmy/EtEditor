@@ -96,8 +96,9 @@ suspend fun EditorController.applyPreparedTitleRenamePlanWithProgress(
         statusMessage = "\u6ca1\u6709\u53ef\u6267\u884c\u7684\u6807\u9898\u8ba1\u5212"
         return false
     }
-    val changed = applyTitleRenamePlanWithProgress(titleRenamePlan, onProgress)
-    return changed > 0
+    // 零改动也返回 true：底层已设好"无需修改"提示，自动化成功路径会据此识别为"跳过"而非"失败"
+    applyTitleRenamePlanWithProgress(titleRenamePlan, onProgress)
+    return true
 }
 
 private suspend fun EditorController.applyTitleRenamePlanWithProgress(

@@ -120,10 +120,8 @@ suspend fun EditorController.applyPreparedTitleFormatPlanWithProgress(
         statusMessage = "\u6ca1\u6709\u53ef\u6267\u884c\u7684\u6807\u9898\u683c\u5f0f\u8ba1\u5212"
         return false
     }
-    val changed = applyTitleFormatPlanWithProgress(titleFormatPlan, onProgress)
-    if (changed <= 0) {
-        return false
-    }
+    // 零改动也返回 true：底层已设好"无需修改"提示，自动化成功路径会据此识别为"跳过"而非"失败"
+    applyTitleFormatPlanWithProgress(titleFormatPlan, onProgress)
     return true
 }
 
