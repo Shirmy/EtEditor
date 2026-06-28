@@ -1,6 +1,7 @@
 package com.eteditor
 
 import com.eteditor.core.TextCodec
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.charset.Charset
@@ -45,6 +46,31 @@ object FetchHttpClient {
         headers: Map<String, String> = emptyMap(),
         redirectValidator: ((String, String) -> Boolean)? = null,
         maxBytes: Long = HTTP_TEXT_RESPONSE_MAX_BYTES
+    ): HttpBytes {
+        var attempt = 0
+        while (true) {
+            try {
+                return fetchBytesOnce(url, headers, redirectValidator, maxBytes)
+            } catch (networkError: IOException) {
+                // 仅对网络层抖动(连接/读取超时、连接中断、临时无法解析主机等)自动重试。
+                // HTTP 状态错误、重定向被拒、体量超限等确定性失败抛的不是 IOException,会直接上抛、不重试。
+                if (attempt >= MAX_RETRY_COUNT) throw networkError
+                attempt += 1
+                try {
+                    Thread.sleep(RETRY_BACKOFF_MILLIS * attempt)
+                } catch (interrupted: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    throw networkError
+                }
+            }
+        }
+    }
+
+    private fun fetchBytesOnce(
+        url: String,
+        headers: Map<String, String>,
+        redirectValidator: ((String, String) -> Boolean)?,
+        maxBytes: Long
     ): HttpBytes {
         var currentUrl = url
         var redirectCount = 0
@@ -115,4 +141,6 @@ object FetchHttpClient {
     )
 
     private const val MAX_REDIRECT_COUNT = 5
+    private const val MAX_RETRY_COUNT = 2
+    private const val RETRY_BACKOFF_MILLIS = 400L
 }
