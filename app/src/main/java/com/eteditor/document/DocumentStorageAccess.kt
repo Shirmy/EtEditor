@@ -73,6 +73,8 @@ private fun replaceDocumentBytes(context: Context, uri: Uri, bytes: ByteArray) {
                     stream.channel.position(0)
                     stream.write(bytes)
                     stream.flush()
+                    // 强制把数据落到永久存储，避免写完即断电/崩溃丢失尾部内容
+                    runCatching { stream.fd.sync() }
                 }
             } ?: error("无法打开输出文件")
         }.onFailure { error ->
@@ -91,6 +93,8 @@ private fun replaceDocumentBytes(context: Context, uri: Uri, bytes: ByteArray) {
             output.use { stream ->
                 stream.write(bytes)
                 stream.flush()
+                // 尽力强制落盘（兜底路径不一定拿得到落盘入口，拿不到就照常完成）
+                runCatching { (stream as? FileOutputStream)?.fd?.sync() }
             }
             // 兜底写法在个别系统/位置上不会先清空旧内容，核对落盘长度，残留旧尾巴即判失败、触发还原
             val writtenLength = documentByteLength(context, uri)
