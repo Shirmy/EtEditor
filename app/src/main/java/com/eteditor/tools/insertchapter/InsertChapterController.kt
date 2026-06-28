@@ -422,16 +422,21 @@ private suspend fun EditorController.insertChaptersIntoEpub(
     val nextBook = sourceBook.mutableDeepCopy()
     val currentChapterIndex = previewChapterIndex
     onProgress("插入章节", 0, selected.size.coerceAtLeast(1))
-    val result = withContext(Dispatchers.Default) {
-        insertChaptersIntoEpubBook(
-            book = nextBook,
-            source = source,
-            selected = selected,
-            positionMode = positionMode,
-            targetChapterIndex = targetChapterIndex,
-            currentChapterIndex = currentChapterIndex,
-            onProgress = { _, _ -> }
-        )
+    val result = try {
+        withContext(Dispatchers.Default) {
+            insertChaptersIntoEpubBook(
+                book = nextBook,
+                source = source,
+                selected = selected,
+                positionMode = positionMode,
+                targetChapterIndex = targetChapterIndex,
+                currentChapterIndex = currentChapterIndex,
+                onProgress = { _, _ -> }
+            )
+        }
+    } catch (error: Throwable) {
+        statusMessage = "插入失败：${error.message ?: error.javaClass.simpleName}"
+        return false
     }
     onProgress("插入章节", selected.size, selected.size.coerceAtLeast(1))
     epub = nextBook
@@ -460,15 +465,20 @@ private suspend fun EditorController.insertChaptersIntoTxt(
     val currentChapterIndex = previewChapterIndex
     val snapshot = document.copy(chapters = document.chapters.toList())
     onProgress("插入章节", 0, selected.size.coerceAtLeast(1))
-    val result = withContext(Dispatchers.Default) {
-        insertChaptersIntoTxtDocumentText(
-            document = snapshot,
-            selected = selected,
-            positionMode = positionMode,
-            targetChapterIndex = targetChapterIndex,
-            currentChapterIndex = currentChapterIndex,
-            onProgress = { _, _ -> }
-        )
+    val result = try {
+        withContext(Dispatchers.Default) {
+            insertChaptersIntoTxtDocumentText(
+                document = snapshot,
+                selected = selected,
+                positionMode = positionMode,
+                targetChapterIndex = targetChapterIndex,
+                currentChapterIndex = currentChapterIndex,
+                onProgress = { _, _ -> }
+            )
+        }
+    } catch (error: Throwable) {
+        statusMessage = "插入失败：${error.message ?: error.javaClass.simpleName}"
+        return false
     }
     if (result == null) {
         statusMessage = "没有可插入章节"
@@ -477,13 +487,18 @@ private suspend fun EditorController.insertChaptersIntoTxt(
     val config = currentTxtChapterDetectionConfig()
     val autoKeys = txtEnabledChapterRuleKeys
     val supplementedCatalogLines = txtSupplementedCatalogLines
-    val nextChapters = withContext(Dispatchers.Default) {
-        detectTxtChaptersWithCatalogConfig(
-            text = result.text,
-            config = config,
-            autoKeys = autoKeys,
-            supplementedCatalogLines = supplementedCatalogLines
-        )
+    val nextChapters = try {
+        withContext(Dispatchers.Default) {
+            detectTxtChaptersWithCatalogConfig(
+                text = result.text,
+                config = config,
+                autoKeys = autoKeys,
+                supplementedCatalogLines = supplementedCatalogLines
+            )
+        }
+    } catch (error: Throwable) {
+        statusMessage = "插入失败：${error.message ?: error.javaClass.simpleName}"
+        return false
     }
     onProgress("插入章节", selected.size, selected.size.coerceAtLeast(1))
     document.text = result.text
