@@ -30,7 +30,8 @@ object ChapterDetector {
         val compiledCustomPatterns = compileTxtChapterPatternRules(customRules)
         val lines = iterTextLines(text)
         val detectedHitsByLine = lines.mapNotNull { line ->
-            val stripped = normalizeTxtCatalogMatchText(line.text)
+            val lineText = text.substring(line.startIndex, line.endIndex)
+            val stripped = normalizeTxtCatalogMatchText(lineText)
             if (stripped.isBlank() || (stripped.length > 90 && line.lineIndex !in forcedLineIndices)) {
                 null
             } else {
@@ -42,7 +43,7 @@ object ChapterDetector {
                     TxtChapterHit(
                         lineIndex = line.lineIndex,
                         lineNumber = line.lineNumber,
-                        rawTitle = line.text,
+                        rawTitle = lineText,
                         chapterMatch = match,
                         startIndex = line.startIndex,
                         bodyStartIndex = line.nextIndex,
@@ -439,8 +440,8 @@ object ChapterDetector {
     private data class TxtLine(
         val lineIndex: Int,
         val lineNumber: Int,
-        val text: String,
         val startIndex: Int,
+        val endIndex: Int,
         val nextIndex: Int
     )
 
@@ -507,15 +508,15 @@ object ChapterDetector {
             result += TxtLine(
                 lineIndex = lineIndex,
                 lineNumber = lineIndex + 1,
-                text = text.substring(start, end),
                 startIndex = start,
+                endIndex = end,
                 nextIndex = next
             )
             lineIndex += 1
             start = next
         }
         if (text.isEmpty()) {
-            result += TxtLine(0, 1, "", 0, 0)
+            result += TxtLine(0, 1, 0, 0, 0)
         }
         return result
     }
