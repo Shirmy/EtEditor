@@ -5,6 +5,7 @@ import com.eteditor.core.EpubChapter
 import com.eteditor.core.ManifestItem
 import java.nio.charset.StandardCharsets
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -271,6 +272,27 @@ class FileRenameUtilsTest {
         assertEquals("Text/Chapter0003.xhtml#frag", book.manifest.getValue("c1").href)
         assertTrue(book.chapters[0].pathAliases.contains("OEBPS/Text/Chapter0001.xhtml"))
         assertTrue(book.chapters[0].pathAliases.contains("OEBPS/Text/Chapter0003.xhtml"))
+    }
+
+    @Test
+    fun applyFileRenamePlanRewritesCrossChapterLinksInBody() {
+        val book = sampleBook(
+            titles = listOf("第一章", "第二章"),
+            paths = listOf("OEBPS/Text/Chapter0001.xhtml", "OEBPS/Text/Chapter0002.xhtml")
+        )
+        book.chapters[1].html = "<html><body><a href=\"Chapter0001.xhtml#note\">脚注</a></body></html>"
+        book.entries["OEBPS/Text/Chapter0002.xhtml"] = book.chapters[1].html.toByteArray(StandardCharsets.UTF_8)
+        val plan = buildFileRenamePlanItems(
+            book = book,
+            parameters = FileRenameParameters(namingFormat = "Chapter{z4:9}", preview = true),
+            targetIndices = listOf(0)
+        )
+
+        applyFileRenamePlanToEpub(book, plan)
+
+        val updatedHtml = String(book.entries.getValue("OEBPS/Text/Chapter0002.xhtml"), StandardCharsets.UTF_8)
+        assertTrue(updatedHtml.contains("Chapter0009.xhtml#note"))
+        assertFalse(updatedHtml.contains("Chapter0001.xhtml#note"))
     }
 
     private fun sampleBook(

@@ -182,6 +182,7 @@ internal fun applyFileRenamePlanToEpub(book: EpubBook, plan: List<FileRenamePlan
         Triple(chapter, item, bytes)
     }
 
+    val renamedPaths = linkedMapOf<String, String>()
     movedEntries.forEach { (chapter, item, bytes) ->
         val newHref = chapter.href.replaceHrefFileName(item.newFileName)
         if (bytes != null) {
@@ -193,7 +194,11 @@ internal fun applyFileRenamePlanToEpub(book: EpubBook, plan: List<FileRenamePlan
         chapter.href = newHref
         book.manifest[chapter.id]?.path = item.newPath
         book.manifest[chapter.id]?.href = newHref
+        if (!item.oldPath.equals(item.newPath, ignoreCase = true)) {
+            renamedPaths[normalizeEpubPath(item.oldPath).lowercase()] = item.newPath
+        }
     }
+    rewriteEpubBodyLinksForRenamedPaths(book, renamedPaths)
     return renamed
 }
 

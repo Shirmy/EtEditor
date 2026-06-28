@@ -133,6 +133,15 @@ private suspend fun EditorController.applyFileRenamePlanWithProgress(
         book.manifest[chapter.id]?.path = item.newPath
         book.manifest[chapter.id]?.href = newHref
     }
+    if (renamed > 0) {
+        val renamedPaths = linkedMapOf<String, String>()
+        movedEntries.forEach { (chapter, item, _) ->
+            if (!item.oldPath.equals(item.newPath, ignoreCase = true)) {
+                renamedPaths[normalizeEpubPath(item.oldPath).lowercase()] = item.newPath
+            }
+        }
+        rewriteEpubBodyLinksForRenamedPaths(book, renamedPaths)
+    }
     checkReport = null
     if (renamed > 0) {
         epub = book
