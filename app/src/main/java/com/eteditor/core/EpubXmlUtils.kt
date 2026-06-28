@@ -25,7 +25,18 @@ internal fun parseXml(bytes: ByteArray) = DocumentBuilderFactory.newInstance().a
     setFeatureSafely("http://xml.org/sax/features/external-parameter-entities", false)
     setAttributeSafely(XML_ACCESS_EXTERNAL_DTD, "")
     setAttributeSafely(XML_ACCESS_EXTERNAL_SCHEMA, "")
-}.newDocumentBuilder().parse(ByteArrayInputStream(bytes))
+}.newDocumentBuilder().parse(ByteArrayInputStream(stripHarmlessDoctype(bytes)))
+
+// 剥掉"光秃秃"的标准文档类型声明(不含内部定义块),让带这行声明的目录等结构文件能被正常解析与重写。
+// 仅剥不含内部定义块（[ ... ]）的声明;一旦声明里夹带内部定义,保持原样、交由 disallow-doctype-decl 继续拒绝,防注入不受影响。
+private val harmlessDoctypeRegex = Regex("""<!DOCTYPE[^\[>]*>""", RegexOption.IGNORE_CASE)
+
+private fun stripHarmlessDoctype(bytes: ByteArray): ByteArray {
+    val text = String(bytes, StandardCharsets.ISO_8859_1)
+    if (!text.contains("<!DOCTYPE", ignoreCase = true)) return bytes
+    val stripped = harmlessDoctypeRegex.replace(text, "")
+    return if (stripped == text) bytes else stripped.toByteArray(StandardCharsets.ISO_8859_1)
+}
 
 internal fun serializeXml(doc: org.w3c.dom.Document): ByteArray {
     val out = ByteArrayOutputStream()
