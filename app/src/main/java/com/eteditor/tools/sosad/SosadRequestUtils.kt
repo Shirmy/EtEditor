@@ -179,11 +179,13 @@ internal fun shouldMarkSosadLoginInvalid(message: String, error: Throwable? = nu
             current = current.cause
         }
     }
-    return combined.contains("登录", ignoreCase = true) ||
-        combined.contains("登录状态", ignoreCase = true) ||
-        combined.contains("权限", ignoreCase = true) ||
-        combined.contains("cookie", ignoreCase = true) ||
-        combined.contains("login", ignoreCase = true) ||
-        combined.contains("401") ||
-        combined.contains("403")
+    // 只在服务器明确以 401(未授权)/403(被拒绝)回绝时,才判定登录失效。
+    // 这两种状态由底层网络层以固定的 "HTTP 401"/"HTTP 403" 文本抛出,据此精确匹配;
+    // 避免把网址、编号里偶然出现的 401/403,或报错里碰巧含"登录/权限/cookie"等字样的情况误判为登录失效。
+    return sosadLoginRejectedStatusRegex.containsMatchIn(combined)
 }
+
+private val sosadLoginRejectedStatusRegex = Regex(
+    """HTTP\s+(?:401|403)\b""",
+    RegexOption.IGNORE_CASE
+)

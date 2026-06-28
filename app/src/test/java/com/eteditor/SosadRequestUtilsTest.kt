@@ -213,9 +213,18 @@ class SosadRequestUtilsTest {
     }
 
     @Test
-    fun shouldMarkSosadLoginInvalidSearchesMessagesAndNestedCauses() {
-        assertTrue(shouldMarkSosadLoginInvalid("403 forbidden"))
+    fun shouldMarkSosadLoginInvalidOnlyOnExplicitAuthStatus() {
+        // 服务器明确以 401/403 回绝(底层固定输出 "HTTP 401"/"HTTP 403")→ 判定登录失效
+        assertTrue(shouldMarkSosadLoginInvalid("废文目录读取失败：HTTP 401"))
         assertTrue(
+            shouldMarkSosadLoginInvalid(
+                message = "废文正文读取失败",
+                error = IllegalStateException("HTTP 403")
+            )
+        )
+        // 网址/编号里偶然出现的 403,或报错里含"cookie/登录"字样 → 不再误判
+        assertFalse(shouldMarkSosadLoginInvalid("废文目录读取失败：https://sosad.fun/thread/403"))
+        assertFalse(
             shouldMarkSosadLoginInvalid(
                 message = "抓取失败",
                 error = IllegalStateException("outer", IllegalArgumentException("cookie expired"))
