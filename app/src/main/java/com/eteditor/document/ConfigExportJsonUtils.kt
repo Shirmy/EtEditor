@@ -58,11 +58,14 @@ internal data class TxtChapterHintsConfigImport(
             txtChapterHintMode != null
 
     fun mergeWith(current: TxtChapterHintsConfigSnapshot): TxtChapterHintsConfigSnapshot {
+        val mergedShort = shortThreshold ?: current.shortThreshold
+        val mergedLong = longThreshold ?: current.longThreshold
+        val swap = mergedShort > 0 && mergedLong > 0 && mergedShort > mergedLong
         return TxtChapterHintsConfigSnapshot(
             shortHintEnabled = shortHintEnabled ?: current.shortHintEnabled,
             longHintEnabled = longHintEnabled ?: current.longHintEnabled,
-            shortThreshold = shortThreshold ?: current.shortThreshold,
-            longThreshold = longThreshold ?: current.longThreshold,
+            shortThreshold = if (swap) mergedLong else mergedShort,
+            longThreshold = if (swap) mergedShort else mergedLong,
             txtChapterHintMode = txtChapterHintMode?.takeIf { it in TXT_CHAPTER_HINT_MODES }
                 ?: current.txtChapterHintMode
         )
@@ -251,6 +254,23 @@ internal fun parseSettingsConfigImport(
     }
     importString("txtChapterHintMode", prefKeys.txtChapterHintMode, current.txtChapterHintMode, TXT_CHAPTER_HINT_MODES) { state, value ->
         state.copy(txtChapterHintMode = value)
+    }
+
+    if (next.txtShortChapterThreshold > 0 &&
+        next.txtLongChapterThreshold > 0 &&
+        next.txtShortChapterThreshold > next.txtLongChapterThreshold
+    ) {
+        val orderedShort = next.txtLongChapterThreshold
+        val orderedLong = next.txtShortChapterThreshold
+        next = next.copy(
+            txtShortChapterThreshold = orderedShort,
+            txtLongChapterThreshold = orderedLong
+        )
+        preferences.removeAll {
+            it.key == prefKeys.txtShortChapterThreshold || it.key == prefKeys.txtLongChapterThreshold
+        }
+        preferences += SettingsPreferenceValue.IntValue(prefKeys.txtShortChapterThreshold, orderedShort)
+        preferences += SettingsPreferenceValue.IntValue(prefKeys.txtLongChapterThreshold, orderedLong)
     }
 
     return SettingsConfigImportResult(

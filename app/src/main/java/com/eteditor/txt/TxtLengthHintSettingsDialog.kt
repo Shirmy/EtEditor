@@ -160,6 +160,21 @@ fun TxtLengthHintSettingsDialog(
                                 longChapterThresholdText = value
                             }
                         )
+                        val manualShortThreshold = shortChapterThresholdText.toIntOrNull() ?: 0
+                        val manualLongThreshold = longChapterThresholdText.toIntOrNull() ?: 0
+                        if (shortChapterHintEnabledDraft && longChapterHintEnabledDraft &&
+                            manualShortThreshold > 0 && manualLongThreshold > 0 &&
+                            manualShortThreshold >= manualLongThreshold
+                        ) {
+                            Text(
+                                text = "\u77ed\u7ae0\u5b57\u6570\u9700\u5c0f\u4e8e\u957f\u7ae0\u5b57\u6570",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 4.dp)
+                            )
+                        }
                     }
                 }
             }
