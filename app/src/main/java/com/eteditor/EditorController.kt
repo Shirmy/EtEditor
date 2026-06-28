@@ -280,6 +280,9 @@ class EditorController(internal val appContext: Context) {
     var fetchInfoProgress: Float
         get() = toolState.fetchInfoProgress
         internal set(value) { toolState.fetchInfoProgress = value }
+    var fetchInfoFiltering: Boolean
+        get() = toolState.fetchInfoFiltering
+        internal set(value) { toolState.fetchInfoFiltering = value }
     var sosadLoginInvalid: Boolean
         get() = toolState.sosadLoginInvalid
         internal set(value) { toolState.sosadLoginInvalid = value }

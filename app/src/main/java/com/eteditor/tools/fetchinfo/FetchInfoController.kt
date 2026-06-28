@@ -42,6 +42,7 @@ fun EditorController.clearFetchInfoPreview(toolId: String? = null) {
         fetchInfoSearchChoiceRequest = null
         fetchInfoRetryRequest = null
         fetchInfoProgress = 0f
+        fetchInfoFiltering = false
     }
     clearFetchInfoSearchChoiceRequest(toolId)
     clearFetchInfoRetryRequest(toolId)
@@ -556,7 +557,9 @@ private suspend fun EditorController.prepareFetchInfoPreviewWithParameters(
             statusMessage = "${FetchInfoSources.label(parameters.source)}没有抓到${fetchInfoContentLabel(parameters.content)}"
             return false
         }
-        val (filtered, issues) = FetchInfoFilter.apply(raw, parameters)
+        val (filtered, issues) = withContext(Dispatchers.Default) {
+            FetchInfoFilter.apply(raw, parameters)
+        }
         fetchInfoPreview = FetchInfoPreview(
             toolId = toolId,
             parameters = parameters,
@@ -564,6 +567,7 @@ private suspend fun EditorController.prepareFetchInfoPreviewWithParameters(
             filtered = filtered,
             filterIssues = issues
         )
+        fetchInfoFiltering = false
         // 认书成功后把详情页地址写入运行级缓存，供后续同源步骤复用（仅自动化运行内生效）。
         cacheFetchInfoRunResolvedUrl(toolId, parameters.source, raw.resolvedUrl)
         fetchInfoSearchChoiceRequest = null

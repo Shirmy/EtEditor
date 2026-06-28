@@ -12,6 +12,7 @@ internal class EditorToolState {
     var fetchInfoSearchChoiceRequest by mutableStateOf<FetchInfoSearchChoiceRequest?>(null)
     var fetchInfoRetryRequest by mutableStateOf<FetchInfoRetryRequest?>(null)
     var fetchInfoProgress by mutableStateOf(0f)
+    var fetchInfoFiltering by mutableStateOf(false)
     var sosadLoginInvalid by mutableStateOf(false)
     var selectedReplacementPreviewMatchId by mutableStateOf<String?>(null)
     var textReplaceRuntimeFiles by mutableStateOf<Map<String, String>>(emptyMap())
