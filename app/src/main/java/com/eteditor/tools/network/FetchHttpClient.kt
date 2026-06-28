@@ -75,21 +75,27 @@ object FetchHttpClient {
         var currentUrl = url
         var redirectCount = 0
         while (true) {
-            val connection = (URL(currentUrl).openConnection() as HttpURLConnection).apply {
+            val parsedUrl = URL(currentUrl)
+            // 按真实主机名(而非"网址里含某段字串")判断是否长佩,避免把长佩专用请求头
+            // 误加到名字里碰巧含 gongzicp.com 的别的地址上;与下面建立连接用同一把解析,口径一致。
+            val host = parsedUrl.host.orEmpty().lowercase().trimEnd('.')
+            val isGongzicpApiHost = host == "webapi.gongzicp.com"
+            val isGongzicpHost = host == "gongzicp.com" || host.endsWith(".gongzicp.com")
+            val connection = (parsedUrl.openConnection() as HttpURLConnection).apply {
                 instanceFollowRedirects = redirectValidator == null
                 connectTimeout = 15000
                 readTimeout = 20000
                 setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 12; Mobile) AppleWebKit/537.36 EtEditor/1.0")
                 setRequestProperty(
                     "Accept",
-                    if (currentUrl.contains("webapi.gongzicp.com", ignoreCase = true)) {
+                    if (isGongzicpApiHost) {
                         "application/json,text/plain,*/*"
                     } else {
                         "text/html,application/xhtml+xml,application/xml,image/*,*/*"
                     }
                 )
                 setRequestProperty("Accept-Encoding", "gzip, deflate")
-                if (currentUrl.contains("gongzicp.com", ignoreCase = true)) {
+                if (isGongzicpHost) {
                     setRequestProperty("Referer", "https://www.gongzicp.com/")
                     setRequestProperty("Origin", "https://www.gongzicp.com")
                 }
