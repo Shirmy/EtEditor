@@ -239,26 +239,10 @@ internal fun defaultEditorToolDefinitions(): List<ToolDefinition> {
                     defaultValue = ""
                 ),
                 ToolParameterDefinition(
-                    key = FETCH_INFO_PARAM_CATALOG_FILTER,
-                    label = "目录过滤",
-                    defaultValue = ""
-                ),
-                ToolParameterDefinition(
-                    key = FETCH_INFO_PARAM_CATALOG_FILTER_ENABLED,
-                    label = "启用目录过滤",
-                    defaultValue = BOOL_TRUE,
-                    options = BOOLEAN_OPTIONS
-                ),
-                ToolParameterDefinition(
                     key = FETCH_INFO_PARAM_AUTO_TITLE_FORMAT,
                     label = "自动判断格式",
                     defaultValue = BOOL_FALSE,
                     options = BOOLEAN_OPTIONS
-                ),
-                ToolParameterDefinition(
-                    key = FETCH_INFO_PARAM_INTRO_FILTER,
-                    label = "简介过滤",
-                    defaultValue = "trim\ncompressBlankLines"
                 )
             )
         ),
