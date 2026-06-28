@@ -141,21 +141,8 @@ private suspend fun EditorController.applyTitleFormatPlanWithProgress(
             var changedCount = 0
             for ((index, pair) in renderedByIndex.withIndex()) {
                 val (chapterIndex, rendered) = pair
-                val chapter = book.chapters.getOrNull(chapterIndex)
-                if (chapter != null) {
-                    val nextHtml = updateHtmlTitleForFormat(
-                        html = chapter.html,
-                        plainTitle = rendered.plainTitle,
-                        headingHtml = rendered.headingHtml,
-                        styleCode = rendered.styleCode
-                    )
-                    if (chapter.title != rendered.plainTitle || chapter.html != nextHtml) {
-                        chapter.title = rendered.plainTitle
-                        chapter.html = nextHtml
-                        chapter.wordCount = com.eteditor.core.ChapterDetector.countHtmlChars(chapter.html)
-                        com.eteditor.core.updateEpubChapterHtmlEntry(book, chapter)
-                        changedCount += 1
-                    }
+                if (applyEpubTitleFormatToChapter(book, chapterIndex, rendered)) {
+                    changedCount += 1
                 }
                 onProgress(index + 1, total)
                 yield()
@@ -171,13 +158,12 @@ private suspend fun EditorController.applyTitleFormatPlanWithProgress(
             for ((index, pair) in sortedRendered.withIndex()) {
                 val (chapterIndex, rendered) = pair
                 val chapter = document.chapters.getOrNull(chapterIndex)
-                if (chapter != null && chapter.title != rendered.plainTitle) {
-                    text = com.eteditor.core.ChapterDetector.updateTxtTitle(
-                        text,
-                        chapter.lineIndex,
-                        rendered.plainTitle
-                    )
-                    changedCount += 1
+                if (chapter != null) {
+                    val next = applyTxtTitleFormatToText(text, chapter, rendered)
+                    if (next != null) {
+                        text = next
+                        changedCount += 1
+                    }
                 }
                 onProgress(index + 1, sortedRendered.size)
                 yield()

@@ -567,28 +567,46 @@ internal fun updateHtmlTitleForFormat(
     } ?: "<h1 class=\"chapter-title_$styleCode\">$headingHtml</h1>\n$updated"
 }
 
+internal fun applyEpubTitleFormatToChapter(
+    book: EpubBook,
+    chapterIndex: Int,
+    rendered: TitleFormatRendered
+): Boolean {
+    val chapter = book.chapters.getOrNull(chapterIndex) ?: return false
+    val nextHtml = updateHtmlTitleForFormat(
+        html = chapter.html,
+        plainTitle = rendered.plainTitle,
+        headingHtml = rendered.headingHtml,
+        styleCode = rendered.styleCode
+    )
+    if (chapter.title == rendered.plainTitle && chapter.html == nextHtml) {
+        return false
+    }
+    chapter.title = rendered.plainTitle
+    chapter.html = nextHtml
+    chapter.wordCount = ChapterDetector.countHtmlChars(chapter.html)
+    updateEpubChapterHtmlEntry(book, chapter)
+    return true
+}
+
 internal fun applyEpubTitleFormatsToBook(
     book: EpubBook,
     renderedByIndex: List<Pair<Int, TitleFormatRendered>>
 ): Int {
     var changed = 0
     renderedByIndex.forEach { (index, rendered) ->
-        val chapter = book.chapters.getOrNull(index) ?: return@forEach
-        val nextHtml = updateHtmlTitleForFormat(
-            html = chapter.html,
-            plainTitle = rendered.plainTitle,
-            headingHtml = rendered.headingHtml,
-            styleCode = rendered.styleCode
-        )
-        if (chapter.title != rendered.plainTitle || chapter.html != nextHtml) {
-            chapter.title = rendered.plainTitle
-            chapter.html = nextHtml
-            chapter.wordCount = ChapterDetector.countHtmlChars(chapter.html)
-            updateEpubChapterHtmlEntry(book, chapter)
-            changed += 1
-        }
+        if (applyEpubTitleFormatToChapter(book, index, rendered)) changed += 1
     }
     return changed
+}
+
+internal fun applyTxtTitleFormatToText(
+    text: String,
+    chapter: TxtChapter,
+    rendered: TitleFormatRendered
+): String? {
+    if (chapter.title == rendered.plainTitle) return null
+    return ChapterDetector.updateTxtTitle(text, chapter.lineIndex, rendered.plainTitle)
 }
 
 internal fun applyTxtTitleFormatsToDocument(
@@ -602,10 +620,9 @@ internal fun applyTxtTitleFormatsToDocument(
         .sortedByDescending { it.first }
         .forEach { (index, rendered) ->
             val chapter = document.chapters.getOrNull(index) ?: return@forEach
-            if (chapter.title != rendered.plainTitle) {
-                text = ChapterDetector.updateTxtTitle(text, chapter.lineIndex, rendered.plainTitle)
-                changed += 1
-            }
+            val next = applyTxtTitleFormatToText(text, chapter, rendered) ?: return@forEach
+            text = next
+            changed += 1
         }
     if (changed > 0) {
         document.text = text
