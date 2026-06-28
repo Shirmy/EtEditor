@@ -89,10 +89,16 @@ class GongzicpFetcher : FetchInfoFetcher {
             "https://www.gongzicp.com/api/novel/search?keyword=$encoded"
         )
         val items = mutableListOf<GongzicpSearchItem>()
-        urls.forEachIndexed { index, url ->
+        // 这些 url 是同一次搜索的不同入口写法（参数名/路径不同），任一入口出结果即够用，
+        // 不再把剩余入口都请求一遍（少发冗余请求）。
+        for ((index, url) in urls.withIndex()) {
             onProgress("正在尝试搜索源 ${index + 1}/${urls.size}")
-            val text = runCatching { FetchHttpClient.getText(url) }.getOrNull() ?: return@forEachIndexed
-            items += parseGongzicpSearchItems(text, "https://www.gongzicp.com/")
+            val text = runCatching { FetchHttpClient.getText(url) }.getOrNull() ?: continue
+            val parsed = parseGongzicpSearchItems(text, "https://www.gongzicp.com/")
+            if (parsed.isNotEmpty()) {
+                items += parsed
+                break
+            }
         }
         return items
             .distinctBy { it.detailUrl }

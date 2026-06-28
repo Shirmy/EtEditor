@@ -123,21 +123,28 @@ class JjwxcFetcher : FetchInfoFetcher {
         query: String,
         onProgress: FetchInfoProgress = {}
     ): List<JjwxcSearchItem> {
-        val ajaxUrls = buildList {
-            listOf(
-                urlEncode(query, StandardCharsets.UTF_8),
-                urlEncode(query, Charset.forName("GB18030"))
-            ).distinct().forEach { encoded ->
-                listOf("1", "0", "novelname", "all").forEach { type ->
-                    add("https://www.jjwxc.net/search/search_ajax.php?action=search&keywords=$encoded&type=$type&version=1&getfull=1")
-                }
-            }
-        }
+        val encodings = listOf(
+            urlEncode(query, StandardCharsets.UTF_8),
+            urlEncode(query, Charset.forName("GB18030"))
+        ).distinct()
+        val types = listOf("1", "0", "novelname", "all")
+        val maxAttempts = encodings.size * types.size
         val items = mutableListOf<JjwxcSearchItem>()
-        ajaxUrls.forEachIndexed { index, url ->
-            onProgress("正在尝试搜索源 ${index + 1}/${ajaxUrls.size}")
-            val text = runCatching { FetchHttpClient.getText(url) }.getOrNull() ?: return@forEachIndexed
-            items += parseJjwxcSearchItems(text)
+        var attempt = 0
+        for (encoded in encodings) {
+            var encodingYielded = false
+            types.forEach { type ->
+                attempt += 1
+                onProgress("正在尝试搜索源 $attempt/$maxAttempts")
+                val url = "https://www.jjwxc.net/search/search_ajax.php?action=search&keywords=$encoded&type=$type&version=1&getfull=1"
+                val text = runCatching { FetchHttpClient.getText(url) }.getOrNull() ?: return@forEach
+                val parsed = parseJjwxcSearchItems(text)
+                if (parsed.isNotEmpty()) encodingYielded = true
+                items += parsed
+            }
+            // 四种搜索类型会扩大结果面，保留全跑；但两套字符集编码只是回退、内容重复，
+            // 这套编码已搜到结果就不再请求另一套（少发冗余请求、不减少候选）。
+            if (encodingYielded) break
         }
         return items
             .distinctBy { it.novelId }
