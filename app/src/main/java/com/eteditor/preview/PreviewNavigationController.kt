@@ -1,8 +1,6 @@
 package com.eteditor
 
 import com.eteditor.core.DocumentKind
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 fun EditorController.previousPreviewChapter() {
     when (kind) {
@@ -13,7 +11,7 @@ fun EditorController.previousPreviewChapter() {
             if (target == previewChapterIndex) return
             clearPreviewHighlight()
             previewChapterIndex = target
-            refreshPreviewWithChapterSwitchProgress()
+            refreshPreview()
         }
         DocumentKind.Txt -> {
             if (warnTxtMoveChapterSyncPending("\u5207\u6362\u7ae0\u8282\u9884\u89c8")) return
@@ -24,7 +22,7 @@ fun EditorController.previousPreviewChapter() {
             if (target == previewChapterIndex) return
             clearPreviewHighlight()
             previewChapterIndex = target
-            refreshPreviewWithChapterSwitchProgress()
+            refreshPreview()
         }
         DocumentKind.None -> Unit
     }
@@ -39,7 +37,7 @@ fun EditorController.nextPreviewChapter() {
             if (target == previewChapterIndex) return
             clearPreviewHighlight()
             previewChapterIndex = target
-            refreshPreviewWithChapterSwitchProgress()
+            refreshPreview()
         }
         DocumentKind.Txt -> {
             if (warnTxtMoveChapterSyncPending("\u5207\u6362\u7ae0\u8282\u9884\u89c8")) return
@@ -49,7 +47,7 @@ fun EditorController.nextPreviewChapter() {
             if (target == previewChapterIndex) return
             clearPreviewHighlight()
             previewChapterIndex = target
-            refreshPreviewWithChapterSwitchProgress()
+            refreshPreview()
         }
         DocumentKind.None -> Unit
     }
@@ -62,7 +60,7 @@ fun EditorController.selectPreviewChapter(index: Int) {
             val book = epub ?: return
             if (book.chapters.isEmpty()) return
             previewChapterIndex = index.coerceIn(0, book.chapters.lastIndex)
-            refreshPreviewWithChapterSwitchProgress()
+            refreshPreview()
         }
         DocumentKind.Txt -> {
             if (warnTxtMoveChapterSyncPending("\u5207\u6362\u7ae0\u8282\u9884\u89c8")) return
@@ -73,23 +71,13 @@ fun EditorController.selectPreviewChapter(index: Int) {
             txtFullPreviewCachedAnchor = null
             if (document.chapters.isEmpty()) {
                 previewChapterIndex = 0
-                refreshPreviewWithChapterSwitchProgress()
+                refreshPreview()
                 return
             }
             val minIndex = if (txtHasPreface()) -1 else 0
             previewChapterIndex = index.coerceIn(minIndex, document.chapters.lastIndex)
-            refreshPreviewWithChapterSwitchProgress()
+            refreshPreview()
         }
         DocumentKind.None -> Unit
-    }
-}
-
-private fun EditorController.refreshPreviewWithChapterSwitchProgress() {
-    setBodyOperationProgress(0.15f, "切换章节：准备")
-    refreshPreview()
-    setBodyOperationProgress(1f, "切换章节：完成")
-    controllerScope.launch {
-        delay(160)
-        clearBodyOperationProgress()
     }
 }
