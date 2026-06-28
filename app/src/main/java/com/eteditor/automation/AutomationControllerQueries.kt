@@ -37,6 +37,7 @@ fun EditorController.automationConfirmationState(request: AutomationConfirmation
 // 用于判断运行视图里任务是否还在进行中——跑完后才允许点目录离开自动化面板。
 fun EditorController.isSelectedAutomationRunFinished(): Boolean {
     if (automationConfirmationRequest != null) return false
+    if (automationRunStopped) return true
     val chain = selectedAutomationChain ?: return false
     if (chain.steps.isEmpty()) return false
     return chain.steps.all { step ->

@@ -397,6 +397,12 @@ class EditorController(internal val appContext: Context) {
     internal var automationRunFailed: Int
         get() = automationState.automationRunFailed
         set(value) { automationState.automationRunFailed = value }
+    internal var automationRunStopRequested: Boolean
+        get() = automationState.automationRunStopRequested
+        set(value) { automationState.automationRunStopRequested = value }
+    internal var automationRunStopped: Boolean
+        get() = automationState.automationRunStopped
+        set(value) { automationState.automationRunStopped = value }
     var draftAutomationChain: AutomationChain?
         get() = automationState.draftAutomationChain
         internal set(value) { automationState.draftAutomationChain = value }

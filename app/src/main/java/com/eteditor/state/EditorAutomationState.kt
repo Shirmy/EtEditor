@@ -17,6 +17,10 @@ internal class EditorAutomationState {
     var automationRunExecuted = 0
     var automationRunSkipped = 0
     var automationRunFailed = 0
+    // 运行中点了"停止"：置位后，执行循环在跑完当前这一步、开始下一步之前会停下。
+    var automationRunStopRequested by mutableStateOf(false)
+    // 本次运行是被"停止"结束的（而非自然跑完）：用于让运行视图判定为已结束、可离开。
+    var automationRunStopped by mutableStateOf(false)
     // 同一次自动化运行内，按 source 缓存已认好的书的详情页地址（resolvedUrl）。
     // 后续同源 fetch_info 步骤直接复用，跳过搜索认书，避免同一本书被反复认。
     var fetchInfoRunResolvedUrls by mutableStateOf<Map<String, String>>(emptyMap())

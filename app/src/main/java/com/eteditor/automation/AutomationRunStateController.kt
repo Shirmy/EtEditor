@@ -69,6 +69,8 @@ internal fun EditorController.automationStepHasPreviewEnabled(tool: EditorTool):
 
 internal fun EditorController.resetAutomationRunRuntimeState() {
     automationConfirmationRequest = null
+    automationRunStopRequested = false
+    automationRunStopped = false
     automationRunStepStatuses = emptyMap()
     automationRunExecuted = 0
     automationRunSkipped = 0

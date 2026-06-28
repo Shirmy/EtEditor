@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
+import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -141,6 +142,16 @@ internal fun AutomationRunView(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+            }
+            if (controller.automationConfirmationRequest == null && !controller.isSelectedAutomationRunFinished()) {
+                IconButton(
+                    onClick = { controller.requestStopAutomationChainRun() },
+                    enabled = !controller.automationRunStopRequested,
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(Icons.Outlined.Stop, contentDescription = "停止", modifier = Modifier.size(20.dp))
+                }
             }
         }
 

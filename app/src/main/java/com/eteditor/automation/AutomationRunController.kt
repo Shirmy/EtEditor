@@ -428,6 +428,14 @@ fun EditorController.cancelAutomationConfirmation() {
     appendAutomationLog(AUTO_CANCELLED)
 }
 
+// 运行中点"停止"：登记停止请求，执行循环会在当前这一步收尾后、开始下一步前停下。
+fun EditorController.requestStopAutomationChainRun() {
+    if (automationRunStopRequested || automationRunStopped) return
+    if (isSelectedAutomationRunFinished()) return
+    automationRunStopRequested = true
+    appendAutomationLog("正在停止，当前步骤完成后停止")
+}
+
 internal fun EditorController.failAutomationConfirmationStep(
     step: AutomationStep,
     message: String = statusMessage.ifBlank { "执行失败" }
@@ -445,6 +453,7 @@ internal fun EditorController.failAutomationConfirmationStep(
 
 private suspend fun EditorController.runAutomationChainFrom(chain: AutomationChain, startIndex: Int) {
     for (index in startIndex until chain.steps.size) {
+        if (automationRunStopRequested) break
         val step = chain.steps[index]
         val label = automationStepLabel(step)
         appendAutomationLog(automationStepLogDivider(index, label))
@@ -598,9 +607,13 @@ private suspend fun EditorController.runAutomationChainFrom(chain: AutomationCha
             )
         }
     }
+    val stopped = automationRunStopRequested
+    automationRunStopRequested = false
+    if (stopped) automationRunStopped = true
     statusMessage = buildString {
-        append("\u81ea\u52a8\u5316\u5b8c\u6210\uff1a\u6267\u884c $automationRunExecuted \u6b65\uff0c\u8df3\u8fc7 $automationRunSkipped \u6b65")
-        if (automationRunFailed > 0) append("\uff0c\u5931\u8d25 $automationRunFailed \u6b65")
+        append(if (stopped) "自动化已停止：执行 " else "自动化完成：执行 ")
+        append("$automationRunExecuted 步，跳过 $automationRunSkipped 步")
+        if (automationRunFailed > 0) append("，失败 $automationRunFailed 步")
     }
     appendAutomationLog(automationLogDivider(statusMessage))
 }
