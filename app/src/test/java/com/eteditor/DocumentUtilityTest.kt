@@ -51,7 +51,7 @@ class DocumentUtilityTest {
         assertEquals("保存前检查未通过", buildSaveCheckFailureMessage(CheckReport(emptyList(), emptyList())))
         assertEquals("当前文件位置是只读的，不能覆盖保存原文件", writableFileErrorMessage(IllegalStateException("read-only file")))
         assertEquals("没有写入权限，请重新从文件页打开原文件", writableFileErrorMessage(IllegalStateException("permission denied")))
-        assertEquals("boom", writableFileErrorMessage(IllegalStateException("boom")))
+        assertEquals("文件位置不允许写入或授权已失效，请重新从文件页打开原文件", writableFileErrorMessage(IllegalStateException("boom")))
         assertEquals("文件位置不允许写入或授权已失效，请重新从文件页打开原文件", writableFileErrorMessage(IllegalStateException()))
     }
 

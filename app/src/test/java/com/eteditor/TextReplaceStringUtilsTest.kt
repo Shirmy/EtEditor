@@ -293,8 +293,8 @@ class TextReplaceStringUtilsTest {
 
         assertEquals(
             listOf(
-                TextReplaceRule(find = "foo", replacement = "bar", regex = true, textOnly = false),
-                TextReplaceRule(find = "baz", replacement = "qux", regex = false, textOnly = false)
+                TextReplaceRule(find = "foo", replacement = "bar", regex = true, textOnly = false, caseSensitive = true),
+                TextReplaceRule(find = "baz", replacement = "qux", regex = false, textOnly = false, caseSensitive = true)
             ),
             result.rules
         )
@@ -323,8 +323,8 @@ class TextReplaceStringUtilsTest {
 
         assertEquals(
             listOf(
-                TextReplaceRule(find = "foo", replacement = "bar", regex = false, textOnly = false),
-                TextReplaceRule(find = "第(\\d+)章", replacement = "第\$1节", regex = true, textOnly = false)
+                TextReplaceRule(find = "foo", replacement = "bar", regex = false, textOnly = false, caseSensitive = true),
+                TextReplaceRule(find = "第(\\d+)章", replacement = "第\$1节", regex = true, textOnly = false, caseSensitive = true)
             ),
             rules
         )

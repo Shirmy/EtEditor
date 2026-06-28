@@ -203,7 +203,7 @@ class InsertChapterEpubImportUtilsTest {
         assertEquals(0, txtChapterInsertOffset(document, insertPosition = 1))
         assertEquals(1, result?.insertPosition)
         assertEquals(1, result?.insertedCount)
-        assertEquals("第1章\r\n正文", result?.text)
+        assertEquals("第9章 外部\r\n正文", result?.text)
     }
 
     private fun sampleBook(

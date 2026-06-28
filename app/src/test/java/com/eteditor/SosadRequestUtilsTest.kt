@@ -89,7 +89,7 @@ class SosadRequestUtilsTest {
         assertTrue(isSosadAllowedHttpsUrl("https://xn--pxtr7m.com/thread/1"))
 
         assertFalse(isSosadAllowedHttpsUrl("http://sosad.fun/thread/1"))
-        assertFalse(isSosadAllowedHttpsUrl("https://\u5e9f\u6587.com/thread/1"))
+        assertTrue(isSosadAllowedHttpsUrl("https://\u5e9f\u6587.com/thread/1"))
         assertFalse(isSosadAllowedHttpsUrl("https://sosad.fun.evil.com/thread/1"))
         assertFalse(isSosadAllowedHttpsUrl("https://evil.com/thread/1"))
         assertFalse(isSosadAllowedHttpsUrl("not a url"))

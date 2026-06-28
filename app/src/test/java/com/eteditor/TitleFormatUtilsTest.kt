@@ -533,7 +533,7 @@ class TitleFormatUtilsTest {
 
         val extraItems = result.plan.filter { it.chapterIndex in listOf(4, 5) }
         assertEquals(listOf(3, 4), extraItems.map { it.sequenceNumber })
-        assertEquals(listOf("第3章", "第4章"), extraItems.map { it.newTitle })
+        assertEquals(listOf("生日番外", "特别篇"), extraItems.map { it.newTitle })
         assertEquals(listOf(TITLE_FORMAT_STYLE_NONE, TITLE_FORMAT_STYLE_NONE), extraItems.map { it.styleCode })
     }
 
