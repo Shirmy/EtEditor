@@ -31,6 +31,7 @@ docs/superpowers/
 
 # Code review docs (local only)
 code-review/
+semantic-review/
 
 # opencode skills & config
 .opencode/
