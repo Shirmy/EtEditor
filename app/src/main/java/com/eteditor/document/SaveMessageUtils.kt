@@ -24,7 +24,6 @@ internal fun writableFileErrorMessage(error: Throwable): String {
         reason.contains("permission", ignoreCase = true) ||
             reason.contains("denied", ignoreCase = true) ->
             "没有写入权限，请重新从文件页打开原文件"
-        reason.isNotBlank() -> reason
         else -> "文件位置不允许写入或授权已失效，请重新从文件页打开原文件"
     }
 }
