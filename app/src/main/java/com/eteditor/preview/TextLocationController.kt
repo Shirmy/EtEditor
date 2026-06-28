@@ -4,20 +4,22 @@ import com.eteditor.core.DocumentKind
 
 fun EditorController.selectTextSearchResult(resultId: String): Boolean {
     val result = textSearchResults.firstOrNull { it.id == resultId } ?: return false
-    selectedTextSearchResultId = result.id
-    selectedReplacementPreviewMatchId = null
-    if (kind == DocumentKind.Txt) {
-        return selectTxtTextLocation(result.chapterIndex, result.sourceStart, result.sourceEnd, result.chapterTitle)
-    }
-    if (result.chapterIndex < 0) {
-        return selectEpubPackageTextLocation(
+    val located = if (kind == DocumentKind.Txt) {
+        selectTxtTextLocation(result.chapterIndex, result.sourceStart, result.sourceEnd, result.chapterTitle)
+    } else if (result.chapterIndex < 0) {
+        selectEpubPackageTextLocation(
             result.chapterIndex,
             result.sourceStart,
             result.sourceEnd,
             result.chapterTitle
         )
+    } else {
+        selectEpubTextLocation(result.chapterIndex, result.sourceStart, result.sourceEnd, result.chapterTitle)
     }
-    return selectEpubTextLocation(result.chapterIndex, result.sourceStart, result.sourceEnd, result.chapterTitle)
+    if (!located) return false
+    selectedTextSearchResultId = result.id
+    selectedReplacementPreviewMatchId = null
+    return true
 }
 
 fun EditorController.selectReplacementPreviewMatch(matchId: String): Boolean {
@@ -26,15 +28,17 @@ fun EditorController.selectReplacementPreviewMatch(matchId: String): Boolean {
         .flatMap { it.matches }
         .firstOrNull { it.id == matchId }
         ?: return false
+    val located = if (kind == DocumentKind.Txt) {
+        selectTxtTextLocation(match.chapterIndex, match.sourceStart, match.sourceEnd, match.chapterTitle)
+    } else if (match.chapterIndex < 0) {
+        selectEpubPackageTextLocation(match.chapterIndex, match.sourceStart, match.sourceEnd, match.chapterTitle)
+    } else {
+        selectEpubTextLocation(match.chapterIndex, match.sourceStart, match.sourceEnd, match.chapterTitle)
+    }
+    if (!located) return false
     selectedReplacementPreviewMatchId = match.id
     selectedTextSearchResultId = null
-    if (kind == DocumentKind.Txt) {
-        return selectTxtTextLocation(match.chapterIndex, match.sourceStart, match.sourceEnd, match.chapterTitle)
-    }
-    if (match.chapterIndex < 0) {
-        return selectEpubPackageTextLocation(match.chapterIndex, match.sourceStart, match.sourceEnd, match.chapterTitle)
-    }
-    return selectEpubTextLocation(match.chapterIndex, match.sourceStart, match.sourceEnd, match.chapterTitle)
+    return true
 }
 
 private fun EditorController.selectEpubPackageTextLocation(
