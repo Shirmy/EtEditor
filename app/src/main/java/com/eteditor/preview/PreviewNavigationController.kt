@@ -54,17 +54,18 @@ fun EditorController.nextPreviewChapter() {
 }
 
 fun EditorController.selectPreviewChapter(index: Int) {
-    clearPreviewHighlight()
     when (kind) {
         DocumentKind.Epub -> {
             val book = epub ?: return
             if (book.chapters.isEmpty()) return
+            clearPreviewHighlight()
             previewChapterIndex = index.coerceIn(0, book.chapters.lastIndex)
             refreshPreview()
         }
         DocumentKind.Txt -> {
             if (warnTxtMoveChapterSyncPending("\u5207\u6362\u7ae0\u8282\u9884\u89c8")) return
             val document = txt ?: return
+            clearPreviewHighlight()
             if (txtPreviewMode != TXT_PREVIEW_MODE_CHAPTER) {
                 txtPreviewMode = TXT_PREVIEW_MODE_CHAPTER
             }
