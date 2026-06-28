@@ -1,13 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   备份白名单（Android 11 / API 30 及更低版本生效）。
+   仅备份应用设置；其余数据一律不进系统备份——尤其是内嵌网页登录组件保存的
+   登录会话数据（位于 app_webview 目录），不会随系统/云备份离开本机。
+   说明：使用 <include> 后，仅被列入的内容会被备份，其余默认全部排除。
+   et_editor_settings 同时存放设置与各类配置/预设（登录凭据已在保存时过滤，不含明文）。
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <include domain="sharedpref" path="et_editor_settings.xml"/>
+    <include domain="sharedpref" path="et_editor_update_notes.xml"/>
 </full-backup-content>
