@@ -34,52 +34,44 @@ class EditorSettingsPreferencesTest {
     fun savedSettingsAreLoadedByNewPreferencesInstance() {
         val writer = EditorSettingsPreferences(context, prefsName)
         writer.saveLeftRailExpanded(true)
-        writer.saveEpubLongPressSplitChapter(true)
         writer.saveEpubDoubleTapEdit(false)
         writer.saveEpubRightPanelMode("log")
         writer.saveTxtLeftPanelMode("tools")
         writer.saveTxtRightPanelMode("search")
         writer.saveTxtDoubleTapEdit(false)
-        writer.saveTxtSupplementLongPressMode(true)
+        writer.saveTxtDoubleTapTitleEdit(false)
         writer.saveTxtChapterRules("chapter-rules")
-        writer.saveTxtTitleRule("title-pattern", "title-replacement")
         writer.saveTxtPurifyRules("purify-rules")
         writer.saveTxtBookTitleRules("book-title-rules")
-        writer.saveTxtSearchReplace("find", "replace", regex = true)
         writer.saveTxtChapterHintSettings(
             wordCountHintsEnabled = false,
             shortHintEnabled = false,
             longHintEnabled = true,
             shortThreshold = 321,
-            longThreshold = 654
+            longThreshold = 654,
+            hintMode = TXT_CHAPTER_HINT_MODE_MANUAL
         )
         writer.saveTxtAutoNumberOnSave(false)
 
         val reader = EditorSettingsPreferences(context, prefsName)
         val state = reader.loadForTest()
-        val search = reader.loadTxtSearchReplace()
 
         assertTrue(state.leftRailExpanded)
-        assertTrue(state.epubLongPressSplitChapter)
         assertFalse(state.epubDoubleTapEdit)
         assertEquals("log", state.epubRightPanelMode)
         assertEquals("tools", state.txtLeftPanelMode)
         assertEquals("search", state.txtRightPanelMode)
         assertFalse(state.txtDoubleTapEdit)
         assertFalse(state.txtDoubleTapTitleEdit)
-        assertTrue(state.txtSupplementLongPressMode)
         assertEquals("chapter-rules", state.txtChapterRulesText)
-        assertEquals("title-pattern", state.txtTitleRulePattern)
-        assertEquals("title-replacement", state.txtTitleRuleReplacement)
         assertEquals("purify-rules", state.txtPurifyRulesText)
         assertEquals("book-title-rules", state.txtBookTitleRulesText)
         assertEquals(321, state.txtShortChapterThreshold)
         assertEquals(654, state.txtLongChapterThreshold)
-        assertFalse(state.txtChapterWordCountHintsEnabled)
         assertFalse(state.txtShortChapterHintEnabled)
         assertTrue(state.txtLongChapterHintEnabled)
+        assertEquals(TXT_CHAPTER_HINT_MODE_MANUAL, state.txtChapterHintMode)
         assertFalse(state.txtAutoNumberOnSave)
-        assertEquals(TxtSearchReplacePreferenceState("find", "replace", true), search)
     }
 
     @Test
@@ -119,8 +111,6 @@ class EditorSettingsPreferencesTest {
     private fun EditorSettingsPreferences.loadForTest(): EditorSettingsPreferenceState {
         return load(
             defaultTxtChapterRules = "default-chapter-rules",
-            defaultTxtTitleRulePattern = "default-title-pattern",
-            defaultTxtTitleRuleReplacement = "default-title-replacement",
             defaultEpubLeftPanelMode = "catalog",
             defaultEpubRightPanelMode = "preview",
             defaultTxtLeftPanelMode = "catalog",
