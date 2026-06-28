@@ -216,14 +216,12 @@ object ChapterDetector {
 
     fun txtChapterNumberFromTitle(title: String): Int? {
         val normalized = normalizeTxtCatalogMatchText(cleanTitleLineBreaksAsSpace(title))
-        val numberedPrefix = Regex("""^\s*第\s*([$cjkNumber]{1,12})\s*(?:章|节|節|回|集|卷|部|篇|话|話)[\s\S]*${'$'}""")
-            .find(normalized)
+        val numberedPrefix = titleNumberedPrefixRegex.find(normalized)
         if (numberedPrefix != null) {
             return parseNumber(numberedPrefix.groupValues[1])
         }
 
-        val numericPrefix = Regex("""^\s*([0-9０-９]{1,5})(?:[\s.、:：\-_]|${'$'})[\s\S]*${'$'}""")
-            .find(normalized)
+        val numericPrefix = titleNumericNumberRegex.find(normalized)
         return numericPrefix?.groupValues?.getOrNull(1)?.let { parseNumber(it) }
     }
 
@@ -249,17 +247,17 @@ object ChapterDetector {
     fun cleanTitle(raw: String): String {
         val title = raw
             .replace('\u3000', ' ')
-            .replace(Regex("""\s+"""), " ")
+            .replace(whitespaceRegex, " ")
             .trim()
 
-        val numericPrefix = Regex("""^(\d{1,5})\s*[、.．]\s*(.+)${'$'}""").find(title)
+        val numericPrefix = titleNumericPrefixRegex.find(title)
         if (numericPrefix != null) {
             return "${numericPrefix.groupValues[1]}、${numericPrefix.groupValues[2].trim()}"
         }
 
-        val chinesePrefix = Regex("""^(第\s*[$cjkNumber]{1,12}\s*[章节回卷部集])\s*(.*)${'$'}""").find(title)
+        val chinesePrefix = titleChinesePrefixRegex.find(title)
         if (chinesePrefix != null) {
-            val prefix = chinesePrefix.groupValues[1].replace(Regex("""\s+"""), "")
+            val prefix = chinesePrefix.groupValues[1].replace(whitespaceRegex, "")
             val suffix = chinesePrefix.groupValues[2].trim()
             return if (suffix.isBlank()) prefix else "$prefix $suffix"
         }
@@ -659,6 +657,11 @@ object ChapterDetector {
     private val htmlWrapperRegex = Regex("""</?html\b[^>]*>""", RegexOption.IGNORE_CASE)
     private val htmlBreakRegex = Regex("""(?i)<br\s*/?>""")
     private val whitespaceRegex = Regex("""\s+""")
+    private val titleNumericPrefixRegex = Regex("""^(\d{1,5})\s*[、.．]\s*(.+)${'$'}""")
+    private val titleChinesePrefixRegex = Regex("""^(第\s*[$cjkNumber]{1,12}\s*[章节回卷部集])\s*(.*)${'$'}""")
+    private val titleNumberedPrefixRegex =
+        Regex("""^\s*第\s*([$cjkNumber]{1,12})\s*(?:章|节|節|回|集|卷|部|篇|话|話)[\s\S]*${'$'}""")
+    private val titleNumericNumberRegex = Regex("""^\s*([0-9０-９]{1,5})(?:[\s.、:：\-_]|${'$'})[\s\S]*${'$'}""")
 
     private fun normalizeTitleHtmlTextWithBreaks(raw: String): String {
         val placeholder = "\u0000BR\u0000"
