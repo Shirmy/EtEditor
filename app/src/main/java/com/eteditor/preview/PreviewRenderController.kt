@@ -93,12 +93,8 @@ private fun EditorController.mappedTxtChapterPreviewSource(
     val end = chapter.endIndex.coerceIn(start, document.text.length)
     val source = document.text.substring(start, end)
     if (source.isEmpty()) return TxtChapterPreviewSource(source)
-    val rawLineEnd = source.indexOf('\n').let { if (it < 0) source.length else it }
-    val titleLineEnd = if (rawLineEnd > 0 && source[rawLineEnd - 1] == '\r') {
-        rawLineEnd - 1
-    } else {
-        rawLineEnd
-    }
+    val titleLineEnd = source.indexOfFirst { it == '\n' || it == '\r' }
+        .let { if (it < 0) source.length else it }
     val mappedTitle = chapter.title.takeIf { it.isNotBlank() } ?: return TxtChapterPreviewSource(source)
     val rawTitle = source.substring(0, titleLineEnd)
     if (rawTitle == mappedTitle) return TxtChapterPreviewSource(source)
