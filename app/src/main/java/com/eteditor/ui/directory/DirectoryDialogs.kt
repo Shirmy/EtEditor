@@ -68,7 +68,7 @@ internal fun AddVolumeDialog(
         add("0" to "书籍开头")
         controller.chapters.forEach { chapter ->
             val title = chapter.title.ifBlank { chapter.fileName.ifBlank { "\u65e0\u6807\u9898" } }
-            add(chapter.index.toString() to "鎻掑叆 $title 否")
+            add(chapter.index.toString() to "插入到 $title 之后")
         }
     }.distinctBy { it.first }
     val insertLabel = insertOptions.firstOrNull { it.first == insertIndexValue }?.second

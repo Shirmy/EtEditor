@@ -89,7 +89,7 @@ internal fun epubDirectoryRowHeight(showFileName: Boolean): Dp {
 }
 
 private fun directoryDisplayTitle(title: String): String {
-    val fallback = "(无标题"
+    val fallback = "(无标题)"
     return title
         .ifBlank { fallback }
         .replace(Regex("""(?i)<br\s*/?>"""), " ")

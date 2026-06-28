@@ -7,7 +7,6 @@ import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.HorizontalScrollView
-import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -54,6 +53,10 @@ internal enum class TxtFullEditWindowEdge {
 }
 
 private const val TXT_FULL_EDIT_WINDOW_EDGE_TRIGGER_PX = 1800
+
+// 正文加载分帧时序的保底超时（毫秒）：超过这个时间仍未走完逐帧链，就强制恢复显示，
+// 防止编辑器/预览卡在全透明、看不见正文的状态。
+private const val STABLE_LAYOUT_VISIBLE_FALLBACK_MS = 1000L
 private data class PreviewCodeEditorTag(
     val contentKey: Any,
     val configKey: Any
@@ -424,28 +427,21 @@ private class BodyReadOnlyTextActionWindow(
         val row = textActionButtonRow()
         actionButtons.forEach { row.removeView(it) }
         actionButtons.clear()
-        val weighted = row is LinearLayout
         actions.forEachIndexed { index, action ->
             val button = TextView(targetEditor.context).apply {
                 text = action.title
                 gravity = android.view.Gravity.CENTER
-                if (!weighted) {
-                    minWidth = (targetEditor.getDpUnit() * 52).roundToInt()
-                }
+                minWidth = (targetEditor.getDpUnit() * 52).roundToInt()
                 setPadding(
                     (targetEditor.getDpUnit() * 12).roundToInt(),
                     0,
                     (targetEditor.getDpUnit() * 12).roundToInt(),
                     0
                 )
-                layoutParams = if (weighted) {
-                    LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
-                } else {
-                    ViewGroup.MarginLayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-                }
+                layoutParams = ViewGroup.MarginLayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
                 setTextColor(
                     targetEditor.getColorScheme()
                         .getColor(io.github.rosemoe.sora.widget.schemes.EditorColorScheme.TEXT_ACTION_WINDOW_ICON_COLOR)
@@ -466,21 +462,12 @@ private class BodyReadOnlyTextActionWindow(
     }
 
     private fun textActionButtonRow(): ViewGroup {
+        // 仅取出第三方文本操作窗的按钮行容器用于追加按钮，不修改它的任何布局参数，
+        // 让按钮沿用第三方默认的横向排列（按钮多于视口宽度时可横向滑动）。
+        // 取不到内部容器时回退到根视图，确保按钮仍能显示、不会崩。
         val scrollView = getView().getChildAt(0) as? HorizontalScrollView
-        if (scrollView != null) {
-            // 让按钮行填满视口宽度，配合按钮 weight 均分，
-            // 三个按钮并排显示不被截断、无需横向滑动。
-            scrollView.isFillViewport = true
-            val row = scrollView.getChildAt(0) as? ViewGroup
-            if (row != null) {
-                row.layoutParams = android.widget.FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
-                return row
-            }
-        }
-        return getView()
+        val row = scrollView?.getChildAt(0) as? ViewGroup
+        return row ?: getView()
     }
 }
 
@@ -531,6 +518,25 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.setEditTextAfterStableLayou
 ) {
     alpha = 0f
     requestLayout()
+    var applied = false
+    val applyOnce = {
+        if (!applied) {
+            applied = true
+            alpha = 1f
+            onApplied()
+        }
+    }
+    // 保底防线：正常情况下由下面的逐帧链走到最内层触发 applyOnce()。万一这串
+    // “等下一帧”的步骤因时序意外在半路断开，这里到点兜底——补设内容并强制把
+    // 编辑器恢复可见，确保它不会停留在全透明、看不见正文的状态。
+    postDelayed({
+        if (previewContentKey() == contentKey && !applied) {
+            setText(text)
+            applyEditSelectionTarget(selectionTargetIndex)
+            scrollEditLineNearTop(scrollTargetLineIndex)
+            applyOnce()
+        }
+    }, STABLE_LAYOUT_VISIBLE_FALLBACK_MS)
     postWhenPreviewMeasured(contentKey) {
         requestLayout()
         postPreviewFrames(contentKey, 1) {
@@ -544,8 +550,7 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.setEditTextAfterStableLayou
                 scrollEditLineNearTop(scrollTargetLineIndex)
                 invalidate()
                 postPreviewFrames(contentKey, 2) {
-                    alpha = 1f
-                    onApplied()
+                    applyOnce()
                 }
             }
         }
@@ -744,6 +749,25 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.setPreviewTextAfterStableLa
 ) {
     alpha = 0f
     requestLayout()
+    var applied = false
+    val applyOnce = {
+        if (!applied) {
+            applied = true
+            alpha = 1f
+            onApplied()
+        }
+    }
+    // 保底防线：与可编辑器同理，分帧链中途断开时到点兜底，补设内容并强制恢复可见，
+    // 确保只读预览不会卡在全透明、看不见正文的状态。
+    postDelayed({
+        if (previewContentKey() == contentKey && !applied) {
+            setText(text)
+            rebuildPlainTextSoftWrap()
+            setSelection(0, 0, false)
+            applyPreviewHighlightOrScroll(highlightRange, scrollTargetOffset, scrollTargetLineIndex)
+            applyOnce()
+        }
+    }, STABLE_LAYOUT_VISIBLE_FALLBACK_MS)
     postWhenPreviewMeasured(contentKey) {
         requestLayout()
         postPreviewFrames(contentKey, 1) {
@@ -758,8 +782,7 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.setPreviewTextAfterStableLa
                 invalidate()
                 applyPreviewHighlightOrScroll(highlightRange, scrollTargetOffset, scrollTargetLineIndex)
                 postPreviewFrames(contentKey, 2) {
-                    alpha = 1f
-                    onApplied()
+                    applyOnce()
                 }
             }
         }

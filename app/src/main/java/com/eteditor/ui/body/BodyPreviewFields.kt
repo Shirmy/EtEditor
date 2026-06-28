@@ -122,7 +122,6 @@ internal fun BodyPreview(
     var bodyEditLayoutResult by remember(controller.documentSessionKey) { mutableStateOf<TextLayoutResult?>(null) }
     var modifiedEditTargetKeys by remember(controller.documentSessionKey) { mutableStateOf<Set<String>>(emptySet()) }
     var nativeBodyEditor by remember { mutableStateOf<io.github.rosemoe.sora.widget.CodeEditor?>(null) }
-    var bodyEditorFocused by remember { mutableStateOf(false) }
     val bodyFocusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val hostView = LocalView.current
@@ -698,7 +697,7 @@ internal fun BodyPreview(
                                     null
                                 },
                                 onEditorReady = { nativeBodyEditor = it },
-                                onFocusChanged = { bodyEditorFocused = it },
+                                onFocusChanged = { },
                                 onContentApplied = {
                                     editTargetOriginalText = textForBodyEditTarget(currentBodyEditTarget())
                                 },
@@ -724,7 +723,6 @@ internal fun BodyPreview(
                                     .focusRequester(bodyFocusRequester)
                                     .verticalScroll(editScrollState)
                                     .padding(end = 16.dp)
-                                    .onFocusChanged { bodyEditorFocused = it.isFocused }
                             )
                             ContentScrollbar(
                                 state = editScrollState,
