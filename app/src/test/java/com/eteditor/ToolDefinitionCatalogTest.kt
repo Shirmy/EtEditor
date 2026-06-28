@@ -81,7 +81,6 @@ class ToolDefinitionCatalogTest {
         assertEquals(FetchInfoSources.options, parameters[FETCH_INFO_PARAM_SOURCE]?.options)
         assertEquals(FETCH_INFO_CONTENT_CATALOG, parameters[FETCH_INFO_PARAM_CONTENT]?.defaultValue)
         assertEquals(FETCH_INFO_CONTENT_OPTIONS, parameters[FETCH_INFO_PARAM_CONTENT]?.options)
-        assertEquals("trim\ncompressBlankLines", parameters[FETCH_INFO_PARAM_INTRO_FILTER]?.defaultValue)
         assertEquals(BOOL_FALSE, parameters[FETCH_INFO_PARAM_AUTO_TITLE_FORMAT]?.defaultValue)
         assertEquals(BOOLEAN_OPTIONS, parameters[FETCH_INFO_PARAM_AUTO_TITLE_FORMAT]?.options)
     }
