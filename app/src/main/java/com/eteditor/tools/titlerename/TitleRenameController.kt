@@ -127,7 +127,10 @@ private suspend fun EditorController.applyTitleRenamePlanWithProgress(
         DocumentKind.Txt -> {
             if (warnTxtMoveChapterSyncPending("写回标题")) return 0
             val document = txt ?: return 0
-            applyRenamedTitlesToTxtWithProgress(document, changedTitles, ::detectCurrentTxtChapters, onProgress)
+            val count = applyRenamedTitlesToTxtWithProgress(document, changedTitles, ::detectCurrentTxtChapters, onProgress)
+            // 与"关预览直接执行"那条路径保持一致：写回标题后补跑一次目录自动净化(对应总报告第 81 项)。
+            applyTxtCatalogPurifyRulesAfterCatalogChange()
+            count
         }
         DocumentKind.None -> 0
     }
