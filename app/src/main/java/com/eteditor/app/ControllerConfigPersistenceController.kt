@@ -10,7 +10,7 @@ suspend fun EditorController.exportConfigTo(uri: Uri) = runBusy("导出配置") 
         .toString(2)
         .toByteArray(Charsets.UTF_8)
     writeDocumentBytes(appContext, uri, bytes)
-    statusMessage = "配置已导出：设置、主页默认、EPUB 预设/执行链、替换预设、TXT 书名/目录/净化规则、长短章提示、替换预设"
+    statusMessage = "配置已导出：设置、主页默认、EPUB 预设/执行链/替换预设、TXT 书名/目录/净化规则/长短章提示/替换预设"
 }
 
 suspend fun EditorController.importConfigFrom(uri: Uri) = runBusy("导入配置") {
@@ -166,8 +166,11 @@ private fun EditorController.txtChapterHintsConfigSnapshot(): TxtChapterHintsCon
 private fun EditorController.applyTxtChapterHintsConfig(config: TxtChapterHintsConfigSnapshot) {
     txtShortChapterHintEnabled = config.shortHintEnabled
     txtLongChapterHintEnabled = config.longHintEnabled
-    txtShortChapterThreshold = config.shortThreshold.coerceAtLeast(0)
-    txtLongChapterThreshold = config.longThreshold.coerceAtLeast(0)
+    val importedShort = config.shortThreshold.coerceAtLeast(0)
+    val importedLong = config.longThreshold.coerceAtLeast(0)
+    // 导入若把短/长章门槛填反了（短≥长），自动对调，避免长短章提示失去意义
+    txtShortChapterThreshold = minOf(importedShort, importedLong)
+    txtLongChapterThreshold = maxOf(importedShort, importedLong)
     txtChapterHintMode = config.txtChapterHintMode.takeIf { it in TXT_CHAPTER_HINT_MODES } ?: TXT_CHAPTER_HINT_MODE_AUTO
     settingsPreferences.saveTxtChapterHintSettings(
         shortHintEnabled = txtShortChapterHintEnabled,
