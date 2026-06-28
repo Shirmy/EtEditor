@@ -57,42 +57,6 @@ fun EditorController.runBuiltInTool(toolId: String, manual: Boolean = true): Boo
     return runConfiguredTool(builtInEditorTool(toolId), manual)
 }
 
-fun EditorController.applyPreparedFileRenamePlan(editorToolId: String): Boolean {
-    if (fileRenamePlanToolId != editorToolId || fileRenamePlan.isEmpty()) {
-        statusMessage = "\u6ca1\u6709\u53ef\u6267\u884c\u7684\u91cd\u547d\u540d\u8ba1\u5212"
-        return false
-    }
-    val changed = applyFileRenamePlan(fileRenamePlan)
-    if (changed <= 0) {
-        return false
-    }
-    return true
-}
-
-fun EditorController.applyPreparedTitleRenamePlan(toolId: String): Boolean {
-    if (titleRenamePlanToolId != toolId || titleRenamePlan.isEmpty()) {
-        statusMessage = "\u6ca1\u6709\u53ef\u6267\u884c\u7684\u6807\u9898\u8ba1\u5212"
-        return false
-    }
-    val changed = applyTitleRenamePlan(titleRenamePlan)
-    if (changed <= 0) {
-        return false
-    }
-    return true
-}
-
-fun EditorController.applyPreparedTitleFormatPlan(toolId: String): Boolean {
-    if (titleFormatPlanToolId != toolId || titleFormatPlan.isEmpty()) {
-        statusMessage = "\u6ca1\u6709\u53ef\u6267\u884c\u7684\u6807\u9898\u683c\u5f0f\u8ba1\u5212"
-        return false
-    }
-    val changed = applyTitleFormatPlan(titleFormatPlan)
-    if (changed <= 0) {
-        return false
-    }
-    return true
-}
-
 fun EditorController.runTool(toolId: String): Boolean {
     if (busy || kind == DocumentKind.None) return false
     if (!this.canRunToolInCurrentDocument(toolId)) {
