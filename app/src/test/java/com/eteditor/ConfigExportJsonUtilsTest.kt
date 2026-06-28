@@ -392,6 +392,106 @@ class ConfigExportJsonUtilsTest {
         assertEquals(emptyMap<String, String>(), (null as JSONObject?).toStringMap())
     }
 
+    @Test
+    fun parseSettingsConfigImportSwapsReversedShortLongThresholds() {
+        val current = settingsSnapshot().copy(
+            txtShortChapterThreshold = 2000,
+            txtLongChapterThreshold = 10000,
+            txtLongChapterHintEnabled = true
+        )
+        val result = parseSettingsConfigImport(
+            settings = JSONObject()
+                .put("txtShortChapterThreshold", 5000)
+                .put("txtLongChapterThreshold", 1000),
+            current = current,
+            prefKeys = prefKeys(),
+            leftPanelModes = setOf("catalog", "tools"),
+            rightPanelModes = setOf("preview", "log"),
+            txtRightPanelModes = setOf("preview", "search")
+        )
+
+        assertEquals(1000, result.snapshot.txtShortChapterThreshold)
+        assertEquals(5000, result.snapshot.txtLongChapterThreshold)
+        assertTrue(result.preferences.any {
+            it is SettingsPreferenceValue.IntValue && it.key == "txtShortChapterThreshold" && it.value == 1000
+        })
+        assertTrue(result.preferences.any {
+            it is SettingsPreferenceValue.IntValue && it.key == "txtLongChapterThreshold" && it.value == 5000
+        })
+        assertTrue(result.txtCatalogChanged)
+    }
+
+    @Test
+    fun parseSettingsConfigImportKeepsOrderedShortLongThresholds() {
+        val result = parseSettingsConfigImport(
+            settings = JSONObject()
+                .put("txtShortChapterThreshold", 800)
+                .put("txtLongChapterThreshold", 9000),
+            current = settingsSnapshot(),
+            prefKeys = prefKeys(),
+            leftPanelModes = setOf("catalog", "tools"),
+            rightPanelModes = setOf("preview", "log"),
+            txtRightPanelModes = setOf("preview", "search")
+        )
+
+        assertEquals(800, result.snapshot.txtShortChapterThreshold)
+        assertEquals(9000, result.snapshot.txtLongChapterThreshold)
+    }
+
+    @Test
+    fun parseSettingsConfigImportDoesNotSwapWhenEitherThresholdIsZero() {
+        val result = parseSettingsConfigImport(
+            settings = JSONObject()
+                .put("txtShortChapterThreshold", 5000)
+                .put("txtLongChapterThreshold", 0),
+            current = settingsSnapshot(),
+            prefKeys = prefKeys(),
+            leftPanelModes = setOf("catalog", "tools"),
+            rightPanelModes = setOf("preview", "log"),
+            txtRightPanelModes = setOf("preview", "search")
+        )
+
+        assertEquals(5000, result.snapshot.txtShortChapterThreshold)
+        assertEquals(0, result.snapshot.txtLongChapterThreshold)
+    }
+
+    @Test
+    fun txtChapterHintsImportMergeSwapsReversedThresholds() {
+        val current = TxtChapterHintsConfigSnapshot(
+            shortHintEnabled = true,
+            longHintEnabled = true,
+            shortThreshold = 1000,
+            longThreshold = 10000,
+            txtChapterHintMode = TXT_CHAPTER_HINT_MODE_AUTO
+        )
+        val merged = TxtChapterHintsConfigImport(
+            shortThreshold = 9000,
+            longThreshold = 1000
+        ).mergeWith(current)
+
+        assertEquals(1000, merged.shortThreshold)
+        assertEquals(9000, merged.longThreshold)
+    }
+
+    @Test
+    fun txtChapterHintsImportMergeKeepsOrderedThresholdsAndFallsBackToCurrent() {
+        val current = TxtChapterHintsConfigSnapshot(
+            shortHintEnabled = true,
+            longHintEnabled = true,
+            shortThreshold = 1000,
+            longThreshold = 10000,
+            txtChapterHintMode = TXT_CHAPTER_HINT_MODE_AUTO
+        )
+
+        val ordered = TxtChapterHintsConfigImport(shortThreshold = 800, longThreshold = 9000).mergeWith(current)
+        assertEquals(800, ordered.shortThreshold)
+        assertEquals(9000, ordered.longThreshold)
+
+        val partial = TxtChapterHintsConfigImport(shortThreshold = 5000).mergeWith(current)
+        assertEquals(5000, partial.shortThreshold)
+        assertEquals(10000, partial.longThreshold)
+    }
+
     private fun settingsSnapshot(): SettingsConfigSnapshot {
         return SettingsConfigSnapshot(
             leftRailExpanded = false,

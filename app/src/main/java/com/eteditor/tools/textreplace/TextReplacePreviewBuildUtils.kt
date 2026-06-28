@@ -171,3 +171,17 @@ internal fun textSearchFoundStatusMessage(results: List<TextSearchResult>): Stri
         textSearchFoundMessage(results.size)
     }
 }
+
+// 预览超限时的"全选"意图判定：某条规则展示已达上限（未展示全）且展示出来的匹配全部勾选，
+// 视为整条规则全要，交引擎按与预览相同口径扫全书替换以覆盖未展示部分；否则只按快照位置精确替换。
+internal fun replacementSelectionTriggersFullScan(
+    totalMatches: Int,
+    selectedMatches: Int,
+    maxMatches: Int,
+    findPatternNotEmpty: Boolean
+): Boolean {
+    return selectedMatches > 0 &&
+        selectedMatches == totalMatches &&
+        totalMatches >= maxMatches &&
+        findPatternNotEmpty
+}

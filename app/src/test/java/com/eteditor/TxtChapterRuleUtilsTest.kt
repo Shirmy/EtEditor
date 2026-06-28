@@ -153,4 +153,16 @@ class TxtChapterRuleUtilsTest {
             parseTxtChapterRuleItems(moveTxtChapterRuleModel(rulesText, 1, 0).rulesText).map { it.name }
         )
     }
+
+    @Test
+    fun txtChapterRuleIsDuplicatedDetectsIdenticalTripleAfterTrim() {
+        val items = parseTxtChapterRuleItems("章节\t^第(\\d+)章\t第{index}章\n番外\t^番外.*$\t")
+
+        assertTrue(txtChapterRuleIsDuplicated(items, name = "章节", pattern = "^第(\\d+)章", replacement = "第{index}章"))
+        assertTrue(txtChapterRuleIsDuplicated(items, name = " 章节 ", pattern = " ^第(\\d+)章 ", replacement = " 第{index}章 "))
+        assertFalse(txtChapterRuleIsDuplicated(items, name = "章节", pattern = "^第(\\d+)章", replacement = "别的"))
+        assertFalse(txtChapterRuleIsDuplicated(items, name = "章节", pattern = "^番外.*$", replacement = "第{index}章"))
+        assertFalse(txtChapterRuleIsDuplicated(items, name = "不存在", pattern = "^第(\\d+)章", replacement = "第{index}章"))
+        assertFalse(txtChapterRuleIsDuplicated(emptyList(), "章节", "^第(\\d+)章", ""))
+    }
 }

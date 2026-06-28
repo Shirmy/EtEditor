@@ -24,6 +24,22 @@ internal fun txtChapterRuleKey(item: TxtChapterRuleItem): String {
     return "${item.name.trim()}\u0000${item.pattern.trim()}\u0000${item.replacement.trim()}"
 }
 
+internal fun txtChapterRuleIsDuplicated(
+    items: List<TxtChapterRuleItem>,
+    name: String,
+    pattern: String,
+    replacement: String
+): Boolean {
+    val trimmedName = name.trim()
+    val trimmedPattern = pattern.trim()
+    val trimmedReplacement = replacement.trim()
+    return items.any { item ->
+        item.name.trim() == trimmedName &&
+            item.pattern.trim() == trimmedPattern &&
+            item.replacement.trim() == trimmedReplacement
+    }
+}
+
 internal fun activeTxtChapterPatternRules(
     config: TxtChapterDetectionConfig,
     enabledKeys: Set<String>

@@ -1,6 +1,7 @@
 package com.eteditor
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -107,6 +108,32 @@ class TextReplacePreviewBuildUtilsTest {
         assertEquals(REPLACEMENT_PREVIEW_MAX_MATCHES_PER_RULE, preview.multiRules.single().matches.size)
         assertEquals(emptyList<ReplacementPreviewRule>(), preview.singleRules)
         assertEquals(emptyList<ReplacementPreviewRule>(), preview.zeroRules)
+    }
+
+    @Test
+    fun replacementSelectionTriggersFullScanOnlyWhenAllMatchesSelectedAndLimitReached() {
+        assertTrue(replacementSelectionTriggersFullScan(
+            totalMatches = 50, selectedMatches = 50, maxMatches = 50, findPatternNotEmpty = true
+        ))
+        assertTrue(replacementSelectionTriggersFullScan(
+            totalMatches = 80, selectedMatches = 80, maxMatches = 50, findPatternNotEmpty = true
+        ))
+    }
+
+    @Test
+    fun replacementSelectionTriggersFullScanFalseForPartialSelectionOrUnderLimitOrEmptyFind() {
+        assertFalse(replacementSelectionTriggersFullScan(
+            totalMatches = 50, selectedMatches = 49, maxMatches = 50, findPatternNotEmpty = true
+        ))
+        assertFalse(replacementSelectionTriggersFullScan(
+            totalMatches = 30, selectedMatches = 30, maxMatches = 50, findPatternNotEmpty = true
+        ))
+        assertFalse(replacementSelectionTriggersFullScan(
+            totalMatches = 50, selectedMatches = 50, maxMatches = 50, findPatternNotEmpty = false
+        ))
+        assertFalse(replacementSelectionTriggersFullScan(
+            totalMatches = 50, selectedMatches = 0, maxMatches = 50, findPatternNotEmpty = true
+        ))
     }
 
     private fun parameters(): TextReplaceParameters {

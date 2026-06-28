@@ -135,9 +135,12 @@ suspend fun EditorController.applySelectedTextSearchResultsWithProgress(
             val rule = activeRules.getOrNull(ruleIndex) ?: continue
             val selectedResults = ruleResults.filter { it.id in resultIds }
             if (selectedResults.isEmpty()) continue
-            val fullySelected = selectedResults.size == ruleResults.size
-            val reachedPreviewLimit = ruleResults.size >= REPLACEMENT_PREVIEW_MAX_MATCHES_PER_RULE
-            if (fullySelected && reachedPreviewLimit && rule.find.isNotEmpty()) {
+            if (replacementSelectionTriggersFullScan(
+                    totalMatches = ruleResults.size,
+                    selectedMatches = selectedResults.size,
+                    maxMatches = REPLACEMENT_PREVIEW_MAX_MATCHES_PER_RULE,
+                    findPatternNotEmpty = rule.find.isNotEmpty()
+                )) {
                 engineRules += rule.copy(caseSensitive = false)
             } else {
                 selectedResults.forEach { result ->
@@ -296,9 +299,12 @@ suspend fun EditorController.applySelectedReplacementPreviewWithProgress(
     for (rule in preview.multiRules + preview.singleRules) {
         val selectedMatches = rule.matches.filter { it.id in matchIds }
         if (selectedMatches.isEmpty()) continue
-        val fullySelected = selectedMatches.size == rule.matches.size
-        val reachedPreviewLimit = rule.matches.size >= REPLACEMENT_PREVIEW_MAX_MATCHES_PER_RULE
-        if (fullySelected && reachedPreviewLimit && rule.pattern.isNotEmpty()) {
+        if (replacementSelectionTriggersFullScan(
+                totalMatches = rule.matches.size,
+                selectedMatches = selectedMatches.size,
+                maxMatches = REPLACEMENT_PREVIEW_MAX_MATCHES_PER_RULE,
+                findPatternNotEmpty = rule.pattern.isNotEmpty()
+            )) {
             engineRules += TextReplaceRule(
                 find = rule.pattern,
                 replacement = rule.replacement,

@@ -420,6 +420,66 @@ class EpubStructureUtilsTest {
         )
     }
 
+    @Test
+    fun rewriteEpubBodyLinksForRenamedPathsUpdatesCrossChapterLinksAndKeepsFragments() {
+        val linkedHtml = "<html><body><p>见<a href=\"Chapter0001.xhtml#note\">注释</a>与<a href='Chapter0001.xhtml'>无锚点</a></p></body></html>"
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章", linkedHtml)
+            )
+        )
+        val renamedPaths = mapOf("oebps/text/chapter0001.xhtml" to "OEBPS/Text/Chapter0009.xhtml")
+
+        rewriteEpubBodyLinksForRenamedPaths(book, renamedPaths)
+
+        assertTrue(book.chapters[1].html.contains("Chapter0009.xhtml#note"))
+        assertFalse(book.chapters[1].html.contains("Chapter0001.xhtml#note"))
+        assertTrue(book.chapters[1].html.contains("Chapter0009.xhtml'>无锚点"))
+        val entryText = String(book.entries.getValue("OEBPS/Text/Chapter0002.xhtml"), StandardCharsets.UTF_8)
+        assertTrue(entryText.contains("Chapter0009.xhtml#note"))
+    }
+
+    @Test
+    fun rewriteEpubBodyLinksForRenamedPathsSkipsExternalLinksAndPureAnchors() {
+        val html = "<html><body><a href=\"https://example.com\">外链</a><a href=\"#section\">纯锚点</a><a href=\"mailto:x@y.com\">邮件</a></body></html>"
+        val book = sampleBook(listOf(chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章", html)))
+        val originalHtml = book.chapters[0].html
+
+        rewriteEpubBodyLinksForRenamedPaths(book, mapOf("oebps/text/chapter0001.xhtml" to "OEBPS/Text/Chapter0009.xhtml"))
+
+        assertEquals(originalHtml, book.chapters[0].html)
+    }
+
+    @Test
+    fun rewriteEpubBodyLinksForRenamedPathsLeavesUnrelatedLinksUnchanged() {
+        val html = "<html><body><a href=\"Other.xhtml\">其他文件</a></body></html>"
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章", html)
+            )
+        )
+        val originalEntry = book.entries.getValue("OEBPS/Text/Chapter0002.xhtml").toList()
+
+        rewriteEpubBodyLinksForRenamedPaths(book, mapOf("oebps/text/chapter0001.xhtml" to "OEBPS/Text/Chapter0009.xhtml"))
+
+        assertEquals(html, book.chapters[1].html)
+        assertEquals(originalEntry, book.entries.getValue("OEBPS/Text/Chapter0002.xhtml").toList())
+    }
+
+    @Test
+    fun rewriteEpubBodyLinksForRenamedPathsResolvesRelativeUpDirectoryLinks() {
+        val html = "<html><body><a href=\"../Notes/appendix.xhtml\">附录</a></body></html>"
+        val book = sampleBook(listOf(chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章", html)))
+        val renamedPaths = mapOf("oebps/notes/appendix.xhtml" to "OEBPS/Notes/endnotes.xhtml")
+
+        rewriteEpubBodyLinksForRenamedPaths(book, renamedPaths)
+
+        assertTrue(book.chapters[0].html.contains("../Notes/endnotes.xhtml"))
+        assertFalse(book.chapters[0].html.contains("../Notes/appendix.xhtml"))
+    }
+
     private fun sampleBook(chapters: List<EpubChapter>): EpubBook {
         val entries = linkedMapOf<String, ByteArray>()
         val manifest = mutableMapOf<String, ManifestItem>()

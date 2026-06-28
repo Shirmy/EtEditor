@@ -37,11 +37,12 @@ fun EditorController.addTxtChapterRule(
     if (!validateTxtChapterRulePattern(nextPattern)) return false
     val nextName = name.trim()
     val nextReplacement = replacement.trim()
-    val duplicated = parseTxtChapterRuleItems(txtChapterRulesText).any { item ->
-        item.name.trim() == nextName &&
-            item.pattern.trim() == nextPattern &&
-            item.replacement.trim() == nextReplacement
-    }
+    val duplicated = txtChapterRuleIsDuplicated(
+        items = parseTxtChapterRuleItems(txtChapterRulesText),
+        name = nextName,
+        pattern = nextPattern,
+        replacement = nextReplacement
+    )
     if (duplicated) {
         statusMessage = "请不要重复输入"
         return false
