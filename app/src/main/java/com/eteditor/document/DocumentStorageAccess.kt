@@ -49,8 +49,11 @@ internal fun rememberWritableDocumentUri(context: Context, uri: Uri) {
 }
 
 // 系统对每个应用能长期登记多少个"以后还能再访问这个文件"的凭证有上限，只增不减会积满；
-// 到顶后新登记会悄悄失败。这里在登记新文件前先看是否接近软上限，接近就把最久没再打开过的
-// 旧凭证回收掉、留出余量；正在用的（刚登记过=最新的，以及本次要登记的 keep）不会被回收。
+// 到顶后新登记会悄悄失败。这里在登记新文件前先看是否接近软上限，接近就把最早授权的
+// 旧凭证回收掉、留出余量；正在用的（本次要登记的 keep）不会被回收。
+// 注意：系统只提供"授权时间"(persistedTime)，不提供"最近使用时间"；因此回收的是
+// "授权最早"而非"最久没用"——经常打开但授权得早的文件可能先被回收。仅在持有约百个
+// 以上时触发，普通使用碰不到；日后若有需要再自行维护"最近使用时间"实现真正的 LRU。
 internal fun pruneOldPersistedUriPermissions(context: Context, keep: Uri) {
     runCatching {
         val resolver = context.contentResolver

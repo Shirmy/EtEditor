@@ -37,13 +37,16 @@ private fun EditorController.commitFetchInfoIntroRules(newIntroFilter: String) {
     )
     persistFetchInfoIntroRulesToDisk("fetch_info", newIntroFilter)
     controllerScope.launch {
-        val (filtered, issues) = withContext(Dispatchers.Default) {
-            FetchInfoFilter.apply(rawSnapshot, nextParameters)
-        }
-        // 只有当前预览仍是同一次抓取、且参数未被更晚的编辑覆盖时才回填，避免旧结果盖掉新结果。
-        val current = fetchInfoPreview
-        if (current != null && current.raw === rawSnapshot && current.parameters == nextParameters) {
-            fetchInfoPreview = current.copy(filtered = filtered, filterIssues = issues)
+        try {
+            val (filtered, issues) = withContext(Dispatchers.Default) {
+                FetchInfoFilter.apply(rawSnapshot, nextParameters)
+            }
+            // 只有当前预览仍是同一次抓取、且参数未被更晚的编辑覆盖时才回填，避免旧结果盖掉新结果。
+            val current = fetchInfoPreview
+            if (current != null && current.raw === rawSnapshot && current.parameters == nextParameters) {
+                fetchInfoPreview = current.copy(filtered = filtered, filterIssues = issues)
+            }
+        } finally {
             fetchInfoFiltering = false
         }
     }
