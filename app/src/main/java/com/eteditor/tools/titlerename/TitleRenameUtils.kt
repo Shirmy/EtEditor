@@ -193,8 +193,15 @@ private fun titleRenameSourceTitleModel(
     }
 }
 
+// 抽取页面里 h1/h2 标题用的匹配规则编译一次、复用:用"按标题匹配"挑章节时,电子书会逐章调用
+// 此函数,若每次重新构造正则会平白增加开销(对应总报告第 80 项)。
+private val h1h2TitleRegex = Regex(
+    """<(h[12])\b[^>]*>(.*?)</\1>""",
+    setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+)
+
 internal fun extractH1H2Titles(html: String): List<String> {
-    return Regex("""<(h[12])\b[^>]*>(.*?)</\1>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+    return h1h2TitleRegex
         .findAll(html)
         .map { match -> ChapterDetector.cleanTitle(ChapterDetector.stripHtml(match.groupValues[2])) }
         .filter { it.isNotBlank() }

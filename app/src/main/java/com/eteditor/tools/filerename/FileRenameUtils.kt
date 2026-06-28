@@ -41,6 +41,11 @@ internal fun renderTemplate(
     )
 }
 
+// 命名格式里的编号占位符匹配规则编译一次、整批复用：批量改名时这个函数每章都会调用一次，
+// 若每次都重新构造正则会平白增加大书的后台开销(对应总报告第 80 项,与第 11/75 项同源)。
+private val fileNameLowerSequenceRegex = Regex("""\{z(\d+)(?:[:：]([^}]+))?\}""")
+private val fileNameUpperSequenceRegex = Regex("""\{Z(\d+)(?:[:：]([^}]+))?\}""")
+
 internal fun applyTemplatePlaceholders(
     pattern: String,
     index: Int,
@@ -59,7 +64,7 @@ internal fun applyTemplatePlaceholders(
     val sequence = (templateStart ?: 0) + sequenceIndex * (templateStep ?: 1)
     val sequenceText = sequence.toString()
     val paddedSequence = sequenceText.padStart(templateDigits ?: 4, '0')
-    val withFixedZeroIndex = Regex("""\{z(\d+)(?:[:：]([^}]+))?\}""").replace(pattern) { match ->
+    val withFixedZeroIndex = fileNameLowerSequenceRegex.replace(pattern) { match ->
         val width = match.groupValues[1].toIntOrNull()?.coerceIn(1, 12) ?: 4
         val startToken = match.groupValues.getOrNull(2)?.trim().orEmpty()
         val startAt = when {
@@ -70,7 +75,7 @@ internal fun applyTemplatePlaceholders(
         }
         (startAt + sequenceIndex * (templateStep ?: 1)).toString().padStart(width, '0')
     }
-    val withUpperSequence = Regex("""\{Z(\d+)(?:[:：]([^}]+))?\}""").replace(withFixedZeroIndex) { match ->
+    val withUpperSequence = fileNameUpperSequenceRegex.replace(withFixedZeroIndex) { match ->
         val width = match.groupValues[1].toIntOrNull()?.coerceIn(0, 12) ?: 0
         val startToken = match.groupValues.getOrNull(2)?.trim().orEmpty()
         val startAt = when {
