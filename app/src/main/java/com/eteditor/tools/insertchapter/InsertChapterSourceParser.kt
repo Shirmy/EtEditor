@@ -71,9 +71,7 @@ internal fun parseInsertSourceEpub(sourceUri: String, name: String, bytes: ByteA
     val importableChapters = book.chapters.filterNot { chapter -> chapter.isCoverSection0001Or0002() }
     val chapters = importableChapters.mapIndexed { index, chapter ->
         val body = ChapterDetector.extractBodyMarkup(chapter.html)
-        val nextLevel = importableChapters.getOrNull(index + 1)?.tocLevel ?: chapter.tocLevel
-        val inferredVolume = chapter.isVolumeChapter() ||
-            (chapter.tocLevel == 0 && nextLevel > chapter.tocLevel && chapter.wordCount <= 200)
+        val inferredVolume = chapter.isVolumeChapter()
         InsertableChapter(
             sourceIndex = index,
             title = chapter.title.ifBlank { chapter.path.substringAfterLast('/').substringBeforeLast('.') },
