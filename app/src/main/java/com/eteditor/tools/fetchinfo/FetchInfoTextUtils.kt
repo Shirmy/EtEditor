@@ -158,11 +158,18 @@ internal fun String.decodeHtmlEntities(): String {
         .replace("&quot;", "\"")
         .replace("&#39;", "'")
         .replace(Regex("""&#(\d+);""")) { match ->
-            match.groupValues[1].toIntOrNull()?.let { code -> runCatching { code.toChar().toString() }.getOrNull() }.orEmpty()
+            match.groupValues[1].toIntOrNull()?.let { code -> decodeNumericCharacterReference(code) }.orEmpty()
         }
         .replace(Regex("""&#x([0-9A-Fa-f]+);""")) { match ->
-            match.groupValues[1].toIntOrNull(16)?.let { code -> runCatching { code.toChar().toString() }.getOrNull() }.orEmpty()
+            match.groupValues[1].toIntOrNull(16)?.let { code -> decodeNumericCharacterReference(code) }.orEmpty()
         }
+}
+
+// 把网页里的数字字符引用（十进制 &#NNN; / 十六进制 &#xNNN;）还原成文字。
+// 用完整码点转换，支持超出基本平面的字符（如表情、生僻字）；旧写法用 16 位 char 截断，
+// 超过 U+FFFF 的码点会还原成乱码。非法码点直接丢弃。
+private fun decodeNumericCharacterReference(code: Int): String {
+    return if (Character.isValidCodePoint(code)) String(Character.toChars(code)) else ""
 }
 
 private val FETCH_INFO_CHAPTER_PREFIX_REGEX = Regex(
