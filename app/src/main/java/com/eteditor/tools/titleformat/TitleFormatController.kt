@@ -137,7 +137,8 @@ private suspend fun EditorController.applyTitleFormatPlanWithProgress(
     yield()
     val changed = when (kind) {
         DocumentKind.Epub -> {
-            val book = epub ?: return 0
+            val source = epub ?: return 0
+            val book = source.mutableDeepCopy()
             var changedCount = 0
             for ((index, pair) in renderedByIndex.withIndex()) {
                 val (chapterIndex, rendered) = pair
@@ -147,6 +148,7 @@ private suspend fun EditorController.applyTitleFormatPlanWithProgress(
                 onProgress(index + 1, total)
                 yield()
             }
+            if (changedCount > 0) epub = book
             changedCount
         }
         DocumentKind.Txt -> {
@@ -193,8 +195,11 @@ private suspend fun EditorController.applyTitleFormatPlanWithProgress(
 }
 
 private fun EditorController.applyEpubTitleFormats(renderedByIndex: List<Pair<Int, TitleFormatRendered>>): Int {
-    val book = epub ?: return 0
-    return applyEpubTitleFormatsToBook(book, renderedByIndex)
+    val source = epub ?: return 0
+    val book = source.mutableDeepCopy()
+    val changed = applyEpubTitleFormatsToBook(book, renderedByIndex)
+    if (changed > 0) epub = book
+    return changed
 }
 
 private fun EditorController.applyTxtTitleFormats(renderedByIndex: List<Pair<Int, TitleFormatRendered>>): Int {
