@@ -25,6 +25,7 @@ internal fun buildTextReplaceSearchResultsForRules(
             caseSensitive = false,
             ruleIndex = index,
             idPrefix = "rule-$index",
+            maxMatches = REPLACEMENT_PREVIEW_MAX_MATCHES_PER_RULE,
             resolveLocation = resolveLocation
         )
     }
@@ -154,4 +155,19 @@ internal fun replacementFilePreviewFromRules(
         scannedRuleCount = rules.size,
         previewLimitReached = previewLimitReached
     )
+}
+
+internal fun textSearchPreviewLimitReached(results: List<TextSearchResult>): Boolean {
+    if (results.isEmpty()) return false
+    return results.groupingBy { it.ruleIndex }
+        .eachCount()
+        .any { it.value >= REPLACEMENT_PREVIEW_MAX_MATCHES_PER_RULE }
+}
+
+internal fun textSearchFoundStatusMessage(results: List<TextSearchResult>): String {
+    return if (textSearchPreviewLimitReached(results)) {
+        "命中较多，每条规则仅显示前 $REPLACEMENT_PREVIEW_MAX_MATCHES_PER_RULE 处；点“全选”执行会替换全部"
+    } else {
+        textSearchFoundMessage(results.size)
+    }
 }

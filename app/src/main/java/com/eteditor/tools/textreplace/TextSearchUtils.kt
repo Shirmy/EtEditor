@@ -43,8 +43,10 @@ internal fun buildTextSearchResults(
     caseSensitive: Boolean,
     ruleIndex: Int,
     idPrefix: String = "rule-0",
+    maxMatches: Int = Int.MAX_VALUE,
     resolveLocation: (Int, Int, Int, String) -> TextSearchResultLocation
 ): List<TextSearchResult> {
+    if (maxMatches <= 0) return emptyList()
     // 每条规则的正则只编译一次，复用到所有 source（不改匹配结果，只省掉逐章重复编译）
     val regex = if (rule.regex) {
         val options = if (caseSensitive) emptySet<RegexOption>() else setOf(RegexOption.IGNORE_CASE)
@@ -53,13 +55,16 @@ internal fun buildTextSearchResults(
         null
     }
     val results = mutableListOf<TextSearchResult>()
-    sources.forEach { source ->
+    for (source in sources) {
+        if (results.size >= maxMatches) break
         val matches = if (regex != null) {
             regexSearchRanges(source.text, regex)
         } else {
             plainSearchRanges(source.text, rule.find, caseSensitive)
         }
-        matches.forEachIndexed { matchIndex, (start, end) ->
+        for ((matchIndex, range) in matches.withIndex()) {
+            if (results.size >= maxMatches) break
+            val (start, end) = range
             val context = searchContext(source.text, start, end)
             val absoluteStart = source.sourceOffset + start
             val absoluteEnd = source.sourceOffset + end

@@ -124,36 +124,65 @@ suspend fun EditorController.applySelectedTextSearchResultsWithProgress(
     val activeRules = textReplaceRules(parameters)
         ?.filter { it.enabled && it.find.isNotEmpty() }
         ?: return false
-    val selectedResults = textSearchResults.filter { result -> result.id in resultIds }
-    val total = (selectedResults.size + 1).coerceAtLeast(1)
-    onProgress(0, total)
-    yield()
-    val plans = try {
-        val builtPlans = mutableListOf<ReplacementMatchPlan>()
-        for ((index, result) in selectedResults.withIndex()) {
-            val rule = activeRules.getOrNull(result.ruleIndex)
-            if (rule != null) {
-                builtPlans += ReplacementMatchPlan(
-                    chapterIndex = result.chapterIndex,
-                    sourceStart = result.sourceStart,
-                    sourceEnd = result.sourceEnd,
-                    replacementText = singleMatchReplacement(result.matchText, rule, caseSensitive = false)
-                )
+    // 勾选意图按「规则」判定（与 .replacement 分组预览一致）：
+    // 某条规则展示已达预览上限(未展示全)且展示出来的匹配全部勾选 -> 视为整条规则全要，
+    // 交引擎按与预览相同口径(忽略大小写、保留仅文本)扫全书替换，覆盖未展示的部分；
+    // 其余(未达上限，或仅勾选部分) -> 只按预览快照里被勾选的位置精确替换，不误碰未展示内容。
+    val engineRules = mutableListOf<TextReplaceRule>()
+    val plans = mutableListOf<ReplacementMatchPlan>()
+    try {
+        for ((ruleIndex, ruleResults) in textSearchResults.groupBy { it.ruleIndex }) {
+            val rule = activeRules.getOrNull(ruleIndex) ?: continue
+            val selectedResults = ruleResults.filter { it.id in resultIds }
+            if (selectedResults.isEmpty()) continue
+            val fullySelected = selectedResults.size == ruleResults.size
+            val reachedPreviewLimit = ruleResults.size >= REPLACEMENT_PREVIEW_MAX_MATCHES_PER_RULE
+            if (fullySelected && reachedPreviewLimit && rule.find.isNotEmpty()) {
+                engineRules += rule.copy(caseSensitive = false)
+            } else {
+                selectedResults.forEach { result ->
+                    plans += ReplacementMatchPlan(
+                        chapterIndex = result.chapterIndex,
+                        sourceStart = result.sourceStart,
+                        sourceEnd = result.sourceEnd,
+                        replacementText = singleMatchReplacement(result.matchText, rule, caseSensitive = false)
+                    )
+                }
             }
-            onProgress(index + 1, total)
-            yield()
         }
-        builtPlans
     } catch (error: IllegalArgumentException) {
         statusMessage = textReplaceRegexErrorMessage(error)
         return false
     }
-    if (plans.isEmpty()) {
+    if (plans.isEmpty() && engineRules.isEmpty()) {
         statusMessage = "没有勾选可替换内容"
         return false
     }
+    val total = (plans.size + engineRules.size + 1).coerceAtLeast(1)
+    var completed = 0
+    onProgress(completed, total)
+    yield()
     applyDeferredTxtTextReplacementRefresh()
-    val applied = applyReplacementMatchPlans(plans)
+    var applied = 0
+    // 先按快照位置替换(从后往前互不影响)，再让引擎在替换后的文本上扫全书补齐超限规则
+    if (plans.isNotEmpty()) {
+        applied += applyReplacementMatchPlans(plans)
+        completed += plans.size
+        onProgress(completed.coerceAtMost(total), total)
+        yield()
+    }
+    if (engineRules.isNotEmpty()) {
+        val result = try {
+            replaceWithParametersAsync(effectiveTextReplaceParameters(tool), engineRules)
+        } catch (error: IllegalArgumentException) {
+            statusMessage = textReplaceRegexErrorMessage(error)
+            return false
+        }
+        applied += result.replacements
+        completed += engineRules.size
+        onProgress(completed.coerceAtMost(total), total)
+        yield()
+    }
     if (applied <= 0) {
         statusMessage = "选中内容已无法替换，请重新预览"
         return false
@@ -480,7 +509,7 @@ internal fun EditorController.runTextReplaceTool(tool: EditorTool, manual: Boole
         textSearchToolId = tool.id
         textSearchResults = results
         clearPreviewHighlight()
-        statusMessage = textSearchFoundMessage(results.size)
+        statusMessage = textSearchFoundStatusMessage(results)
         if (manual) return true
         statusMessage = needsConfirmationMessage()
         return false
@@ -552,7 +581,7 @@ internal suspend fun EditorController.runTextReplaceToolAsync(tool: EditorTool, 
         textSearchToolId = tool.id
         textSearchResults = results
         clearPreviewHighlight()
-        statusMessage = textSearchFoundMessage(results.size)
+        statusMessage = textSearchFoundStatusMessage(results)
         if (manual) return true
         statusMessage = needsConfirmationMessage()
         return false
@@ -819,9 +848,17 @@ private suspend fun EditorController.buildTextSearchResultsWithProgress(
             onProgress("加载预览", completed, total)
             yield()
         } else {
+            var ruleMatchCount = 0
             for (source in sources) {
                 currentCoroutineContext().ensureActive()
+                if (ruleMatchCount >= REPLACEMENT_PREVIEW_MAX_MATCHES_PER_RULE) {
+                    completed += 1
+                    onProgress("加载预览", completed, total)
+                    yield()
+                    continue
+                }
                 val resolveLocation = textSearchResultLocationResolverSnapshot()
+                val remaining = REPLACEMENT_PREVIEW_MAX_MATCHES_PER_RULE - ruleMatchCount
                 val chunk = withContext(Dispatchers.Default) {
                     currentCoroutineContext().ensureActive()
                     buildTextSearchResults(
@@ -830,10 +867,12 @@ private suspend fun EditorController.buildTextSearchResultsWithProgress(
                         caseSensitive = false,
                         ruleIndex = index,
                         idPrefix = "rule-$index",
+                        maxMatches = remaining,
                         resolveLocation = resolveLocation
                     )
                 }
                 results += chunk
+                ruleMatchCount += chunk.size
                 completed += 1
                 onProgress("加载预览", completed, total)
                 yield()
