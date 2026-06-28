@@ -247,15 +247,9 @@ object ChapterDetector {
     }
 
     fun cleanTitle(raw: String): String {
-        var title = raw
+        val title = raw
             .replace('\u3000', ' ')
             .replace(Regex("""\s+"""), " ")
-            .trim()
-
-        title = title
-            .replace(Regex("""^[【\[]?(正文|目录|章节)[】\]]?\s*[:：-]?\s*"""), "")
-            .replace(Regex("""\[(VIP|番外|福利番外|作话锁|锁|本章节已锁定)]""", RegexOption.IGNORE_CASE), "")
-            .replace(Regex("""（(VIP|番外|福利番外|作话锁|锁|本章节已锁定)）""", RegexOption.IGNORE_CASE), "")
             .trim()
 
         val numericPrefix = Regex("""^(\d{1,5})\s*[、.．]\s*(.+)${'$'}""").find(title)
