@@ -47,7 +47,7 @@ class TextReplaceMessageUtilsTest {
     @Test
     fun noMatchMessageExplainsSourceHtmlTagSearch() {
         assertEquals(
-            "没有对应的标签",
+            "无匹配内容",
             textReplaceNoMatchMessage(
                 documentKind = DocumentKind.Epub,
                 currentStatusMessage = "",
@@ -173,7 +173,7 @@ class TextReplaceMessageUtilsTest {
     @Test
     fun noMatchMessageUsesFirstNonBlankRuleBeforeParameterText() {
         assertEquals(
-            "没有对应的标签",
+            "无匹配内容",
             textReplaceNoMatchMessage(
                 documentKind = DocumentKind.Epub,
                 currentStatusMessage = "",

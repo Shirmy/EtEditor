@@ -25,18 +25,7 @@ internal fun textReplaceNoMatchMessage(
     }
     if (scopedMessage != null) return scopedMessage
 
-    val firstRule = rules.firstOrNull { it.find.isNotEmpty() }
-    val findText = firstRule?.find
-        ?: parameters?.findText.orEmpty()
-    val looksLikeHtmlTag = Regex("""</?\w+[^>]*>""").containsMatchIn(findText)
-    if (documentKind == DocumentKind.Epub &&
-        parameters?.target == TEXT_REPLACE_TARGET_SOURCE &&
-        looksLikeHtmlTag
-    ) {
-        return "没有对应的标签"
-    }
-    if (documentKind == DocumentKind.Epub && parameters?.scope == TOOL_SCOPE_ALL) {
-        return "无匹配内容"
-    }
+    // 其余各种"确实没匹配到"（含搜网页标签没找到）统一显示"无匹配内容"；
+    // 上面那种"范围/规则本身有问题"的提示不是"没匹配"，已在前面原样保留。
     return "无匹配内容"
 }
