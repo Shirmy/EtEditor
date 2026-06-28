@@ -180,7 +180,7 @@ class TitleRenameUtilsTest {
 
         assertEquals("", result.message)
         assertEquals(listOf(1), result.plan.map { it.chapterIndex })
-        assertEquals(listOf("重命名01 第2章 命中标题"), result.plan.map { it.newTitle })
+        assertEquals(listOf("重命名01 命中标题"), result.plan.map { it.newTitle })
     }
 
     @Test

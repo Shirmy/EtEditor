@@ -38,6 +38,13 @@ internal fun titleRenameScopeLabel(
         ?: options.firstOrNull()?.second.orEmpty()
 }
 
+// Strips an existing leading chapter designation ("第X章/节/回/卷/部/集", or a "数字、" prefix) from a
+// title so that "保留后缀" keeps only the meaningful part. Without this, re-numbering a title that
+// already begins with "第X章" stacks the numbers (e.g. "第1章 第1章 寒夜").
+private val titleRenameExistingNumberPrefixRegex = Regex(
+    """^(?:第\s*[零〇一二两三四五六七八九十百千万亿壹贰叁肆伍陆柒捌玖拾佰仟0-9０-９]{1,12}\s*[章节回卷部集]|[0-9]{1,5}\s*[、.．])\s*(.*)${'$'}"""
+)
+
 internal fun buildTitleRenamePlanItems(
     parameters: TitleRenameParameters,
     targetIndices: List<Int>,
@@ -53,7 +60,7 @@ internal fun buildTitleRenamePlanItems(
     val containsTitle = pattern.contains("{title}")
     return targetIndices.mapIndexed { offset, chapterIndex ->
         val oldTitle = sourceTitle(chapterIndex)
-        val suffix = titleRenameSuffix(oldTitle, null)
+        val suffix = titleRenameSuffix(oldTitle, titleRenameExistingNumberPrefixRegex)
         val prefix = applyTemplatePlaceholders(
             pattern = pattern,
             index = offset,
