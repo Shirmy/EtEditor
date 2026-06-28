@@ -640,13 +640,17 @@ private suspend fun EditorController.applyFetchedInfoToEpub(
     deletes: Set<Int> = emptySet(),
     onProgress: (phase: String, completed: Int, total: Int) -> Unit = { _, _, _ -> }
 ): FetchInfoWriteResult {
-    val book = epub ?: error("没有 EPUB 可应用")
+    val sourceBook = epub ?: error("没有 EPUB 可应用")
+    // 先在副本上完成全部写入（标题、简介、封面），全部成功后再整体替换当前书；
+    // 中途任何一步抛错都不会改到原书，避免留下半成品。
+    val book = sourceBook.mutableDeepCopy()
     val parameters = preview.parameters
     val info = if (filterActive) preview.filtered else preview.raw
     var catalogChanged = 0
     var introWritten = false
     var coverWritten = false
     var coverError = ""
+    var touchedCurrentChapter = false
     val total = listOf(
         parameters.writeCatalog && info.catalog.isNotEmpty(),
         parameters.writeIntro && info.intro.isNotBlank(),
@@ -667,7 +671,7 @@ private suspend fun EditorController.applyFetchedInfoToEpub(
             onError = { message -> statusMessage = message }
         )
         catalogChanged = catalogResult.changed
-        if (catalogResult.touchedCurrentChapter) refreshPreview()
+        touchedCurrentChapter = catalogResult.touchedCurrentChapter
         completed += 1
         onProgress("应用目录", completed, total)
         yield()
@@ -713,6 +717,10 @@ private suspend fun EditorController.applyFetchedInfoToEpub(
         onProgress("应用封面", completed, total)
         yield()
     }
+
+    // 全部写入完成、未抛异常，才把副本整体替换为当前书，并按需刷新当前章预览。
+    epub = book
+    if (touchedCurrentChapter) refreshPreview()
 
     return FetchInfoWriteResult(
         catalogChanged = catalogChanged,
