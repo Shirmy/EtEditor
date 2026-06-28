@@ -10,7 +10,8 @@ data class GeneratedCoverPreview(
     val bytes: ByteArray,
     val mediaType: String,
     val width: Int,
-    val height: Int
+    val height: Int,
+    val convertedFromMediaType: String? = null
 )
 
 internal data class CoverTitleLayout(

@@ -43,6 +43,16 @@ internal fun coverFileNameForMediaType(mediaType: String): String {
     }
 }
 
+internal fun coverMediaTypeLabel(mediaType: String): String {
+    return when (mediaType) {
+        "image/jpeg" -> "JPG"
+        "image/png" -> "PNG"
+        "image/webp" -> "WebP"
+        "image/gif" -> "GIF"
+        else -> mediaType.substringAfter('/').uppercase().ifBlank { "图片" }
+    }
+}
+
 internal fun buildInsertedCoverPreviewFromImageBytes(
     bytes: ByteArray,
     displayName: String,
@@ -68,7 +78,8 @@ internal fun buildInsertedCoverPreviewFromImageBytes(
         bytes = prepared.bytes,
         mediaType = prepared.mediaType,
         width = prepared.width,
-        height = prepared.height
+        height = prepared.height,
+        convertedFromMediaType = if (prepared.mediaType != mediaType) mediaType else null
     )
 }
 

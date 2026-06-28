@@ -25,7 +25,8 @@ internal fun EditorController.runConfiguredTool(tool: EditorTool, manual: Boolea
         return runTitleFormatTool(tool, manual)
     }
     if (tool.toolId == "generate_cover") {
-        return runCoverTool(tool)
+        statusMessage = needsConfirmationMessage()
+        return false
     }
     if (tool.toolId == "fetch_info") {
         statusMessage = needsConfirmationMessage()
@@ -113,7 +114,8 @@ fun EditorController.runTool(toolId: String): Boolean {
             runTitleFormatTool(builtInEditorTool(toolId), manual = false)
         }
         "generate_cover" -> {
-            runCoverTool(builtInEditorTool(toolId))
+            statusMessage = needsConfirmationMessage()
+            false
         }
         "fetch_info" -> {
             statusMessage = needsConfirmationMessage()

@@ -58,7 +58,9 @@ suspend fun EditorController.prepareInsertedCoverPreview(
             buildInsertedCoverPreviewFromUri(appContext.contentResolver, uri, compress)
         }
         generatedCoverPreview = preview
-        statusMessage = "\u5c01\u9762\u56fe\u7247\u5df2\u9009\u62e9"
+        statusMessage = preview.convertedFromMediaType?.let { from ->
+            "封面图片已选择（原 ${coverMediaTypeLabel(from)} 压缩后转为 ${coverMediaTypeLabel(preview.mediaType)}）"
+        } ?: "封面图片已选择"
         true
     } catch (error: Throwable) {
         generatedCoverPreview = null
@@ -73,40 +75,6 @@ fun EditorController.applyGeneratedCoverPreview(): Boolean {
         return false
     }
     return writeCoverPreview(preview, "\u5c01\u9762\u5df2\u5199\u5165 EPUB")
-}
-
-internal fun EditorController.runCoverTool(tool: EditorTool): Boolean {
-    if (kind != DocumentKind.Epub) {
-        statusMessage = "\u56fe\u7247\u5904\u7406\u4ec5\u652f\u6301 EPUB"
-        return false
-    }
-    val parameters = coverParameters(tool)
-    if (parameters.mode == COVER_MODE_IMAGE_INSERT) {
-        return insertImageResourceIntoEpub(parameters)
-    }
-    return try {
-        val result = buildCoverPreviewForTool(
-            assets = appContext.assets,
-            contentResolver = appContext.contentResolver,
-            parameters = parameters,
-            defaultTitle = defaultCoverTitle()
-        )
-        if (!result.success) {
-            if (result.message.isNotBlank()) statusMessage = result.message
-            return false
-        }
-        val preview = result.preview ?: return false
-        generatedCoverPreview = preview
-        if (parameters.preview) {
-            statusMessage = needsConfirmationMessage()
-            return false
-        }
-        writeCoverPreview(preview, "${result.sourceLabel} \u5df2\u5199\u5165 EPUB")
-    } catch (error: Throwable) {
-        generatedCoverPreview = null
-        statusMessage = coverFailureMessage("\u56fe\u7247\u5904\u7406\u5931\u8d25", error)
-        false
-    }
 }
 
 internal suspend fun EditorController.runCoverToolAsync(tool: EditorTool): Boolean {
@@ -141,38 +109,6 @@ internal suspend fun EditorController.runCoverToolAsync(tool: EditorTool): Boole
     } catch (error: Throwable) {
         generatedCoverPreview = null
         statusMessage = coverFailureMessage("图片处理失败", error)
-        false
-    }
-}
-
-private fun EditorController.insertImageResourceIntoEpub(parameters: CoverParameters): Boolean {
-    val book = epub ?: run {
-        statusMessage = "\u63d2\u5165\u56fe\u7247\u4ec5\u652f\u6301 EPUB"
-        return false
-    }
-    return try {
-        if (parameters.imageInsertType == COVER_IMAGE_INSERT_CUSTOM && parameters.imageUri.isNotBlank()) {
-            rememberReadableDocumentUri(appContext, Uri.parse(parameters.imageUri.trim()))
-        }
-        val result = insertImageResourceIntoEpubBook(
-            book = book,
-            parameters = parameters,
-            assets = appContext.assets,
-            contentResolver = appContext.contentResolver,
-            noteAssetPath = insertImageNoteAssetPath(),
-            warningAssetPath = insertImageWarningAssetPath()
-        )
-        if (!result.success) {
-            if (result.message.isNotBlank()) statusMessage = result.message
-            return false
-        }
-        generatedCoverPreview = null
-        checkReport = null
-        markDocumentChanged()
-        statusMessage = "\u5df2\u63d2\u5165\u56fe\u7247\uff1a${result.fileName}"
-        true
-    } catch (error: Throwable) {
-        statusMessage = coverFailureMessage("\u63d2\u5165\u56fe\u7247\u5931\u8d25", error)
         false
     }
 }
