@@ -214,13 +214,15 @@ private suspend fun EditorController.insertImageResourceIntoEpubAsync(parameters
 }
 
 private fun EditorController.writeCoverPreview(preview: GeneratedCoverPreview, successMessage: String): Boolean {
-    val book = epub ?: run {
+    val sourceBook = epub ?: run {
         statusMessage = "\u5c01\u9762\u5199\u5165\u4ec5\u652f\u6301 EPUB"
         return false
     }
     return try {
+        val nextBook = sourceBook.mutableDeepCopy()
         val coverName = coverFileNameForMediaType(preview.mediaType)
-        writeCoverToEpub(book, coverName, preview.bytes, preview.mediaType)
+        writeCoverToEpub(nextBook, coverName, preview.bytes, preview.mediaType)
+        epub = nextBook
         checkReport = null
         markDocumentChanged()
         refreshChapters()
