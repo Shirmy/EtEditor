@@ -15,7 +15,6 @@ object EpubToolkit {
         }
         val metadataTitle = parseBookTitle(opfDoc)
         val metadataAuthor = parseBookAuthor(opfDoc)
-        val metadataItems = parseMetadataItems(opfDoc)
 
         val manifest = linkedMapOf<String, ManifestItem>()
         opfDoc.elements("manifest").firstOrNull()?.children("item")?.forEach { item ->
@@ -73,7 +72,6 @@ object EpubToolkit {
             originalName = originalName,
             metadataTitle = metadataTitle,
             metadataAuthor = metadataAuthor,
-            metadataItems = metadataItems.toMutableList(),
             entries = entries,
             opfPath = opfPath,
             tocPath = tocPath,
@@ -81,45 +79,6 @@ object EpubToolkit {
             spineIds = spineIds.toMutableList(),
             chapters = chapters
         )
-    }
-
-    fun updateMetadataItem(bytes: ByteArray, index: Int, item: EpubMetadataItem): ByteArray? {
-        return runCatching {
-            val doc = parseXml(bytes)
-            val metadata = doc.elements("metadata").firstOrNull() ?: return null
-            val oldElement = metadata.childNodes.toElements().getOrNull(index) ?: return null
-            val newName = item.name.trim().ifBlank { oldElement.nodeName }
-            val element = if (newName == oldElement.nodeName) {
-                oldElement
-            } else {
-                val namespace = namespaceForQualifiedName(metadata, oldElement, newName)
-                val replacement = if (namespace.isNullOrBlank()) {
-                    doc.createElement(newName)
-                } else {
-                    doc.createElementNS(namespace, newName)
-                }
-                metadata.replaceChild(replacement, oldElement)
-                replacement
-            }
-            element.attributes.toAttributeMap().keys.forEach { attributeName ->
-                element.removeAttribute(attributeName)
-            }
-            item.attributes.forEach { (name, value) ->
-                if (name.isNotBlank()) element.setAttribute(name, value)
-            }
-            element.textContent = item.value
-            serializeXml(doc)
-        }.getOrNull()
-    }
-
-    fun deleteMetadataItem(bytes: ByteArray, index: Int): ByteArray? {
-        return runCatching {
-            val doc = parseXml(bytes)
-            val metadata = doc.elements("metadata").firstOrNull() ?: return null
-            val element = metadata.childNodes.toElements().getOrNull(index) ?: return null
-            metadata.removeChild(element)
-            serializeXml(doc)
-        }.getOrNull()
     }
 
     fun export(book: EpubBook, options: EpubExportOptions = EpubExportOptions()): ByteArray {
@@ -249,34 +208,6 @@ object EpubToolkit {
                     ?.textContent
                     ?.trim()
                     .orEmpty()
-            }
-    }
-
-    private fun parseMetadataItems(doc: org.w3c.dom.Document): List<EpubMetadataItem> {
-        val metadata = doc.elements("metadata").firstOrNull() ?: return emptyList()
-        return metadata.childNodes.toElements().map { element ->
-            val attributes = element.attributes.toAttributeMap()
-            val value = element.textContent
-                ?.trim()
-                .orEmpty()
-                .ifBlank { attributes["content"].orEmpty() }
-            EpubMetadataItem(
-                name = element.nodeName.ifBlank { element.localName.orEmpty() },
-                value = value,
-                attributes = attributes
-            )
-        }
-    }
-
-    private fun namespaceForQualifiedName(parent: Element, oldElement: Element, name: String): String? {
-        val prefix = name.substringBefore(':', missingDelimiterValue = "")
-        if (prefix.isBlank()) return parent.namespaceURI ?: oldElement.namespaceURI
-        return oldElement.lookupNamespaceURI(prefix)
-            ?: parent.lookupNamespaceURI(prefix)
-            ?: when (prefix) {
-                "dc" -> "http://purl.org/dc/elements/1.1/"
-                "opf" -> "http://www.idpf.org/2007/opf"
-                else -> parent.namespaceURI
             }
     }
 

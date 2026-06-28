@@ -5,9 +5,6 @@ import com.eteditor.core.ManifestItem
 
 internal fun EpubBook.mutableDeepCopy(): EpubBook {
     return copy(
-        metadataItems = metadataItems.map { item ->
-            item.copy(attributes = item.attributes.toMap())
-        }.toMutableList(),
         entries = LinkedHashMap<String, ByteArray>().also { copy ->
             entries.forEach { (path, bytes) -> copy[path] = bytes.copyOf() }
         },

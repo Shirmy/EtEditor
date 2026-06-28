@@ -271,7 +271,6 @@ class EpubHtmlUtilsTest {
             originalName = "book.epub",
             metadataTitle = "Book",
             metadataAuthor = "",
-            metadataItems = mutableListOf(),
             entries = linkedMapOf(path to html.toByteArray(StandardCharsets.UTF_8)),
             opfPath = "OEBPS/content.opf",
             tocPath = "OEBPS/toc.ncx",

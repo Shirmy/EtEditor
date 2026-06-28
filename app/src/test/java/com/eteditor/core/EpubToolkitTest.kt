@@ -7,7 +7,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.w3c.dom.Element
 
 class EpubToolkitTest {
     @Test
@@ -81,26 +80,6 @@ class EpubToolkitTest {
         assertTrue(report.warnings.contains("缺少 EPUB mimetype 条目"))
         assertTrue(report.warnings.contains("1 个章节标题为空"))
         assertTrue(report.warnings.contains("1 个章节正文为空或无法统计字数"))
-    }
-
-    @Test
-    fun updateAndDeleteMetadataItemsPreserveValidOpfXml() {
-        val updated = EpubToolkit.updateMetadataItem(
-            bytes = contentOpf.bytes(),
-            index = 0,
-            item = EpubMetadataItem(
-                name = "dc:title",
-                value = "Changed Book",
-                attributes = mapOf("id" to "title-id")
-            )
-        )
-        val deleted = EpubToolkit.deleteMetadataItem(updated!!, index = 1)
-        val doc = parseXml(deleted!!)
-        val metadata = doc.elements("metadata").single()
-
-        assertEquals("Changed Book", metadata.children("title").single().textContent)
-        assertEquals("title-id", metadata.children("title").single().attr("id"))
-        assertEquals(emptyList<Element>(), metadata.children("creator"))
     }
 
     private fun minimalEpubBytes(): ByteArray {

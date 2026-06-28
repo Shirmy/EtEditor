@@ -46,12 +46,6 @@ data class ManifestItem(
     val properties: String = ""
 )
 
-data class EpubMetadataItem(
-    val name: String,
-    val value: String,
-    val attributes: Map<String, String> = emptyMap()
-)
-
 data class EpubChapter(
     val id: String,
     var href: String,
@@ -68,7 +62,6 @@ data class EpubBook(
     val originalName: String,
     var metadataTitle: String,
     var metadataAuthor: String,
-    val metadataItems: MutableList<EpubMetadataItem>,
     val entries: LinkedHashMap<String, ByteArray>,
     val opfPath: String,
     val tocPath: String?,

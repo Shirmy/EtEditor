@@ -146,7 +146,6 @@ class EpubHtmlEncodingUtilsTest {
             originalName = "book.epub",
             metadataTitle = "Book",
             metadataAuthor = "",
-            metadataItems = mutableListOf(),
             entries = linkedMapOf(),
             opfPath = "OEBPS/content.opf",
             tocPath = null,

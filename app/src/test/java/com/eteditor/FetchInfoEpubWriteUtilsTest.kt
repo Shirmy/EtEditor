@@ -282,7 +282,6 @@ class FetchInfoEpubWriteUtilsTest {
             originalName = "book.epub",
             metadataTitle = "Book",
             metadataAuthor = "",
-            metadataItems = mutableListOf(),
             entries = entries,
             opfPath = "OEBPS/content.opf",
             tocPath = "OEBPS/toc.ncx",
