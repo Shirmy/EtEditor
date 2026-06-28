@@ -19,4 +19,5 @@ internal class EditorPreviewState {
     var previewHighlightSourceEnd = -1
     var previewVisibleSourceOffset = 0
     var previewVisibleSourceLineOffset = 0
+    var epubVisibleBodyCache: Pair<String, HtmlBodyContentParts>? = null
 }

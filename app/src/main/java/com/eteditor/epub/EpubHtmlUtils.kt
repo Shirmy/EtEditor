@@ -87,7 +87,14 @@ internal fun htmlVisibleBodyRelativeRange(
     sourceStart: Int,
     sourceEnd: Int
 ): Pair<Int, Int>? {
-    val parts = htmlBodyContentParts(html)
+    return htmlVisibleBodyRelativeRange(htmlBodyContentParts(html), sourceStart, sourceEnd)
+}
+
+internal fun htmlVisibleBodyRelativeRange(
+    parts: HtmlBodyContentParts,
+    sourceStart: Int,
+    sourceEnd: Int
+): Pair<Int, Int>? {
     if (sourceEnd <= parts.visibleBodySourceStart || sourceStart >= parts.visibleBodySourceEnd) {
         return null
     }

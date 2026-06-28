@@ -160,7 +160,7 @@ internal fun EditorController.refreshPreview() {
                 previewChapterCount = book.chapters.size
                 val chapter = book.chapters[displayChapterIndex]
                 previewTitle = chapter.title.ifBlank { "无标题" }
-                setPreviewTextFromSource(htmlVisibleBodyContent(chapter.html), displayChapterIndex, showFull = true)
+                setPreviewTextFromSource(epubVisibleBodyParts(chapter.html).body, displayChapterIndex, showFull = true)
             }
         }
         DocumentKind.Txt -> {
@@ -225,10 +225,19 @@ internal fun EditorController.refreshPreview() {
     }
 }
 
+internal fun EditorController.epubVisibleBodyParts(html: String): HtmlBodyContentParts {
+    epubVisibleBodyCache?.let { (cachedHtml, cachedParts) ->
+        if (cachedHtml === html) return cachedParts
+    }
+    val parts = htmlBodyContentParts(html)
+    epubVisibleBodyCache = html to parts
+    return parts
+}
+
 internal fun EditorController.locateEpubPreviewAtBodyOffset(chapterIndex: Int, bodyOffset: Int) {
     val book = epub ?: return
     val chapter = book.chapters.getOrNull(chapterIndex) ?: return
-    val body = htmlVisibleBodyContent(chapter.html)
+    val body = epubVisibleBodyParts(chapter.html).body
     val safeOffset = bodyOffset.coerceIn(0, body.length)
     previewHighlightChapterIndex = chapterIndex
     previewHighlightSourceStart = safeOffset

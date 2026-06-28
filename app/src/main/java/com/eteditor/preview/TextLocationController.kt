@@ -59,7 +59,7 @@ private fun EditorController.selectEpubTextLocation(
 ): Boolean {
     val book = epub ?: return false
     val chapter = book.chapters.getOrNull(chapterIndex) ?: return false
-    val highlightRange = htmlVisibleBodyRelativeRange(chapter.html, sourceStart, sourceEnd) ?: return false
+    val highlightRange = htmlVisibleBodyRelativeRange(epubVisibleBodyParts(chapter.html), sourceStart, sourceEnd) ?: return false
     previewChapterIndex = chapterIndex
     previewDisplayChapterIndexOverride = chapterIndex
     previewHighlightChapterIndex = chapterIndex

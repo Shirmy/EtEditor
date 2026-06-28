@@ -182,6 +182,7 @@ private fun EditorController.resetDocumentSessionRuntimeState() {
     resetAutomationRunRuntimeState()
     txtEnabledChapterRuleKeys = emptySet()
     txtFullPreviewCachedAnchor = null
+    epubVisibleBodyCache = null
 }
 
 private fun EditorController.resetOpenDocumentRuntimeState() {

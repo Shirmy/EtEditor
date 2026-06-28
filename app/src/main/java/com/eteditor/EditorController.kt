@@ -13,6 +13,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class EditorController(internal val appContext: Context) {
     internal val controllerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -258,6 +260,9 @@ class EditorController(internal val appContext: Context) {
     internal var previewVisibleSourceLineOffset: Int
         get() = previewState.previewVisibleSourceLineOffset
         set(value) { previewState.previewVisibleSourceLineOffset = value }
+    internal var epubVisibleBodyCache: Pair<String, HtmlBodyContentParts>?
+        get() = previewState.epubVisibleBodyCache
+        set(value) { previewState.epubVisibleBodyCache = value }
 
     var textSearchResults: List<TextSearchResult>
         get() = toolState.textSearchResults
@@ -432,11 +437,17 @@ class EditorController(internal val appContext: Context) {
         get() = draftAutomationChain?.id == selectedAutomationChainId
 
     init {
-        loadPersistedBuiltInToolDefaults()
-        resetBuiltInToolState()
-        loadPersistedEditorTools()
-        loadPersistedAutomationChains()
-        log("EtEditor MVP 已就绪")
+        // 把"读用户存的内置默认值/工具/执行链"挪到后台：界面先显示出来，读好后自动补上，
+        // 避免攒得多时冷启动卡顿（常规设置体量小、且要用来构建初始界面，仍在上面同步读取）。
+        controllerScope.launch {
+            withContext(Dispatchers.Default) {
+                loadPersistedBuiltInToolDefaults()
+                resetBuiltInToolState()
+                loadPersistedEditorTools()
+                loadPersistedAutomationChains()
+            }
+            log("EtEditor MVP 已就绪")
+        }
     }
 
     fun dispose() {
