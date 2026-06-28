@@ -68,11 +68,9 @@ internal fun automationTerminalStateForSuccessMessage(message: String): Automati
 }
 
 internal fun automationTerminalStateForFailureMessage(message: String): AutomationRunStepState {
-    return if (automationStatusMeansSkipped(message)) {
-        AutomationRunStepState.Skipped
-    } else {
-        AutomationRunStepState.Failed
-    }
+    // 失败就是失败：不再根据结果话术里的字眼把"失败"重判成"跳过"，避免真失败被悄悄藏进"跳过"、汇总漏报。
+    // "成功但没什么可做=跳过"的识别仍只在成功路径上做（见 automationTerminalStateForSuccessMessage）。
+    return AutomationRunStepState.Failed
 }
 
 internal fun automationStatusMeansSkipped(message: String): Boolean {

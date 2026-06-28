@@ -556,7 +556,7 @@ class AutomationStateUtilsTest {
         assertEquals(AutomationRunTerminalCounts(executed = 1, skipped = 1, failed = 1), counts)
         assertEquals(AutomationRunStepState.Skipped, automationTerminalStateForSuccessMessage("没有匹配内容"))
         assertEquals(AutomationRunStepState.Completed, automationTerminalStateForSuccessMessage("已修改 2 处"))
-        assertEquals(AutomationRunStepState.Skipped, automationTerminalStateForFailureMessage("修改 0 章"))
+        assertEquals(AutomationRunStepState.Failed, automationTerminalStateForFailureMessage("修改 0 章"))
         assertEquals(AutomationRunStepState.Failed, automationTerminalStateForFailureMessage("解析失败"))
         assertTrue(automationStatusMeansSkipped("无需修改"))
         assertFalse(automationStatusMeansSkipped(""))
@@ -576,7 +576,7 @@ class AutomationStateUtilsTest {
         ).forEach { message ->
             assertTrue(automationStatusMeansSkipped(message))
             assertEquals(AutomationRunStepState.Skipped, automationTerminalStateForSuccessMessage(message))
-            assertEquals(AutomationRunStepState.Skipped, automationTerminalStateForFailureMessage(message))
+            assertEquals(AutomationRunStepState.Failed, automationTerminalStateForFailureMessage(message))
         }
         assertFalse(automationStatusMeansSkipped("已修改 10 处"))
         assertEquals("完成", automationRunTerminalLogPrefix(AutomationRunStepState.Waiting))

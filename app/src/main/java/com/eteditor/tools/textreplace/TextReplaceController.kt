@@ -566,7 +566,7 @@ internal suspend fun EditorController.runTextReplaceToolAsync(tool: EditorTool, 
     }
     if (result.replacements <= 0) {
         statusMessage = textReplaceNoMatchMessage(kind, statusMessage, parameters, activeRules)
-        return false
+        return !manual
     }
     checkReport = null
     markDocumentChanged()
@@ -619,7 +619,7 @@ internal suspend fun EditorController.runTextReplaceToolForAutomationPreview(
     if (results.isEmpty()) {
         clearTextSearchState()
         statusMessage = textReplaceNoMatchMessage(kind, statusMessage, parameters, activeRules)
-        return false
+        return true
     }
     textSearchToolId = tool.id
     textSearchResults = results
