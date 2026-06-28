@@ -5,6 +5,8 @@ import org.json.JSONArray
 
 private const val REPLACEMENT_SEPARATOR = "#->#"
 
+private val htmlTagRegex = Regex("""<[^>]+>""")
+
 internal fun decodeLineBreakEscapes(pattern: String): String {
     return pattern
         .replace("\\r\\n", "\r\n")
@@ -152,15 +154,30 @@ internal fun regexSearchRanges(source: String, pattern: Regex): List<Pair<Int, I
     return ranges
 }
 
+internal fun compileTextReplaceRulePattern(rule: TextReplaceRule, caseSensitive: Boolean): Regex? {
+    if (!rule.regex || rule.find.isEmpty()) return null
+    val options = if (caseSensitive) emptySet<RegexOption>() else setOf(RegexOption.IGNORE_CASE)
+    return Regex(rule.find, options)
+}
+
 internal fun replaceInString(
     source: String,
     rule: TextReplaceRule,
     caseSensitive: Boolean
 ): Pair<String, Int> {
+    return replaceInStringWithPattern(source, rule, compileTextReplaceRulePattern(rule, caseSensitive), caseSensitive)
+}
+
+// Same as replaceInString but reuses an already-compiled regex (compiled once per rule by the caller).
+// Applying one rule across many chapter files / markup segments then no longer recompiles it each time.
+internal fun replaceInStringWithPattern(
+    source: String,
+    rule: TextReplaceRule,
+    pattern: Regex?,
+    caseSensitive: Boolean
+): Pair<String, Int> {
     if (rule.find.isEmpty()) return source to 0
-    return if (rule.regex) {
-        val options = if (caseSensitive) emptySet<RegexOption>() else setOf(RegexOption.IGNORE_CASE)
-        val pattern = Regex(rule.find, options)
+    return if (pattern != null) {
         replaceRegex(source, pattern, rule.replacement)
     } else {
         replacePlain(source, rule.find, rule.replacement, caseSensitive)
@@ -172,19 +189,33 @@ internal fun replaceVisibleTextInMarkup(
     rule: TextReplaceRule,
     caseSensitive: Boolean
 ): Pair<String, Int> {
+    return replaceVisibleTextInMarkupWithPattern(
+        source,
+        rule,
+        compileTextReplaceRulePattern(rule, caseSensitive),
+        caseSensitive
+    )
+}
+
+internal fun replaceVisibleTextInMarkupWithPattern(
+    source: String,
+    rule: TextReplaceRule,
+    pattern: Regex?,
+    caseSensitive: Boolean
+): Pair<String, Int> {
     val builder = StringBuilder()
     var cursor = 0
     var total = 0
-    Regex("""<[^>]+>""").findAll(source).forEach { tag ->
+    htmlTagRegex.findAll(source).forEach { tag ->
         val segment = source.substring(cursor, tag.range.first)
-        val replaced = replaceInString(segment, rule, caseSensitive)
+        val replaced = replaceInStringWithPattern(segment, rule, pattern, caseSensitive)
         builder.append(replaced.first)
         builder.append(tag.value)
         total += replaced.second
         cursor = tag.range.last + 1
     }
     val tail = source.substring(cursor)
-    val replacedTail = replaceInString(tail, rule, caseSensitive)
+    val replacedTail = replaceInStringWithPattern(tail, rule, pattern, caseSensitive)
     builder.append(replacedTail.first)
     total += replacedTail.second
     return if (total == 0) source to 0 else builder.toString() to total

@@ -95,6 +95,11 @@ internal fun replaceInEpubPackageText(
 ): ReplaceResult {
     var files = 0
     var total = 0
+    // Compile each rule's regex once up front, then reuse it across every chapter file and markup
+    // segment (previously the same regex was recompiled per file, and per paragraph in text-only mode).
+    val activeRules = rules
+        .filter { it.enabled && it.find.isNotEmpty() }
+        .map { rule -> rule to compileTextReplaceRulePattern(rule, rule.caseSensitive) }
     epubPackageTextReplaceTargets(
         book = book,
         scope = parameters.scope,
@@ -106,12 +111,12 @@ internal fun replaceInEpubPackageText(
         val bodyRange = htmlBodyContentRangeOrNull(original) ?: return@forEach
         var nextBody = original.substring(bodyRange.first, bodyRange.second)
         var changed = 0
-        rules.filter { it.enabled && it.find.isNotEmpty() }.forEach { rule ->
+        activeRules.forEach { (rule, pattern) ->
             ensureActive()
             val replaced = if (rule.textOnly) {
-                replaceVisibleTextInMarkup(nextBody, rule, rule.caseSensitive)
+                replaceVisibleTextInMarkupWithPattern(nextBody, rule, pattern, rule.caseSensitive)
             } else {
-                replaceInString(nextBody, rule, rule.caseSensitive)
+                replaceInStringWithPattern(nextBody, rule, pattern, rule.caseSensitive)
             }
             nextBody = replaced.first
             changed += replaced.second
