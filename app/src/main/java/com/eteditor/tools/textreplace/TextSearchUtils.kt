@@ -360,7 +360,7 @@ internal fun replaceInTxtDocumentText(
     currentChapterIndex: Int,
     prefaceEndIndex: Int?,
     rules: List<TextReplaceRule>,
-    ensureActive: () -> Unit = {}
+    ensureActive: (() -> Unit)? = null
 ): TxtTextReplaceApplyResult {
     val activeRules = rules.filter { it.enabled && it.find.isNotEmpty() }
     val sources = txtSearchSources(
@@ -373,14 +373,14 @@ internal fun replaceInTxtDocumentText(
     var changedSources = 0
     var total = 0
     sources.sortedByDescending { it.sourceOffset }.forEach { source ->
-        ensureActive()
+        ensureActive?.invoke()
         val start = source.sourceOffset.coerceIn(0, nextText.length)
         val end = (source.sourceOffset + source.text.length).coerceIn(start, nextText.length)
         var sourceText = nextText.substring(start, end)
         var changed = 0
         activeRules.forEach { rule ->
-            ensureActive()
-            val replaced = replaceInString(sourceText, rule, rule.caseSensitive)
+            ensureActive?.invoke()
+            val replaced = replaceInString(sourceText, rule, rule.caseSensitive, ensureActive)
             sourceText = replaced.first
             changed += replaced.second
         }

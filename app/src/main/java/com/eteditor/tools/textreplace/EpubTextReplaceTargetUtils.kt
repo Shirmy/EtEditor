@@ -91,7 +91,7 @@ internal fun replaceInEpubPackageText(
     currentPath: String?,
     introPath: String,
     rules: List<TextReplaceRule>,
-    ensureActive: () -> Unit = {}
+    ensureActive: (() -> Unit)? = null
 ): ReplaceResult {
     var files = 0
     var total = 0
@@ -106,17 +106,17 @@ internal fun replaceInEpubPackageText(
         currentPath = currentPath,
         introPath = introPath
     ).forEach { target ->
-        ensureActive()
+        ensureActive?.invoke()
         val original = epubPackageText(book, target.path) ?: return@forEach
         val bodyRange = htmlBodyContentRangeOrNull(original) ?: return@forEach
         var nextBody = original.substring(bodyRange.first, bodyRange.second)
         var changed = 0
         activeRules.forEach { (rule, pattern) ->
-            ensureActive()
+            ensureActive?.invoke()
             val replaced = if (rule.textOnly) {
-                replaceVisibleTextInMarkupWithPattern(nextBody, rule, pattern, rule.caseSensitive)
+                replaceVisibleTextInMarkupWithPattern(nextBody, rule, pattern, rule.caseSensitive, ensureActive)
             } else {
-                replaceInStringWithPattern(nextBody, rule, pattern, rule.caseSensitive)
+                replaceInStringWithPattern(nextBody, rule, pattern, rule.caseSensitive, ensureActive)
             }
             nextBody = replaced.first
             changed += replaced.second

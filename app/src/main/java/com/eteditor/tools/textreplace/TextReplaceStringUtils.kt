@@ -163,22 +163,32 @@ internal fun compileTextReplaceRulePattern(rule: TextReplaceRule, caseSensitive:
 internal fun replaceInString(
     source: String,
     rule: TextReplaceRule,
-    caseSensitive: Boolean
+    caseSensitive: Boolean,
+    ensureActive: (() -> Unit)? = null
 ): Pair<String, Int> {
-    return replaceInStringWithPattern(source, rule, compileTextReplaceRulePattern(rule, caseSensitive), caseSensitive)
+    return replaceInStringWithPattern(
+        source,
+        rule,
+        compileTextReplaceRulePattern(rule, caseSensitive),
+        caseSensitive,
+        ensureActive
+    )
 }
 
 // Same as replaceInString but reuses an already-compiled regex (compiled once per rule by the caller).
 // Applying one rule across many chapter files / markup segments then no longer recompiles it each time.
+// When ensureActive is supplied (background apply), the regex match itself watches for cancellation so a
+// pathological, slowly-backtracking pattern can be interrupted mid-match instead of only at file/rule edges.
 internal fun replaceInStringWithPattern(
     source: String,
     rule: TextReplaceRule,
     pattern: Regex?,
-    caseSensitive: Boolean
+    caseSensitive: Boolean,
+    ensureActive: (() -> Unit)? = null
 ): Pair<String, Int> {
     if (rule.find.isEmpty()) return source to 0
     return if (pattern != null) {
-        replaceRegex(source, pattern, rule.replacement)
+        replaceRegex(source, pattern, rule.replacement, ensureActive)
     } else {
         replacePlain(source, rule.find, rule.replacement, caseSensitive)
     }
@@ -187,13 +197,15 @@ internal fun replaceInStringWithPattern(
 internal fun replaceVisibleTextInMarkup(
     source: String,
     rule: TextReplaceRule,
-    caseSensitive: Boolean
+    caseSensitive: Boolean,
+    ensureActive: (() -> Unit)? = null
 ): Pair<String, Int> {
     return replaceVisibleTextInMarkupWithPattern(
         source,
         rule,
         compileTextReplaceRulePattern(rule, caseSensitive),
-        caseSensitive
+        caseSensitive,
+        ensureActive
     )
 }
 
@@ -201,21 +213,22 @@ internal fun replaceVisibleTextInMarkupWithPattern(
     source: String,
     rule: TextReplaceRule,
     pattern: Regex?,
-    caseSensitive: Boolean
+    caseSensitive: Boolean,
+    ensureActive: (() -> Unit)? = null
 ): Pair<String, Int> {
     val builder = StringBuilder()
     var cursor = 0
     var total = 0
     htmlTagRegex.findAll(source).forEach { tag ->
         val segment = source.substring(cursor, tag.range.first)
-        val replaced = replaceInStringWithPattern(segment, rule, pattern, caseSensitive)
+        val replaced = replaceInStringWithPattern(segment, rule, pattern, caseSensitive, ensureActive)
         builder.append(replaced.first)
         builder.append(tag.value)
         total += replaced.second
         cursor = tag.range.last + 1
     }
     val tail = source.substring(cursor)
-    val replacedTail = replaceInStringWithPattern(tail, rule, pattern, caseSensitive)
+    val replacedTail = replaceInStringWithPattern(tail, rule, pattern, caseSensitive, ensureActive)
     builder.append(replacedTail.first)
     total += replacedTail.second
     return if (total == 0) source to 0 else builder.toString() to total
@@ -263,10 +276,20 @@ internal fun expandRegexReplacement(match: MatchResult, replacement: String): St
 private fun replaceRegex(
     source: String,
     pattern: Regex,
-    replacement: String
+    replacement: String,
+    ensureActive: (() -> Unit)? = null
 ): Pair<String, Int> {
+    // Match against a cancellation-aware view of the text when running in the background, so a
+    // pathological pattern stuck in heavy backtracking can be aborted promptly (the matcher reads
+    // characters as it backtracks, and those reads periodically check for cancellation). Output is
+    // still built from the real string, and match indices line up 1:1 with it.
+    val matchInput: CharSequence = if (ensureActive != null) {
+        CancellableCharSequence(source, ensureActive)
+    } else {
+        source
+    }
     val builder = StringBuilder()
-    val matches = pattern.findAll(source).iterator()
+    val matches = pattern.findAll(matchInput).iterator()
     var cursor = 0
     var count = 0
     while (matches.hasNext()) {
@@ -393,4 +416,33 @@ private fun parseRegexReplacementNumberToken(
         if (width > 0) value.padStart(width, '0') else value
     }
     return rendered to (cursor + 1)
+}
+
+private const val REGEX_CANCELLATION_CHECK_INTERVAL = 4096
+
+// A read-through view of a text that periodically lets the caller abort (via ensureActive, which throws
+// when the coroutine is cancelled). The regex matcher reads characters through this view while matching
+// and backtracking, so even a single long-running match can be cancelled promptly. Everything except the
+// character reads is delegated unchanged, so match indices and extracted group values stay correct.
+private class CancellableCharSequence(
+    private val delegate: CharSequence,
+    private val ensureActive: () -> Unit
+) : CharSequence {
+    private var readsSinceCheck = 0
+
+    override val length: Int get() = delegate.length
+
+    override fun get(index: Int): Char {
+        if (++readsSinceCheck >= REGEX_CANCELLATION_CHECK_INTERVAL) {
+            readsSinceCheck = 0
+            ensureActive()
+        }
+        return delegate[index]
+    }
+
+    override fun subSequence(startIndex: Int, endIndex: Int): CharSequence {
+        return delegate.subSequence(startIndex, endIndex)
+    }
+
+    override fun toString(): String = delegate.toString()
 }
