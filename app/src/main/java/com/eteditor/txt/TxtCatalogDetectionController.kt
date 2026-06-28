@@ -236,7 +236,7 @@ internal fun EditorController.refreshEpubChapterInfoAt(
     chapters = chapters.toMutableList().also { list ->
         list[currentInfoIndex] = nextInfo
     }
-    subtitle = "EPUB | OPF: ${book.opfPath} | 绔犺妭 ${book.chapters.size}"
+    subtitle = "EPUB | OPF: ${book.opfPath} | 章节 ${book.chapters.size}"
     if (refreshPreview) {
         refreshPreview()
     }

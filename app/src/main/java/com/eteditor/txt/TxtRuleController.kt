@@ -35,13 +35,24 @@ fun EditorController.addTxtChapterRule(
     if (warnTxtMoveChapterSyncPending("\u65b0\u589e\u76ee\u5f55\u89c4\u5219")) return false
     val nextPattern = pattern.trim()
     if (!validateTxtChapterRulePattern(nextPattern)) return false
+    val nextName = name.trim()
+    val nextReplacement = replacement.trim()
+    val duplicated = parseTxtChapterRuleItems(txtChapterRulesText).any { item ->
+        item.name.trim() == nextName &&
+            item.pattern.trim() == nextPattern &&
+            item.replacement.trim() == nextReplacement
+    }
+    if (duplicated) {
+        statusMessage = "请不要重复输入"
+        return false
+    }
     return commitTxtChapterRuleEdit(
         addTxtChapterRuleModel(
             rulesText = txtChapterRulesText,
             enabledKeys = txtEnabledChapterRuleKeys,
-            name = name.trim(),
+            name = nextName,
             pattern = nextPattern,
-            replacement = replacement.trim()
+            replacement = nextReplacement
         ),
         deferRefresh = deferRefresh
     )

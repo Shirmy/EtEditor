@@ -38,21 +38,25 @@ internal fun parseTxtPurifyRuleItems(text: String): List<TxtPurifyRuleItem> {
                 parts.size >= 2 -> normalizeTxtPurifyTarget(parts[0])
                 else -> TXT_PURIFY_TARGET_BODY
             }
-            val name = when {
-                parts.size >= 4 -> parts[1].trim()
-                parts.size == 3 -> parts[1].trim()
-                else -> ""
-            }
+            val name = decodeTxtRuleArrowSeparator(
+                when {
+                    parts.size >= 4 -> parts[1].trim()
+                    parts.size == 3 -> parts[1].trim()
+                    else -> ""
+                }
+            )
             val regex = when {
                 parts.size >= 4 -> parts[2].trim().toBooleanStrictOrNull() ?: true
                 else -> true
             }
-            val pattern = when {
-                parts.size >= 4 -> parts.drop(3).joinToString("\t")
-                parts.size == 3 -> parts[2]
-                parts.size == 2 -> parts[1]
-                else -> left
-            }.trim()
+            val pattern = decodeTxtRuleArrowSeparator(
+                when {
+                    parts.size >= 4 -> parts.drop(3).joinToString("\t")
+                    parts.size == 3 -> parts[2]
+                    parts.size == 2 -> parts[1]
+                    else -> left
+                }.trim()
+            )
             add(
                 TxtPurifyRuleItem(
                     index = size,
@@ -71,14 +75,18 @@ internal fun parseTxtPurifyRuleItems(text: String): List<TxtPurifyRuleItem> {
 internal fun serializeTxtPurifyRuleItems(items: List<TxtPurifyRuleItem>): String {
     return items.joinToString("\n") { item ->
         val target = normalizeTxtPurifyTarget(item.target)
-        val name = item.name
-            .replace('\t', ' ')
-            .replace('\n', ' ')
-            .trim()
-        val pattern = item.pattern
-            .replace('\t', ' ')
-            .replace('\n', ' ')
-            .trim()
+        val name = encodeTxtRuleArrowSeparator(
+            item.name
+                .replace('\t', ' ')
+                .replace('\n', ' ')
+                .trim()
+        )
+        val pattern = encodeTxtRuleArrowSeparator(
+            item.pattern
+                .replace('\t', ' ')
+                .replace('\n', ' ')
+                .trim()
+        )
         val replacement = item.replacement
             .replace('\t', ' ')
             .replace('\n', ' ')

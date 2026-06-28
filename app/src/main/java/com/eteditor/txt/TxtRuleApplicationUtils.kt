@@ -12,6 +12,21 @@ internal fun stripLegacyDisabledRulePrefix(line: String): String {
     return line.drop(1).dropWhile { it.isWhitespace() }
 }
 
+// 书名/净化规则按 "查找=>替换" 存盘。若分隔符左侧字段(名称、查找式)的内容里本身含 "=>",
+// 读回时会被当成分隔符切错。存盘时把左侧字段里的 "=>" 临时换成占位符,读取时还原;
+// 替换内容在分隔符右侧,可以原样保留 "=>",无需处理。占位符为私有区字符,正常文本不会出现。
+private const val RULE_ARROW_PLACEHOLDER = "\uE000"
+
+internal fun encodeTxtRuleArrowSeparator(value: String): String {
+    if (value.isEmpty()) return value
+    return value.replace(RULE_ARROW_PLACEHOLDER, "").replace("=>", RULE_ARROW_PLACEHOLDER)
+}
+
+internal fun decodeTxtRuleArrowSeparator(value: String): String {
+    if (value.isEmpty()) return value
+    return value.replace(RULE_ARROW_PLACEHOLDER, "=>")
+}
+
 internal fun txtRuleRegexErrorMessage(
     label: String,
     pattern: String,
