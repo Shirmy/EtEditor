@@ -2,6 +2,7 @@ package com.eteditor
 
 import android.annotation.SuppressLint
 import android.webkit.CookieManager
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.BorderStroke
@@ -42,8 +43,35 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import java.net.IDN
+import java.net.URI
 
 private const val SOSAD_LOGIN_URL = "https://xn--pxtr7m.com/"
+
+// 登录窗允许停留的站点(含其子域名):废文中文域名的 punycode 形式与 sosad.fun。
+private val SOSAD_LOGIN_ALLOWED_DOMAINS = listOf("sosad.fun", "xn--pxtr7m.com")
+
+// 判断登录网页要跳转的地址是否仍在废文站点内。
+// 站内(含子域名)且为 http/https 才放行;空地址/about: 视为内部放行;其余一律拦下。
+private fun isSosadLoginNavigationAllowed(url: String): Boolean {
+    val trimmed = url.trim()
+    if (trimmed.isBlank()) return true
+    if (trimmed.startsWith("about:", ignoreCase = true)) return true
+    val uri = runCatching { URI(trimmed) }.getOrNull() ?: return false
+    val scheme = uri.scheme.orEmpty().lowercase()
+    if (scheme != "http" && scheme != "https") return false
+    // 中文域名(如 废文.com)含非 ASCII 字符时 uri.host 返回 null,
+    // 只能从 authority 取主机名,去掉可能的 userinfo@ 和 :端口后再转 punycode。
+    val rawHost = uri.host.orEmpty().ifBlank {
+        uri.authority.orEmpty()
+            .substringAfterLast('@')
+            .substringBefore(':')
+    }.trimEnd('.')
+    if (rawHost.isBlank()) return false
+    val host = runCatching { IDN.toASCII(rawHost).lowercase().trimEnd('.') }
+        .getOrDefault(rawHost.lowercase())
+    return SOSAD_LOGIN_ALLOWED_DOMAINS.any { host == it || host.endsWith(".$it") }
+}
 
 @Composable
 fun SosadLoginField(
@@ -178,6 +206,17 @@ fun SosadLoginDialog(
                                 settings.useWideViewPort = true
                                 CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
                                 webViewClient = object : WebViewClient() {
+                                    override fun shouldOverrideUrlLoading(
+                                        view: WebView?,
+                                        request: WebResourceRequest?
+                                    ): Boolean {
+                                        // 把登录网页限制在废文站点内:站内地址放行,
+                                        // 外站、非网页协议(intent/tel 等)一律拦下不加载,
+                                        // 避免登录窗被用来打开任意外部网址。
+                                        val target = request?.url?.toString().orEmpty()
+                                        return !isSosadLoginNavigationAllowed(target)
+                                    }
+
                                     override fun onPageFinished(view: WebView?, url: String?) {
                                         super.onPageFinished(view, url)
                                         currentUrl = url.orEmpty().ifBlank { SOSAD_LOGIN_URL }
