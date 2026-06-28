@@ -192,7 +192,7 @@ internal fun buildTitleFormatPlanItems(
     return targetIndices.mapNotNull { index ->
         val parts = partsByIndex[index] ?: return@mapNotNull null
         val number = numberByIndex[index] ?: return@mapNotNull null
-        val prefix = parts.prefix ?: "第${number}章"
+        val prefix = parts.prefix ?: ChapterDetector.cleanTitle(titles.getOrNull(index).orEmpty())
         val autoDecision = autoDecisionByIndex?.get(index) ?: fallbackAutoDecision
         val style = when (parameters.mode) {
             TITLE_FORMAT_MODE_PER_CHAPTER -> autoDecision?.style ?: TITLE_FORMAT_STYLE_DOUBLE
