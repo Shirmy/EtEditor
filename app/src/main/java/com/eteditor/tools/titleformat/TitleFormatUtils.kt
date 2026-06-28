@@ -8,6 +8,25 @@ import com.eteditor.core.TxtChapter
 import com.eteditor.core.TxtDocument
 import com.eteditor.core.updateEpubChapterHtmlEntry
 
+private val TITLE_FORMAT_WHITESPACE_REGEX = Regex("""\s+""")
+private val TITLE_FORMAT_CHAPTER_PREFIX_REGEX =
+    Regex("""^(第\s*[零〇一二两三四五六七八九十百千万亿\d]+\s*章)([\s\S]*)${'$'}""")
+private val TITLE_FORMAT_LEADING_SEPARATOR_REGEX = Regex("""^[\s|─—–-]+""")
+private val TITLE_FORMAT_CLASS_CAPTURE_REGEX = Regex("""chapter-title_(\d+)""")
+private val TITLE_FORMAT_CLASS_TOKEN_REGEX = Regex("""^chapter-title_\d+${'$'}""")
+private val TITLE_FORMAT_HTML_TITLE_TAG_REGEX =
+    Regex("""<title[^>]*>.*?</title>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+private val TITLE_FORMAT_HTML_HEADING_REGEX =
+    Regex("""<((?:h1|h2|h3))([^>]*)>.*?</\1>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+private val TITLE_FORMAT_HTML_HEADING_SCAN_REGEX =
+    Regex("""<h[1-3][^>]*>(.*?)</h[1-3]>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+private val TITLE_FORMAT_HTML_BR_REGEX = Regex("""<br\s*/?>""", RegexOption.IGNORE_CASE)
+private val TITLE_FORMAT_HTML_BODY_REGEX = Regex("""<body([^>]*)>""", RegexOption.IGNORE_CASE)
+private val TITLE_FORMAT_HTML_CLASS_ATTR_REGEX =
+    Regex("""\sclass\s*=\s*(['"])(.*?)\1""", RegexOption.IGNORE_CASE)
+private val TITLE_FORMAT_EXTRA_VOLUME_STEM_REGEX = Regex("""^volf\d+${'$'}""")
+private val TITLE_FORMAT_NORMAL_VOLUME_STEM_REGEX = Regex("""^vol\d+${'$'}""")
+
 internal data class TitleFormatParts(
     val prefix: String?,
     val suffix: String
@@ -86,16 +105,16 @@ private val TITLE_FORMAT_STYLE_CODES = TITLE_FORMAT_STYLE_OPTIONS.map { it.first
 internal fun parseTitleFormatParts(title: String): TitleFormatParts {
     val normalized = title
         .replace('\u3000', ' ')
-        .replace(Regex("""\s+"""), " ")
+        .replace(TITLE_FORMAT_WHITESPACE_REGEX, " ")
         .trim()
-    val match = Regex("""^(第\s*[零〇一二两三四五六七八九十百千万亿\d]+\s*章)([\s\S]*)${'$'}""")
+    val match = TITLE_FORMAT_CHAPTER_PREFIX_REGEX
         .find(normalized)
     if (match == null) {
         return TitleFormatParts(prefix = null, suffix = "")
     }
-    val prefix = match.groupValues[1].replace(Regex("""\s+"""), "")
+    val prefix = match.groupValues[1].replace(TITLE_FORMAT_WHITESPACE_REGEX, "")
     val suffix = match.groupValues[2]
-        .replace(Regex("""^[\s|─—–-]+"""), "")
+        .replace(TITLE_FORMAT_LEADING_SEPARATOR_REGEX, "")
         .trim()
     return TitleFormatParts(prefix = prefix, suffix = suffix)
 }
@@ -324,7 +343,7 @@ private fun EpubChapter.isExtraVolumeChapter(): Boolean {
     if (!isVolumeChapter()) return false
     return (pathAliases + path + originalPath).any { itemPath ->
         val stem = itemPath.substringAfterLast('/').substringBeforeLast('.').lowercase()
-        stem == "vol00" || Regex("""^volf\d+$""").matches(stem)
+        stem == "vol00" || TITLE_FORMAT_EXTRA_VOLUME_STEM_REGEX.matches(stem)
     }
 }
 
@@ -332,7 +351,7 @@ private fun EpubChapter.isNormalVolumeChapter(): Boolean {
     if (!isVolumeChapter()) return false
     return (pathAliases + path + originalPath).any { itemPath ->
         val stem = itemPath.substringAfterLast('/').substringBeforeLast('.').lowercase()
-        stem != "vol00" && Regex("""^vol\d+$""").matches(stem)
+        stem != "vol00" && TITLE_FORMAT_NORMAL_VOLUME_STEM_REGEX.matches(stem)
     }
 }
 
@@ -460,18 +479,16 @@ private fun titleFormatReason(
 }
 
 internal fun epubChapterTitleStyle(chapter: EpubChapter): String {
-    Regex("""chapter-title_(\d+)""")
+    TITLE_FORMAT_CLASS_CAPTURE_REGEX
         .find(chapter.html)
         ?.groupValues
         ?.getOrNull(1)
         ?.takeIf { style -> style in TITLE_FORMAT_STYLE_CODES }
         ?.let { return it }
 
-    val heading = Regex(
-        """<h[1-3][^>]*>(.*?)</h[1-3]>""",
-        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
-    ).find(chapter.html)?.groupValues?.getOrNull(1).orEmpty()
-    if (Regex("""<br\s*/?>""", RegexOption.IGNORE_CASE).containsMatchIn(heading)) {
+    val heading = TITLE_FORMAT_HTML_HEADING_SCAN_REGEX
+        .find(chapter.html)?.groupValues?.getOrNull(1).orEmpty()
+    if (TITLE_FORMAT_HTML_BR_REGEX.containsMatchIn(heading)) {
         return TITLE_FORMAT_STYLE_LEFT
     }
 
@@ -525,15 +542,13 @@ internal fun updateHtmlTitleForFormat(
     styleCode: String
 ): String {
     val escapedPlainTitle = plainTitle.escapeXmlText()
-    val titleRegex = Regex("""<title[^>]*>.*?</title>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
-    val headingRegex = Regex("""<((?:h1|h2|h3))([^>]*)>.*?</\1>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
-    var updated = if (titleRegex.containsMatchIn(html)) {
-        html.replace(titleRegex, "<title>$escapedPlainTitle</title>")
+    var updated = if (TITLE_FORMAT_HTML_TITLE_TAG_REGEX.containsMatchIn(html)) {
+        html.replace(TITLE_FORMAT_HTML_TITLE_TAG_REGEX, "<title>$escapedPlainTitle</title>")
     } else {
         html
     }
 
-    val headingMatch = headingRegex.find(updated)
+    val headingMatch = TITLE_FORMAT_HTML_HEADING_REGEX.find(updated)
     if (headingMatch != null) {
         val tag = headingMatch.groupValues[1]
         val attrs = headingMatch.groupValues[2]
@@ -544,8 +559,7 @@ internal fun updateHtmlTitleForFormat(
         )
     }
 
-    val bodyRegex = Regex("""<body([^>]*)>""", RegexOption.IGNORE_CASE)
-    return bodyRegex.find(updated)?.let { match ->
+    return TITLE_FORMAT_HTML_BODY_REGEX.find(updated)?.let { match ->
         updated.replaceRange(
             match.range,
             "${match.value}\n<h1 class=\"chapter-title_$styleCode\">$headingHtml</h1>"
@@ -601,14 +615,13 @@ internal fun applyTxtTitleFormatsToDocument(
 }
 
 private fun updateTitleHeadingClass(attrs: String, styleCode: String): String {
-    val classRegex = Regex("""\sclass\s*=\s*(['"])(.*?)\1""", RegexOption.IGNORE_CASE)
-    val classMatch = classRegex.find(attrs)
+    val classMatch = TITLE_FORMAT_HTML_CLASS_ATTR_REGEX.find(attrs)
     if (classMatch != null) {
         val quote = classMatch.groupValues[1]
         val classes = classMatch.groupValues[2]
-            .split(Regex("""\s+"""))
+            .split(TITLE_FORMAT_WHITESPACE_REGEX)
             .map { it.trim() }
-            .filter { it.isNotBlank() && !Regex("""^chapter-title_\d+${'$'}""").matches(it) }
+            .filter { it.isNotBlank() && !TITLE_FORMAT_CLASS_TOKEN_REGEX.matches(it) }
             .toMutableList()
         classes += "chapter-title_$styleCode"
         val nextClass = " class=$quote${classes.joinToString(" ")}$quote"
@@ -618,10 +631,8 @@ private fun updateTitleHeadingClass(attrs: String, styleCode: String): String {
 }
 
 internal fun inheritedTitleHeadingFormat(html: String): EpubTitleHeadingFormat? {
-    val headingRegex = Regex("""<((?:h1|h2|h3))([^>]*)>.*?</\1>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
-    val classRegex = Regex("""\sclass\s*=\s*(['"])(.*?)\1""", RegexOption.IGNORE_CASE)
-    val headingMatch = headingRegex.find(html) ?: return null
-    val classValue = classRegex.find(headingMatch.groupValues[2])
+    val headingMatch = TITLE_FORMAT_HTML_HEADING_REGEX.find(html) ?: return null
+    val classValue = TITLE_FORMAT_HTML_CLASS_ATTR_REGEX.find(headingMatch.groupValues[2])
         ?.groupValues
         ?.getOrNull(2)
         .orEmpty()
@@ -637,15 +648,13 @@ internal fun updateHtmlTitleWithInheritedFormat(
     inheritedFormat: EpubTitleHeadingFormat?
 ): String {
     val escapedTitle = ChapterDetector.cleanTitle(newTitle).escapeXmlText()
-    val titleRegex = Regex("""<title[^>]*>.*?</title>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
-    val headingRegex = Regex("""<((?:h1|h2|h3))([^>]*)>.*?</\1>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
-    var updated = if (titleRegex.containsMatchIn(html)) {
-        html.replace(titleRegex, "<title>$escapedTitle</title>")
+    var updated = if (TITLE_FORMAT_HTML_TITLE_TAG_REGEX.containsMatchIn(html)) {
+        html.replace(TITLE_FORMAT_HTML_TITLE_TAG_REGEX, "<title>$escapedTitle</title>")
     } else {
         html
     }
 
-    val headingMatch = headingRegex.find(updated)
+    val headingMatch = TITLE_FORMAT_HTML_HEADING_REGEX.find(updated)
     if (headingMatch != null) {
         val tag = inheritedFormat?.tag ?: headingMatch.groupValues[1]
         val attrs = applyInheritedHeadingClass(
@@ -665,17 +674,15 @@ internal fun updateHtmlTitleWithInheritedFormat(
         ?.let { " class=\"${it.escapeXmlAttribute("\"")}\"" }
         .orEmpty()
     val heading = "<$tag$attrs>$escapedTitle</$tag>"
-    val bodyRegex = Regex("""<body([^>]*)>""", RegexOption.IGNORE_CASE)
-    return bodyRegex.find(updated)?.let { match ->
+    return TITLE_FORMAT_HTML_BODY_REGEX.find(updated)?.let { match ->
         updated.replaceRange(match.range, "${match.value}\n$heading\n")
     } ?: "$heading\n$updated"
 }
 
 private fun applyInheritedHeadingClass(attrs: String, classValue: String): String {
     if (classValue.isBlank()) return attrs
-    val classRegex = Regex("""\sclass\s*=\s*(['"])(.*?)\1""", RegexOption.IGNORE_CASE)
     val classAttr = " class=\"${classValue.escapeXmlAttribute("\"")}\""
-    val classMatch = classRegex.find(attrs)
+    val classMatch = TITLE_FORMAT_HTML_CLASS_ATTR_REGEX.find(attrs)
     return if (classMatch != null) {
         attrs.replaceRange(classMatch.range, classAttr)
     } else {
