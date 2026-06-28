@@ -163,6 +163,7 @@ internal fun EditorController.refreshPreview() {
         DocumentKind.Txt -> {
             val document = txt
             if (document == null) {
+                previewChapterIndex = 0
                 previewVisibleSourceOffset = 0
                 previewVisibleSourceLineOffset = 0
                 previewChapterCount = 0
