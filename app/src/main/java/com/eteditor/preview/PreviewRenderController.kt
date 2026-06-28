@@ -65,15 +65,16 @@ internal fun EditorController.previewHeaderTitle(): String {
         }
         DocumentKind.Txt -> {
             val document = txt ?: return previewTitle
+            val displayChapterIndex = previewDisplayChapterIndex()
             if (txtPreviewMode == TXT_PREVIEW_MODE_FULL) {
                 "TXT 全文"
             } else if (document.chapters.isEmpty()) {
                 "TXT 正文预览"
-            } else if (previewChapterIndex < 0 && txtHasPreface()) {
+            } else if (displayChapterIndex < 0 && txtHasPreface()) {
                 "前言"
             } else {
                 document.chapters
-                    .getOrNull(previewChapterIndex)
+                    .getOrNull(displayChapterIndex)
                     ?.title
                     ?.ifBlank { "无标题" }
                     ?: previewTitle
