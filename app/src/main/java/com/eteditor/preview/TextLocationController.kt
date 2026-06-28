@@ -5,6 +5,7 @@ import com.eteditor.core.DocumentKind
 fun EditorController.selectTextSearchResult(resultId: String): Boolean {
     val result = textSearchResults.firstOrNull { it.id == resultId } ?: return false
     selectedTextSearchResultId = result.id
+    selectedReplacementPreviewMatchId = null
     if (kind == DocumentKind.Txt) {
         return selectTxtTextLocation(result.chapterIndex, result.sourceStart, result.sourceEnd, result.chapterTitle)
     }
