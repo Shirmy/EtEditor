@@ -78,55 +78,56 @@ internal class EditorSettingsPreferences(
         )
     }
 
+    // 常规设置改完即同步落盘（commit），避免进程被系统杀掉时异步写（apply）丢失尾部改动
     fun saveLeftRailExpanded(expanded: Boolean) {
-        prefs.edit().putBoolean(KEY_LEFT_RAIL_EXPANDED, expanded).apply()
+        prefs.edit().putBoolean(KEY_LEFT_RAIL_EXPANDED, expanded).commit()
     }
 
     fun saveEpubDoubleTapEdit(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_EPUB_DOUBLE_TAP_EDIT, enabled).apply()
+        prefs.edit().putBoolean(KEY_EPUB_DOUBLE_TAP_EDIT, enabled).commit()
     }
 
     fun saveEpubLeftPanelMode(mode: String) {
-        prefs.edit().putString(KEY_EPUB_LEFT_PANEL, mode).apply()
+        prefs.edit().putString(KEY_EPUB_LEFT_PANEL, mode).commit()
     }
 
     fun saveEpubRightPanelMode(mode: String) {
-        prefs.edit().putString(KEY_EPUB_RIGHT_PANEL, mode).apply()
+        prefs.edit().putString(KEY_EPUB_RIGHT_PANEL, mode).commit()
     }
 
     fun saveTxtLeftPanelMode(mode: String) {
-        prefs.edit().putString(KEY_TXT_LEFT_PANEL, mode).apply()
+        prefs.edit().putString(KEY_TXT_LEFT_PANEL, mode).commit()
     }
 
     fun saveTxtRightPanelMode(mode: String) {
-        prefs.edit().putString(KEY_TXT_RIGHT_PANEL, mode).apply()
+        prefs.edit().putString(KEY_TXT_RIGHT_PANEL, mode).commit()
     }
 
     fun saveTxtDoubleTapEdit(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_TXT_DOUBLE_TAP_EDIT, enabled).apply()
+        prefs.edit().putBoolean(KEY_TXT_DOUBLE_TAP_EDIT, enabled).commit()
     }
 
     fun saveTxtDoubleTapTitleEdit(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_TXT_DOUBLE_TAP_TITLE_EDIT, enabled).apply()
+        prefs.edit().putBoolean(KEY_TXT_DOUBLE_TAP_TITLE_EDIT, enabled).commit()
     }
 
     fun saveTxtChapterRules(rulesText: String) {
-        prefs.edit().putString(KEY_TXT_CHAPTER_RULES, rulesText).apply()
+        prefs.edit().putString(KEY_TXT_CHAPTER_RULES, rulesText).commit()
     }
 
     fun saveTxtPurifyRules(rulesText: String) {
-        prefs.edit().putString(KEY_TXT_PURIFY_RULES, rulesText).apply()
+        prefs.edit().putString(KEY_TXT_PURIFY_RULES, rulesText).commit()
     }
 
     fun saveTxtBookTitleRules(rulesText: String) {
-        prefs.edit().putString(KEY_TXT_BOOK_TITLE_RULES, rulesText).apply()
+        prefs.edit().putString(KEY_TXT_BOOK_TITLE_RULES, rulesText).commit()
     }
 
     fun saveTxtChapterThresholds(shortThreshold: Int, longThreshold: Int) {
         prefs.edit()
             .putInt(KEY_TXT_SHORT_CHAPTER_THRESHOLD, shortThreshold)
             .putInt(KEY_TXT_LONG_CHAPTER_THRESHOLD, longThreshold)
-            .apply()
+            .commit()
     }
 
     fun saveTxtChapterHintSettings(
@@ -142,23 +143,23 @@ internal class EditorSettingsPreferences(
             .putInt(KEY_TXT_SHORT_CHAPTER_THRESHOLD, shortThreshold)
             .putInt(KEY_TXT_LONG_CHAPTER_THRESHOLD, longThreshold)
             .putString(KEY_TXT_CHAPTER_HINT_MODE, hintMode.takeIf { it in TXT_CHAPTER_HINT_MODES } ?: TXT_CHAPTER_HINT_MODE_AUTO)
-            .apply()
+            .commit()
     }
 
     fun saveTxtShortChapterHintEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_TXT_SHORT_CHAPTER_HINT_ENABLED, enabled).apply()
+        prefs.edit().putBoolean(KEY_TXT_SHORT_CHAPTER_HINT_ENABLED, enabled).commit()
     }
 
     fun saveTxtLongChapterHintEnabled(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_TXT_LONG_CHAPTER_HINT_ENABLED, enabled).apply()
+        prefs.edit().putBoolean(KEY_TXT_LONG_CHAPTER_HINT_ENABLED, enabled).commit()
     }
 
     fun saveTxtAutoNumberOnSave(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_TXT_AUTO_NUMBER_ON_SAVE, enabled).apply()
+        prefs.edit().putBoolean(KEY_TXT_AUTO_NUMBER_ON_SAVE, enabled).commit()
     }
 
     fun saveTxtChapterNumberStartAtOneOnSave(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_TXT_CHAPTER_NUMBER_START_AT_ONE_ON_SAVE, enabled).apply()
+        prefs.edit().putBoolean(KEY_TXT_CHAPTER_NUMBER_START_AT_ONE_ON_SAVE, enabled).commit()
     }
 
     fun applySettingsPreferenceValues(preferences: List<SettingsPreferenceValue>) {
@@ -170,7 +171,7 @@ internal class EditorSettingsPreferences(
                 is SettingsPreferenceValue.StringValue -> editor.putString(preference.key, preference.value)
             }
         }
-        editor.apply()
+        editor.commit()
     }
 
     fun applyTxtConfigRules(bookTitleRules: String?, chapterRules: String?, purifyRules: String?) {
@@ -178,7 +179,7 @@ internal class EditorSettingsPreferences(
             .putStringIfNotNull(KEY_TXT_BOOK_TITLE_RULES, bookTitleRules)
             .putStringIfNotNull(KEY_TXT_CHAPTER_RULES, chapterRules)
             .putStringIfNotNull(KEY_TXT_PURIFY_RULES, purifyRules)
-            .apply()
+            .commit()
     }
 }
 

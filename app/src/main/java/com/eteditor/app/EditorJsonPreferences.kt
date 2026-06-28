@@ -19,9 +19,10 @@ internal class EditorJsonPreferences(
     }
 
     fun writeAutomationChains(json: String) {
+        // 同步写盘：执行链改完即落盘，避免进程被杀时异步写丢失。
         prefs.edit()
             .putString(KEY_AUTOMATION_CHAINS, json)
-            .apply()
+            .commit()
     }
 
     fun readEditorToolStores(): PersistedEditorToolRawStores {
