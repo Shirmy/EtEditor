@@ -120,7 +120,7 @@ suspend fun EditorController.applyPreparedTitleFormatPlanWithProgress(
     }
     val changed = applyTitleFormatPlanWithProgress(titleFormatPlan, onProgress)
     if (changed <= 0) {
-        return true
+        return false
     }
     return true
 }

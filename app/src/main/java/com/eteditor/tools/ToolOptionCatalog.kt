@@ -80,12 +80,6 @@ internal val COVER_IMAGE_INSERT_OPTIONS = listOf(
 
 internal val FETCH_INFO_SOURCE_OPTIONS = FetchInfoSources.options
 
-internal val FETCH_INFO_SEARCH_OPTIONS = listOf(
-    FETCH_INFO_SEARCH_TITLE to "按书名",
-    FETCH_INFO_SEARCH_AUTHOR to "按作者",
-    FETCH_INFO_SEARCH_KEYWORD to "按关键词"
-)
-
 internal val FETCH_INFO_CONTENT_OPTIONS = listOf(
     FETCH_INFO_CONTENT_COVER to "封面",
     FETCH_INFO_CONTENT_INTRO to "简介",

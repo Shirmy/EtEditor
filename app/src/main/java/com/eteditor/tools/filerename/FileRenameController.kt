@@ -86,7 +86,10 @@ suspend fun EditorController.applyPreparedFileRenamePlanWithProgress(
         statusMessage = "\u6ca1\u6709\u53ef\u6267\u884c\u7684\u91cd\u547d\u540d\u8ba1\u5212"
         return false
     }
-    applyFileRenamePlanWithProgress(fileRenamePlan, onProgress)
+    val changed = applyFileRenamePlanWithProgress(fileRenamePlan, onProgress)
+    if (changed <= 0) {
+        return false
+    }
     return true
 }
 

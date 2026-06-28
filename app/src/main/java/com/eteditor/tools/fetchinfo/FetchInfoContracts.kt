@@ -1,7 +1,6 @@
 package com.eteditor
 
 internal const val FETCH_INFO_PARAM_SOURCE = "fetch_source"
-internal const val FETCH_INFO_PARAM_SEARCH_MODE = "fetch_search_mode"
 internal const val FETCH_INFO_PARAM_QUERY = "fetch_query"
 internal const val FETCH_INFO_PARAM_CONTENT = "fetch_content"
 internal const val FETCH_INFO_PARAM_AUTH_COOKIE = "fetch_auth_cookie"

@@ -79,7 +79,6 @@ class ToolDefinitionCatalogTest {
 
         assertEquals(FETCH_INFO_SOURCE_JJWXC, parameters[FETCH_INFO_PARAM_SOURCE]?.defaultValue)
         assertEquals(FetchInfoSources.options, parameters[FETCH_INFO_PARAM_SOURCE]?.options)
-        assertEquals(FETCH_INFO_SEARCH_TITLE, parameters[FETCH_INFO_PARAM_SEARCH_MODE]?.defaultValue)
         assertEquals(FETCH_INFO_CONTENT_CATALOG, parameters[FETCH_INFO_PARAM_CONTENT]?.defaultValue)
         assertEquals(FETCH_INFO_CONTENT_OPTIONS, parameters[FETCH_INFO_PARAM_CONTENT]?.options)
         assertEquals("trim\ncompressBlankLines", parameters[FETCH_INFO_PARAM_INTRO_FILTER]?.defaultValue)
@@ -160,7 +159,6 @@ class ToolDefinitionCatalogTest {
             COVER_MODE_OPTIONS,
             COVER_IMAGE_INSERT_OPTIONS,
             FETCH_INFO_SOURCE_OPTIONS,
-            FETCH_INFO_SEARCH_OPTIONS,
             FETCH_INFO_CONTENT_OPTIONS
         )
 

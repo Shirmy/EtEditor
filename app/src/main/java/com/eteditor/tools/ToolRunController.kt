@@ -61,7 +61,10 @@ fun EditorController.applyPreparedFileRenamePlan(editorToolId: String): Boolean 
         statusMessage = "\u6ca1\u6709\u53ef\u6267\u884c\u7684\u91cd\u547d\u540d\u8ba1\u5212"
         return false
     }
-    applyFileRenamePlan(fileRenamePlan)
+    val changed = applyFileRenamePlan(fileRenamePlan)
+    if (changed <= 0) {
+        return false
+    }
     return true
 }
 
@@ -84,7 +87,7 @@ fun EditorController.applyPreparedTitleFormatPlan(toolId: String): Boolean {
     }
     val changed = applyTitleFormatPlan(titleFormatPlan)
     if (changed <= 0) {
-        return true
+        return false
     }
     return true
 }

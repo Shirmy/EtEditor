@@ -217,17 +217,6 @@ internal fun defaultEditorToolDefinitions(): List<ToolDefinition> {
                     options = FetchInfoSources.options
                 ),
                 ToolParameterDefinition(
-                    key = FETCH_INFO_PARAM_SEARCH_MODE,
-                    label = "搜索",
-                    defaultValue = FETCH_INFO_SEARCH_TITLE,
-                    options = FETCH_INFO_SEARCH_OPTIONS
-                ),
-                ToolParameterDefinition(
-                    key = FETCH_INFO_PARAM_QUERY,
-                    label = "关键词/网址",
-                    defaultValue = ""
-                ),
-                ToolParameterDefinition(
                     key = FETCH_INFO_PARAM_CONTENT,
                     label = "抓取内容",
                     defaultValue = FETCH_INFO_CONTENT_CATALOG,
