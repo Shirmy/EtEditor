@@ -8,7 +8,6 @@ import com.eteditor.readBytesLimited
 import com.eteditor.requireSizeWithinLimit
 import java.io.ByteArrayInputStream
 import java.util.zip.CRC32
-import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -56,31 +55,10 @@ internal fun ZipOutputStream.putStoredEntry(name: String, data: ByteArray) {
 }
 
 internal fun ZipOutputStream.putDeflatedEntry(name: String, data: ByteArray) {
-    val crc = CRC32()
-    crc.update(data)
-    val entry = ZipEntry(name).apply {
-        method = ZipEntry.DEFLATED
-        size = data.size.toLong()
-        compressedSize = deflatedSize(data)
-        this.crc = crc.value
-    }
+    // 用 DEFLATED 方式写入，但不预先设置大小/CRC：让 ZipOutputStream 在写入时压缩并计算一次，
+    // 把压缩后大小写进尾随的数据描述符。避免为了填本地头而先整块试压一遍，造成同一文件被压两次。
+    val entry = ZipEntry(name).apply { method = ZipEntry.DEFLATED }
     putNextEntry(entry)
     write(data)
     closeEntry()
-}
-
-private fun deflatedSize(data: ByteArray): Long {
-    val deflater = Deflater(Deflater.DEFAULT_COMPRESSION, true)
-    return try {
-        deflater.setInput(data)
-        deflater.finish()
-        val buffer = ByteArray(8192)
-        var total = 0L
-        while (!deflater.finished()) {
-            total += deflater.deflate(buffer).toLong()
-        }
-        total
-    } finally {
-        deflater.end()
-    }
 }

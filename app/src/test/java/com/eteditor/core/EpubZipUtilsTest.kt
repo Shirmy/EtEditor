@@ -87,7 +87,8 @@ class EpubZipUtilsTest {
             val entry = zip.nextEntry
             assertEquals("OEBPS/content.opf", entry.name)
             assertEquals(ZipEntry.DEFLATED, entry.method)
-            assertEquals(data.size.toLong(), entry.size)
+            // 压缩条目现在用尾随数据描述符记录大小，本地头里读不到未压缩大小（与外部 EPUB 的常见写法一致），
+            // 因此只校验压缩方式与数据可正确还原。
             assertArrayEquals(data, zip.readBytes())
             zip.closeEntry()
         }

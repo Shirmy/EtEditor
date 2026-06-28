@@ -5,6 +5,7 @@ import com.eteditor.core.EPUB_COVER_DIRECTORY_TITLE
 import com.eteditor.core.EpubBook
 import com.eteditor.core.EpubChapter
 import com.eteditor.core.ManifestItem
+import com.eteditor.core.decodeUrl
 import com.eteditor.core.isEpubCoverDirectoryCandidate
 import com.eteditor.core.updateEpubChapterHtmlEntry
 
@@ -93,12 +94,16 @@ internal fun resequenceEpubBodyChapterFileNames(
     val removedEntries = targetIndices.associateWith { index ->
         book.entries.remove(book.chapters[index].path)
     }
+    val renamedPaths = LinkedHashMap<String, String>()
     targetIndices.zip(plannedPaths).forEach { (index, newPath) ->
         val chapter = book.chapters[index]
         val oldPath = chapter.path
         val oldBytes = removedEntries[index]
         if (oldBytes != null) {
             book.entries[newPath] = oldBytes
+        }
+        if (!oldPath.equals(newPath, ignoreCase = true)) {
+            renamedPaths[normalizeEpubPath(oldPath).lowercase()] = newPath
         }
         chapter.pathAliases += oldPath
         chapter.pathAliases += newPath
@@ -107,6 +112,7 @@ internal fun resequenceEpubBodyChapterFileNames(
         book.manifest[chapter.id]?.path = newPath
         book.manifest[chapter.id]?.href = chapter.href
     }
+    rewriteEpubBodyLinksForRenamedPaths(book, renamedPaths)
     return changed
 }
 
@@ -388,6 +394,45 @@ internal fun rebuildHtmlWithBodyContent(
     }
 }
 
+private val epubBodyHrefRegex = Regex("""(href\s*=\s*)(["'])(.*?)\2""", RegexOption.IGNORE_CASE)
+
+// 章节文件被改名后，扫描每一章正文里指向这些文件的跳转链接（脚注/尾注那类），把链接改到新文件名，
+// 避免改名/分章/自动连号后正文里的内部链接失效。renamedPaths 的键是“整理并转小写后的旧路径”，值是新路径。
+internal fun rewriteEpubBodyLinksForRenamedPaths(
+    book: EpubBook,
+    renamedPaths: Map<String, String>
+) {
+    if (renamedPaths.isEmpty()) return
+    book.chapters.forEach { chapter ->
+        val chapterDir = chapter.path.substringBeforeLast('/', missingDelimiterValue = "")
+            .let { if (it.isBlank()) "" else "$it/" }
+        var changed = false
+        val nextHtml = epubBodyHrefRegex.replace(chapter.html) { match ->
+            val quote = match.groupValues[2]
+            val rawValue = match.groupValues[3]
+            val hashIndex = rawValue.indexOf('#')
+            val pathPart = if (hashIndex >= 0) rawValue.substring(0, hashIndex) else rawValue
+            val fragment = if (hashIndex >= 0) rawValue.substring(hashIndex) else ""
+            // 跳过纯锚点和外链（带协议，如 http: / mailto:），只处理指向书内文件的相对链接
+            if (pathPart.isBlank() || pathPart.substringBefore('/').contains(':')) {
+                return@replace match.value
+            }
+            val resolvedRaw = normalizeEpubPath(chapterDir + pathPart).lowercase()
+            val resolvedDecoded = normalizeEpubPath(chapterDir + pathPart.decodeUrl()).lowercase()
+            val newPath = renamedPaths[resolvedRaw]
+                ?: renamedPaths[resolvedDecoded]
+                ?: return@replace match.value
+            changed = true
+            "${match.groupValues[1]}$quote${relativeEpubHref(chapterDir, newPath)}$fragment$quote"
+        }
+        if (changed) {
+            chapter.html = nextHtml.toCrlfLineEndings()
+            chapter.wordCount = ChapterDetector.countHtmlChars(chapter.html)
+            updateEpubChapterHtmlEntry(book, chapter)
+        }
+    }
+}
+
 internal fun updateEpubChapterItemModel(
     book: EpubBook,
     chapterIndex: Int,
@@ -424,6 +469,10 @@ internal fun updateEpubChapterItemModel(
         chapter.href = newHref
         manifestItem?.path = newPath
         manifestItem?.href = newHref
+        rewriteEpubBodyLinksForRenamedPaths(
+            book,
+            mapOf(normalizeEpubPath(oldPath).lowercase() to newPath)
+        )
     }
 
     val nextTitle = if (isCover) EPUB_COVER_DIRECTORY_TITLE else cleanedTitle

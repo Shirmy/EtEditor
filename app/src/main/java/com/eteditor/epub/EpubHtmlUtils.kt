@@ -168,31 +168,11 @@ internal fun replaceIntroHtmlPreservingStructure(current: String, introBody: Str
     return current.replaceRange(bodyRange.first, bodyRange.second, nextBody)
 }
 
-internal fun normalizeEpubPath(path: String): String {
-    val result = ArrayDeque<String>()
-    path.replace('\\', '/').split('/').forEach { part ->
-        when {
-            part.isBlank() || part == "." -> Unit
-            part == ".." -> {
-                if (result.isNotEmpty()) result.removeLast()
-            }
-            else -> result.addLast(part)
-        }
-    }
-    return result.joinToString("/")
-}
+// 路径整理与相对链接的实现统一放在 com.eteditor.core，这里只转发，避免同一套逻辑维护两份。
+internal fun normalizeEpubPath(path: String): String = com.eteditor.core.normalizePath(path)
 
-internal fun relativeEpubHref(fromDir: String, targetPath: String): String {
-    val cleanFrom = normalizeEpubPath(fromDir).split('/').filter { it.isNotBlank() }
-    val cleanTarget = normalizeEpubPath(targetPath).split('/').filter { it.isNotBlank() }
-    var common = 0
-    while (common < cleanFrom.size && common < cleanTarget.size && cleanFrom[common] == cleanTarget[common]) {
-        common += 1
-    }
-    val ups = List(cleanFrom.size - common) { ".." }
-    val rest = cleanTarget.drop(common)
-    return (ups + rest).joinToString("/").ifBlank { targetPath.substringAfterLast('/') }
-}
+internal fun relativeEpubHref(fromDir: String, targetPath: String): String =
+    com.eteditor.core.relativeHref(fromDir, targetPath)
 
 internal fun uniqueManifestId(book: EpubBook, stem: String): String {
     val cleanBase = stem

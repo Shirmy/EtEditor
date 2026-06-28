@@ -7,12 +7,13 @@ internal fun EditorController.updateEpubChapterItem(
     fileName: String,
     chapterTitle: String
 ): Boolean {
-    val book = epub ?: return false
+    val book = (epub ?: return false).mutableDeepCopy()
     val result = updateEpubChapterItemModel(book, chapterIndex, fileName, chapterTitle)
     if (!result.success) {
         if (result.message.isNotBlank()) statusMessage = result.message
         return false
     }
+    epub = book
     checkReport = null
     markDocumentChanged()
     clearFileRenamePlan()
@@ -22,15 +23,16 @@ internal fun EditorController.updateEpubChapterItem(
 }
 
 fun EditorController.deleteEpubChapter(chapterIndex: Int): Boolean {
-    val book = epub ?: run {
+    val book = (epub ?: run {
         statusMessage = "删除章节仅支持 EPUB"
         return false
-    }
+    }).mutableDeepCopy()
     val result = deleteEpubChapterFromBook(book, chapterIndex)
     if (!result.success) {
         if (result.message.isNotBlank()) statusMessage = result.message
         return false
     }
+    epub = book
     previewChapterIndex = result.nextPreviewIndex
     checkReport = null
     markDocumentChanged()
@@ -60,10 +62,10 @@ fun EditorController.splitEpubChapterAtLine(
     newTitleText: String,
     dropSplitLineFromBody: Boolean = false
 ): Boolean {
-    val book = epub ?: run {
+    val book = (epub ?: run {
         statusMessage = "分章仅支持 EPUB"
         return false
-    }
+    }).mutableDeepCopy()
     val result = splitEpubChapterAtLineInBook(
         book = book,
         chapterIndex = chapterIndex,
@@ -75,6 +77,7 @@ fun EditorController.splitEpubChapterAtLine(
         if (result.message.isNotBlank()) statusMessage = result.message
         return false
     }
+    epub = book
     previewChapterIndex = result.nextPreviewIndex
     checkReport = null
     markDocumentChanged()
@@ -101,10 +104,10 @@ fun EditorController.hasExtraVolume(): Boolean {
 }
 
 fun EditorController.addEpubVolume(kind: String, volumeTitle: String, insertIndex: Int): Boolean {
-    val book = epub ?: run {
+    val book = (epub ?: run {
         statusMessage = "增加卷仅支持 EPUB"
         return false
-    }
+    }).mutableDeepCopy()
     val result = addEpubVolumeToBook(
         book = book,
         kind = kind,
@@ -115,6 +118,7 @@ fun EditorController.addEpubVolume(kind: String, volumeTitle: String, insertInde
         if (result.message.isNotBlank()) statusMessage = result.message
         return false
     }
+    epub = book
     previewChapterIndex = result.nextPreviewIndex
     checkReport = null
     markDocumentChanged()
@@ -126,10 +130,10 @@ fun EditorController.addEpubVolume(kind: String, volumeTitle: String, insertInde
 }
 
 fun EditorController.epubMoveChapterAfter(sourceIndex: Int, targetIndex: Int): Boolean {
-    val book = epub ?: run {
+    val book = (epub ?: run {
         statusMessage = "移动章节仅支持 EPUB"
         return false
-    }
+    }).mutableDeepCopy()
     val result = moveEpubChapterAfterInBook(
         book = book,
         sourceIndex = sourceIndex,
@@ -138,6 +142,7 @@ fun EditorController.epubMoveChapterAfter(sourceIndex: Int, targetIndex: Int): B
         bookEndTarget = MOVE_TARGET_BOOK_END
     )
     if (!result.success) return false
+    epub = book
     previewChapterIndex = result.nextPreviewIndex
     checkReport = null
     markDocumentChanged()
@@ -185,15 +190,16 @@ fun EditorController.splitEpubChapterAtBodyLine(chapterIndex: Int, lineIndex: In
 }
 
 fun EditorController.deleteEpubBodyLine(chapterIndex: Int, lineIndex: Int): Boolean {
-    val book = epub ?: run {
+    val book = (epub ?: run {
         statusMessage = "删除正文行仅支持 EPUB"
         return false
-    }
+    }).mutableDeepCopy()
     val result = deleteEpubBodyLineFromBook(book, chapterIndex, lineIndex)
     if (!result.success) {
         if (result.message.isNotBlank()) statusMessage = result.message
         return false
     }
+    epub = book
     previewChapterIndex = chapterIndex.coerceIn(0, book.chapters.lastIndex)
     checkReport = null
     markDocumentChanged()
@@ -210,10 +216,10 @@ fun EditorController.setEpubVolumeAtBodyLine(
     lineCountText: String,
     volumeTitleText: String
 ): Boolean {
-    val book = epub ?: run {
+    val book = (epub ?: run {
         statusMessage = "设为卷仅支持 EPUB"
         return false
-    }
+    }).mutableDeepCopy()
     val result = setEpubVolumeAtBodyLineInBook(
         book = book,
         chapterIndex = chapterIndex,
@@ -225,6 +231,7 @@ fun EditorController.setEpubVolumeAtBodyLine(
         if (result.message.isNotBlank()) statusMessage = result.message
         return false
     }
+    epub = book
     previewChapterIndex = result.nextPreviewIndex.coerceIn(0, book.chapters.lastIndex)
     checkReport = null
     markDocumentChanged()
@@ -240,10 +247,10 @@ fun EditorController.setEpubVolumeFromBodySelection(
     sourceStart: Int,
     sourceEnd: Int
 ): Boolean {
-    val book = epub ?: run {
+    val book = (epub ?: run {
         statusMessage = "设为卷仅支持 EPUB"
         return false
-    }
+    }).mutableDeepCopy()
     val result = setEpubVolumeFromBodySelectionInBook(
         book = book,
         chapterIndex = chapterIndex,
@@ -254,6 +261,7 @@ fun EditorController.setEpubVolumeFromBodySelection(
         if (result.message.isNotBlank()) statusMessage = result.message
         return false
     }
+    epub = book
     previewChapterIndex = chapterIndex.coerceIn(0, book.chapters.lastIndex)
     checkReport = null
     markDocumentChanged()
@@ -277,15 +285,16 @@ fun EditorController.deleteEpubBodySelection(
     sourceStart: Int,
     sourceEnd: Int
 ): Boolean {
-    val book = epub ?: run {
+    val book = (epub ?: run {
         statusMessage = "删除所选文字仅支持 EPUB"
         return false
-    }
+    }).mutableDeepCopy()
     val result = deleteEpubBodySelectionFromBook(book, chapterIndex, sourceStart, sourceEnd)
     if (!result.success) {
         if (result.message.isNotBlank()) statusMessage = result.message
         return false
     }
+    epub = book
     previewChapterIndex = chapterIndex.coerceIn(0, book.chapters.lastIndex)
     checkReport = null
     markDocumentChanged()
@@ -309,15 +318,16 @@ fun EditorController.wrapEpubBodySelectionWithParagraphs(
     sourceStart: Int,
     sourceEnd: Int
 ): Boolean {
-    val book = epub ?: run {
+    val book = (epub ?: run {
         statusMessage = "加标签仅支持 EPUB"
         return false
-    }
+    }).mutableDeepCopy()
     val result = wrapEpubBodySelectionParagraphsInBook(book, chapterIndex, sourceStart, sourceEnd)
     if (!result.success) {
         if (result.message.isNotBlank()) statusMessage = result.message
         return false
     }
+    epub = book
     previewChapterIndex = chapterIndex.coerceIn(0, book.chapters.lastIndex)
     checkReport = null
     markDocumentChanged()
