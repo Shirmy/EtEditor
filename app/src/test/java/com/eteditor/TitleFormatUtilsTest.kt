@@ -278,18 +278,8 @@ class TitleFormatUtilsTest {
                 chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章", "<html><body><h1>第2章</h1></body></html>")
             )
         )
-        val text = "第1章\n正文\n第2章 标题\n正文"
-        val document = TxtDocument(
-            originalName = "book.txt",
-            text = text,
-            encoding = "UTF-8",
-            chapters = detectTxtChapters(text)
-        )
-
         assertEquals(TITLE_FORMAT_STYLE_LEFT, epubInsertReferenceTitleStyle(book, insertPosition = 0))
         assertEquals(TITLE_FORMAT_STYLE_LEFT, epubInsertReferenceTitleStyle(book, insertPosition = 2))
-        assertEquals(TITLE_FORMAT_STYLE_NONE, txtInsertReferenceTitleStyle(document, insertPosition = 0))
-        assertEquals(TITLE_FORMAT_STYLE_DOUBLE, txtInsertReferenceTitleStyle(document, insertPosition = 2))
     }
 
     @Test

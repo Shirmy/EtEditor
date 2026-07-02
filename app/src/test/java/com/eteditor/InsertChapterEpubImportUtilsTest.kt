@@ -3,7 +3,6 @@ package com.eteditor
 import com.eteditor.core.EpubBook
 import com.eteditor.core.EpubChapter
 import com.eteditor.core.ManifestItem
-import com.eteditor.core.TxtDocument
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -180,32 +179,6 @@ class InsertChapterEpubImportUtilsTest {
         assertEquals(chapter.html.toByteArray(Charsets.UTF_8).toList(), book.entries[chapter.path]?.toList())
     }
 
-    @Test
-    fun txtInsertPositionAndTextHandleEmptyDocuments() {
-        val document = TxtDocument(
-            originalName = "empty.txt",
-            text = "",
-            encoding = "UTF-8",
-            chapters = emptyList()
-        )
-
-        val result = insertChaptersIntoTxtDocumentText(
-            document = document,
-            selected = listOf(insertable("第9章 外部", "正文")),
-            positionMode = INSERT_CHAPTER_POSITION_END,
-            targetChapterIndex = null,
-            currentChapterIndex = 0
-        )
-
-        assertEquals(0, resolveTxtInsertChapterPosition(document, INSERT_CHAPTER_POSITION_START, null, 0))
-        assertEquals(1, resolveTxtInsertChapterPosition(document, INSERT_CHAPTER_POSITION_END, null, 0))
-        assertEquals(0, txtChapterInsertOffset(document, insertPosition = 0))
-        assertEquals(0, txtChapterInsertOffset(document, insertPosition = 1))
-        assertEquals(1, result?.insertPosition)
-        assertEquals(1, result?.insertedCount)
-        assertEquals("第9章 外部\r\n正文", result?.text)
-    }
-
     private fun sampleBook(
         chapters: List<EpubChapter>,
         extraManifest: List<ManifestItem> = emptyList(),
@@ -262,20 +235,6 @@ class InsertChapterEpubImportUtilsTest {
             mediaType = mediaType,
             path = path,
             properties = properties
-        )
-    }
-
-    private fun insertable(title: String, text: String): InsertableChapter {
-        return InsertableChapter(
-            sourceIndex = 0,
-            title = title,
-            fileName = "source.xhtml",
-            sourcePath = "source.xhtml",
-            html = null,
-            text = text,
-            wordCount = text.length,
-            tocLevel = 0,
-            isVolume = false
         )
     }
 }

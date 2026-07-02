@@ -406,7 +406,6 @@ internal suspend fun EditorController.insertChaptersFromSource(
 
     return when (kind) {
         DocumentKind.Epub -> insertChaptersIntoEpub(source, chaptersToInsert, positionMode, targetChapterIndex, onProgress)
-        DocumentKind.Txt -> insertChaptersIntoTxt(chaptersToInsert, positionMode, targetChapterIndex, onProgress)
         DocumentKind.None -> false
     }
 }
@@ -454,61 +453,4 @@ private suspend fun EditorController.insertChaptersIntoEpub(
     return true
 }
 
-private suspend fun EditorController.insertChaptersIntoTxt(
-    selected: List<InsertableChapter>,
-    positionMode: String,
-    targetChapterIndex: Int?,
-    onProgress: InsertChapterProgressCallback
-): Boolean {
-    if (warnTxtMoveChapterSyncPending("插入章节")) return false
-    val document = txt ?: return false
-    val currentChapterIndex = previewChapterIndex
-    val snapshot = document.copy(chapters = document.chapters.toList())
-    onProgress("插入章节", 0, selected.size.coerceAtLeast(1))
-    val result = try {
-        withContext(Dispatchers.Default) {
-            insertChaptersIntoTxtDocumentText(
-                document = snapshot,
-                selected = selected,
-                positionMode = positionMode,
-                targetChapterIndex = targetChapterIndex,
-                currentChapterIndex = currentChapterIndex,
-                onProgress = { _, _ -> }
-            )
-        }
-    } catch (error: Throwable) {
-        statusMessage = "插入失败：${error.message ?: error.javaClass.simpleName}"
-        return false
-    }
-    if (result == null) {
-        statusMessage = "没有可插入章节"
-        return false
-    }
-    val config = currentTxtChapterDetectionConfig()
-    val autoKeys = txtEnabledChapterRuleKeys
-    val supplementedCatalogLines = txtSupplementedCatalogLines
-    val nextChapters = try {
-        withContext(Dispatchers.Default) {
-            detectTxtChaptersWithCatalogConfig(
-                text = result.text,
-                config = config,
-                autoKeys = autoKeys,
-                supplementedCatalogLines = supplementedCatalogLines
-            )
-        }
-    } catch (error: Throwable) {
-        statusMessage = "插入失败：${error.message ?: error.javaClass.simpleName}"
-        return false
-    }
-    onProgress("插入章节", selected.size, selected.size.coerceAtLeast(1))
-    document.text = result.text
-    document.chapters = nextChapters
-    applyTxtCatalogPurifyRulesAfterCatalogChange()
-    previewChapterIndex = result.insertPosition.coerceIn(0, document.chapters.lastIndex.coerceAtLeast(0))
-    checkReport = null
-    markDocumentChanged()
-    clearTextSearchState()
-    refreshChapters()
-    statusMessage = "已插入 ${result.insertedCount} 章"
-    return true
-}
+

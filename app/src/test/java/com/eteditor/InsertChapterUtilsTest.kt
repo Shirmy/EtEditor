@@ -1,15 +1,11 @@
 package com.eteditor
 
-import com.eteditor.core.ChapterDetector
 import com.eteditor.core.EpubBook
 import com.eteditor.core.EpubChapter
 import com.eteditor.core.ManifestItem
-import com.eteditor.core.TxtChapter
-import com.eteditor.core.TxtDocument
 import java.nio.charset.StandardCharsets
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -75,7 +71,7 @@ class InsertChapterUtilsTest {
     }
 
     @Test
-    fun resolveInsertChapterPositionsHandleCurrentTargetAndVolumeEnd() {
+    fun resolveEpubInsertChapterPositionsHandleCurrentTargetAndVolumeEnd() {
         val book = sampleBook(
             listOf(
                 epubChapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"),
@@ -83,133 +79,31 @@ class InsertChapterUtilsTest {
                 epubChapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章")
             )
         )
-        val document = txtDocument("第1章 开始\n正文\n第2章 继续\n正文")
 
         assertEquals(1, resolveEpubInsertChapterPosition(book, INSERT_CHAPTER_POSITION_CURRENT_AFTER, null, 0))
         assertEquals(1, resolveEpubInsertChapterPosition(book, INSERT_CHAPTER_POSITION_VOLUME_END, null, 0))
         assertEquals(3, resolveEpubInsertChapterPosition(book, INSERT_CHAPTER_POSITION_VOLUME_END, null, 1))
-        assertEquals(0, resolveTxtInsertChapterPosition(document, INSERT_CHAPTER_POSITION_START, null, 1))
-        assertEquals(2, resolveTxtInsertChapterPosition(document, INSERT_CHAPTER_POSITION_TARGET_AFTER, 1, 0))
     }
 
     @Test
-    fun resolveInsertChapterPositionsClampMissingTargetsAndEmptyTxtDocuments() {
+    fun resolveEpubInsertChapterPositionsClampMissingTargets() {
         val book = sampleBook(
             listOf(
                 epubChapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"),
                 epubChapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章")
             )
         )
-        val emptyDocument = TxtDocument(
-            originalName = "book.txt",
-            text = "正文",
-            encoding = "UTF-8",
-            chapters = emptyList()
-        )
 
         assertEquals(1, resolveEpubInsertChapterPosition(book, INSERT_CHAPTER_POSITION_TARGET_BEFORE, 99, 0))
         assertEquals(1, resolveEpubInsertChapterPosition(book, INSERT_CHAPTER_POSITION_TARGET_AFTER, -9, 0))
-        assertEquals(0, resolveTxtInsertChapterPosition(emptyDocument, INSERT_CHAPTER_POSITION_START, null, 0))
-        assertEquals(1, resolveTxtInsertChapterPosition(emptyDocument, INSERT_CHAPTER_POSITION_END, null, 0))
-        assertEquals(0, txtChapterInsertOffset(emptyDocument, 0))
-        assertEquals(emptyDocument.text.length, txtChapterInsertOffset(emptyDocument, 1))
     }
 
     @Test
-    fun resolveInsertChapterPositionsHandleEmptyEpubAndInvalidTxtChapterOffsets() {
+    fun resolveEpubInsertChapterPositionsHandleEmptyEpub() {
         val emptyBook = sampleBook(emptyList())
-        val brokenDocument = TxtDocument(
-            originalName = "broken.txt",
-            text = "第1章 开始\n正文",
-            encoding = "UTF-8",
-            chapters = listOf(
-                TxtChapter(
-                    index = 1,
-                    lineIndex = 9,
-                    endLineIndex = 10,
-                    title = "第1章 开始",
-                    wordCount = 2
-                )
-            )
-        )
 
         assertEquals(0, resolveEpubInsertChapterPosition(emptyBook, INSERT_CHAPTER_POSITION_CURRENT_AFTER, null, 99))
         assertEquals(0, resolveEpubInsertChapterPosition(emptyBook, INSERT_CHAPTER_POSITION_TARGET_AFTER, 5, 0))
-        assertEquals(0, resolveTxtInsertChapterPosition(brokenDocument, INSERT_CHAPTER_POSITION_TARGET_BEFORE, null, 0))
-        assertEquals(brokenDocument.text.length, txtChapterInsertOffset(brokenDocument, insertPosition = 0))
-    }
-
-    @Test
-    fun insertChaptersIntoTxtDocumentTextRenumbersAndInsertsAtResolvedPosition() {
-        val document = txtDocument("第1章 开始\n正文一\n第2章 继续\n正文二")
-        val result = insertChaptersIntoTxtDocumentText(
-            document = document,
-            selected = listOf(
-                InsertableChapter(
-                    sourceIndex = 0,
-                    title = "第9章 外部",
-                    fileName = "source",
-                    sourcePath = "source",
-                    html = null,
-                    text = "插入正文",
-                    wordCount = 4,
-                    tocLevel = 0,
-                    isVolume = false
-                )
-            ),
-            positionMode = INSERT_CHAPTER_POSITION_CURRENT_AFTER,
-            targetChapterIndex = null,
-            currentChapterIndex = 0
-        )
-
-        assertEquals(1, result?.insertPosition)
-        assertEquals(1, result?.insertedCount)
-        assertEquals(
-            "第1章 开始\r\n正文一\r\n\r\n第2章 外部\r\n插入正文\r\n\r\n第2章 继续\r\n正文二",
-            result?.text
-        )
-    }
-
-    @Test
-    fun insertChaptersIntoTxtDocumentTextSkipsBlankChunksButReportsProgress() {
-        val progress = mutableListOf<Pair<Int, Int>>()
-        val document = txtDocument("第1章 开始\n正文一\n第2章 继续\n正文二")
-        val result = insertChaptersIntoTxtDocumentText(
-            document = document,
-            selected = listOf(
-                insertable(0, " ", isVolume = true).copy(text = " "),
-                insertable(1, "外篇", isVolume = true).copy(text = ""),
-                insertable(2, "第9章 外部").copy(text = "新正文")
-            ),
-            positionMode = INSERT_CHAPTER_POSITION_END,
-            targetChapterIndex = null,
-            currentChapterIndex = 0,
-            onProgress = { completed, total -> progress += completed to total }
-        )
-
-        assertEquals(2, result?.insertedCount)
-        assertEquals(listOf(1 to 3, 2 to 3, 3 to 3), progress)
-        assertEquals(
-            "第1章 开始\r\n正文一\r\n第2章 继续\r\n正文二\r\n\r\n外篇\r\n\r\n第3章 外部\r\n新正文",
-            result?.text
-        )
-    }
-
-    @Test
-    fun insertChaptersIntoTxtDocumentTextReturnsNullWhenNothingCanBeInserted() {
-        val progress = mutableListOf<Pair<Int, Int>>()
-
-        val result = insertChaptersIntoTxtDocumentText(
-            document = txtDocument("第1章 开始\n正文"),
-            selected = emptyList(),
-            positionMode = INSERT_CHAPTER_POSITION_END,
-            targetChapterIndex = null,
-            currentChapterIndex = 0,
-            onProgress = { completed, total -> progress += completed to total }
-        )
-
-        assertNull(result)
-        assertEquals(emptyList<Pair<Int, Int>>(), progress)
     }
 
     @Test
@@ -344,22 +238,6 @@ class InsertChapterUtilsTest {
             wordCount = 2,
             tocLevel = 0,
             isVolume = isVolume
-        )
-    }
-
-    private fun txtDocument(text: String): TxtDocument {
-        return TxtDocument(
-            originalName = "book.txt",
-            text = text,
-            encoding = "UTF-8",
-            chapters = detectTxtChapters(text)
-        )
-    }
-
-    private fun detectTxtChapters(text: String): List<TxtChapter> {
-        return ChapterDetector.detectTxtChapters(
-            text = text,
-            customPatterns = listOf("""^第\s*(\d+)\s*章.*$""")
         )
     }
 

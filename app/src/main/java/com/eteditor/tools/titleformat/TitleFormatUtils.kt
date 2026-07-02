@@ -507,16 +507,6 @@ internal fun epubInsertReferenceTitleStyle(book: EpubBook, insertPosition: Int):
     return reference?.let(::epubChapterTitleStyle) ?: TITLE_FORMAT_STYLE_DOUBLE
 }
 
-internal fun txtInsertReferenceTitleStyle(document: TxtDocument, insertPosition: Int): String {
-    val before = document.chapters
-        .take(insertPosition)
-        .asReversed()
-        .firstOrNull()
-    val reference = before ?: document.chapters.drop(insertPosition).firstOrNull()
-    val parts = parseTitleFormatParts(reference?.title.orEmpty())
-    return if (parts.suffix.isBlank()) TITLE_FORMAT_STYLE_NONE else TITLE_FORMAT_STYLE_DOUBLE
-}
-
 // 插入参照点的章节是否本就是"第X章"样式(决定要不要给插入章续编号)。
 internal fun epubInsertReferenceIsNumbered(book: EpubBook, insertPosition: Int): Boolean {
     val before = book.chapters
@@ -526,12 +516,6 @@ internal fun epubInsertReferenceIsNumbered(book: EpubBook, insertPosition: Int):
     val reference = before ?: book.chapters
         .drop(insertPosition)
         .firstOrNull { chapter -> !chapter.isVolumeChapter() && !chapter.isCoverSection0001Or0002() }
-    return reference != null && parseTitleFormatParts(reference.title).prefix != null
-}
-
-internal fun txtInsertReferenceIsNumbered(document: TxtDocument, insertPosition: Int): Boolean {
-    val before = document.chapters.take(insertPosition).asReversed().firstOrNull()
-    val reference = before ?: document.chapters.drop(insertPosition).firstOrNull()
     return reference != null && parseTitleFormatParts(reference.title).prefix != null
 }
 
