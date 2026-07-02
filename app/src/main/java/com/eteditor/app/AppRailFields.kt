@@ -180,10 +180,10 @@ private fun RailDocumentControls(
             DocumentKind.Epub -> {
                 RailGlyphToggle(
                     label = "Ch",
-                    selected = hideDirectoryFileName,
+                    selected = !hideDirectoryFileName,
                     enabled = enabled,
-                    diagonalSlash = !hideDirectoryFileName,
-                    contentDescription = if (hideDirectoryFileName) "目录文件名隐藏已开启" else "目录文件名隐藏已关闭",
+                    diagonalSlash = hideDirectoryFileName,
+                    contentDescription = if (hideDirectoryFileName) "目录文件名显示已关闭" else "目录文件名显示已开启",
                     onClick = { onHideDirectoryFileNameChange(!hideDirectoryFileName) }
                 )
                 RailGlyphToggle(
