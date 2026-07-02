@@ -269,11 +269,12 @@ internal fun moveEpubChapterAfterInBook(
     bookEndTarget: Int
 ): EpubChapterMoveResult {
     if (sourceIndex !in book.chapters.indices) return EpubChapterMoveResult(success = false)
+    if (targetIndex !in setOf(bookStartTarget, bookEndTarget) && targetIndex !in book.chapters.indices) {
+        return EpubChapterMoveResult(success = false)
+    }
     if (targetIndex !in setOf(bookStartTarget, bookEndTarget) && sourceIndex == targetIndex) {
         return EpubChapterMoveResult(success = false)
     }
-    val originalLastIndex = book.chapters.lastIndex
-    val clampedTarget = targetIndex.coerceIn(0, originalLastIndex)
     val source = book.chapters.removeAt(sourceIndex)
     val movedDisplayTitle = source.title.ifBlank { source.path.substringAfterLast('/') }
     val sourceSpineId = if (sourceIndex in book.spineIds.indices) {
@@ -285,7 +286,7 @@ internal fun moveEpubChapterAfterInBook(
         bookStartTarget -> 0
         bookEndTarget -> book.chapters.size
         else -> {
-            val adjustedTarget = if (clampedTarget > sourceIndex) clampedTarget - 1 else clampedTarget
+            val adjustedTarget = if (targetIndex > sourceIndex) targetIndex - 1 else targetIndex
             (adjustedTarget + 1).coerceIn(0, book.chapters.size)
         }
     }
