@@ -154,7 +154,7 @@ class EpubStructureUtilsTest {
         val result = moveEpubChapterAfterInBook(
             book = book,
             sourceIndex = 0,
-            targetIndex = 99,
+            targetIndex = MOVE_TARGET_BOOK_END,
             bookStartTarget = MOVE_TARGET_BOOK_START,
             bookEndTarget = MOVE_TARGET_BOOK_END
         )
