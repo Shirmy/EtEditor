@@ -230,6 +230,7 @@ internal fun moveEpubChapterAfterInBook(
     val originalLastIndex = book.chapters.lastIndex
     val clampedTarget = targetIndex.coerceIn(0, originalLastIndex)
     val source = book.chapters.removeAt(sourceIndex)
+    val movedDisplayTitle = source.title.ifBlank { source.path.substringAfterLast('/') }
     val sourceSpineId = if (sourceIndex in book.spineIds.indices) {
         book.spineIds.removeAt(sourceIndex)
     } else {
@@ -251,10 +252,17 @@ internal fun moveEpubChapterAfterInBook(
         book.spineIds.addAll(book.chapters.map { it.id })
     }
     applyVolumeTocLevels(book)
+    val titleChanges = resequenceEpubNumberedTitles(
+        book = book,
+        targetIndices = epubBodyChapterIndices(book),
+        preferredTitleSource = source.title,
+        forceNumberedIndex = null
+    )
     return EpubChapterMoveResult(
         success = true,
-        movedDisplayTitle = source.title.ifBlank { source.path.substringAfterLast('/') },
-        nextPreviewIndex = insertIndex
+        movedDisplayTitle = movedDisplayTitle,
+        nextPreviewIndex = insertIndex,
+        resequence = EpubStructureResequenceResult(renamedFiles = 0, renamedTitles = titleChanges)
     )
 }
 

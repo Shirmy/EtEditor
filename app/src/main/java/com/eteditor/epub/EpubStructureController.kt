@@ -149,7 +149,10 @@ fun EditorController.epubMoveChapterAfter(sourceIndex: Int, targetIndex: Int): B
     clearFileRenamePlan()
     clearTextSearchState()
     refreshChapters()
-    statusMessage = "已移动章节：${result.movedDisplayTitle}"
+    statusMessage = buildEpubStructureChangeMessage(
+        prefix = "已移动章节：${result.movedDisplayTitle}",
+        resequence = result.resequence
+    )
     return true
 }
 

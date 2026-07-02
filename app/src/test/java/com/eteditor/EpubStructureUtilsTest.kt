@@ -170,6 +170,30 @@ class EpubStructureUtilsTest {
     }
 
     @Test
+    fun moveEpubChapterAfterInBookResequencesNumberedTitles() {
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章"),
+                chapter("c3", "OEBPS/Text/Chapter0003.xhtml", "第3章")
+            )
+        )
+
+        val result = moveEpubChapterAfterInBook(
+            book = book,
+            sourceIndex = 2,
+            targetIndex = -1,
+            bookStartTarget = -1,
+            bookEndTarget = 99
+        )
+
+        assertTrue(result.success)
+        assertEquals(EpubStructureResequenceResult(renamedFiles = 0, renamedTitles = 3), result.resequence)
+        assertEquals(listOf("c3", "c1", "c2"), book.chapters.map { it.id })
+        assertEquals(listOf("第1章", "第2章", "第3章"), book.chapters.map { it.title })
+    }
+
+    @Test
     fun moveEpubChapterAfterInBookRebuildsSpineWhenSpineStateIsMismatched() {
         val book = sampleBook(
             listOf(
