@@ -389,7 +389,7 @@ internal fun moveEpubChaptersAfterInBook(
 
     remainingChapters.addAll(insertIndex, movingChapters)
     if (remainingChapters.map { it.id } == originalChapters.map { it.id }) {
-        return EpubChapterMoveResult(success = false)
+        return EpubChapterMoveResult(success = false, message = "章节顺序未变化,未移动")
     }
     book.chapters.clear()
     book.chapters.addAll(remainingChapters)

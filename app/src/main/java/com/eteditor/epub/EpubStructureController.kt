@@ -192,7 +192,10 @@ fun EditorController.epubMoveChaptersAfter(sourceIndices: Set<Int>, targetIndex:
         bookStartTarget = MOVE_TARGET_BOOK_START,
         bookEndTarget = MOVE_TARGET_BOOK_END
     )
-    if (!result.success) return false
+    if (!result.success) {
+        statusMessage = result.message.ifBlank { "未移动:选中章节或目标位置无效" }
+        return false
+    }
     epub = book
     previewChapterIndex = result.nextPreviewIndex
     checkReport = null

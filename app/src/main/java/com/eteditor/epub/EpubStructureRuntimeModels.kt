@@ -42,6 +42,7 @@ internal data class EpubChapterDeleteResult(
 
 internal data class EpubChapterMoveResult(
     val success: Boolean,
+    val message: String = "",
     val movedDisplayTitle: String = "",
     val nextPreviewIndex: Int = 0,
     val resequence: EpubStructureResequenceResult = EpubStructureResequenceResult(0, 0)
