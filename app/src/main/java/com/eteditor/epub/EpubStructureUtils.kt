@@ -719,7 +719,7 @@ private fun resequenceEpubNumberedTitles(
     targetIndices: List<Int>,
     preferredTitleSource: String,
     forceNumberedIndex: Int?,
-    preserveTitleLineBreakStyle: Boolean = false
+    preserveTitleLineBreakStyle: Boolean = true
 ): Int {
     if (targetIndices.isEmpty()) return 0
     val preferredPattern = parseEpubNumberedTitle(preferredTitleSource)

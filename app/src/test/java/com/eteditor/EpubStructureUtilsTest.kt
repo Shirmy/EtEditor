@@ -245,6 +245,28 @@ class EpubStructureUtilsTest {
     }
 
     @Test
+    fun deleteEpubChapterFromBookKeepsTitleLineBreakStyle() {
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章 标题一"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章 标题二"),
+                chapter(
+                    "c3",
+                    "OEBPS/Text/Chapter0003.xhtml",
+                    "第3章 标题三",
+                    """<html><head><title>第3章 标题三</title></head><body><h1 class="chapter-title_01">第3章<br/>标题三</h1><p>正文</p></body></html>"""
+                )
+            )
+        )
+
+        val result = deleteEpubChapterFromBook(book = book, chapterIndex = 0)
+
+        assertTrue(result.success)
+        assertEquals("第2章 标题三", book.chapters[1].title)
+        assertTrue(book.chapters[1].html.contains("""<h1 class="chapter-title_01">第2章<br/>标题三</h1>"""))
+    }
+
+    @Test
     fun moveEpubChaptersAfterInBookKeepsSelectedOrderAndResequencesTitles() {
         val book = sampleBook(
             listOf(
