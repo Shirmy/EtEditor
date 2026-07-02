@@ -312,6 +312,39 @@ internal fun moveEpubChapterAfterInBook(
     )
 }
 
+internal fun epubBulkMoveTargetChangesOrder(
+    chapterCount: Int,
+    sourceIndices: Set<Int>,
+    targetIndex: Int,
+    bookStartTarget: Int,
+    bookEndTarget: Int
+): Boolean {
+    if (chapterCount <= 0) return false
+    val originalOrder = (0 until chapterCount).toList()
+    val selectedIndices = sourceIndices
+        .filter { index -> index in originalOrder.indices }
+        .toSortedSet()
+    if (selectedIndices.isEmpty()) return false
+    if (targetIndex !in setOf(bookStartTarget, bookEndTarget) && targetIndex !in originalOrder.indices) {
+        return false
+    }
+    if (targetIndex in selectedIndices) return false
+
+    val moving = originalOrder.filter { index -> index in selectedIndices }
+    val remaining = originalOrder.filter { index -> index !in selectedIndices }.toMutableList()
+    val insertIndex = when (targetIndex) {
+        bookStartTarget -> 0
+        bookEndTarget -> remaining.size
+        else -> {
+            val remainingTargetIndex = remaining.indexOf(targetIndex)
+            if (remainingTargetIndex < 0) return false
+            remainingTargetIndex + 1
+        }
+    }.coerceIn(0, remaining.size)
+    remaining.addAll(insertIndex, moving)
+    return remaining != originalOrder
+}
+
 internal fun moveEpubChaptersAfterInBook(
     book: EpubBook,
     sourceIndices: Set<Int>,
@@ -326,10 +359,14 @@ internal fun moveEpubChaptersAfterInBook(
     if (selectedIndices.any { index -> book.chapters[index].isCoverSection0001Or0002() }) {
         return EpubChapterMoveResult(success = false)
     }
-    if (targetIndex !in setOf(bookStartTarget, bookEndTarget) && targetIndex !in book.chapters.indices) {
-        return EpubChapterMoveResult(success = false)
-    }
-    if (targetIndex in selectedIndices) {
+    if (!epubBulkMoveTargetChangesOrder(
+            chapterCount = book.chapters.size,
+            sourceIndices = selectedIndices,
+            targetIndex = targetIndex,
+            bookStartTarget = bookStartTarget,
+            bookEndTarget = bookEndTarget
+        )
+    ) {
         return EpubChapterMoveResult(success = false)
     }
 

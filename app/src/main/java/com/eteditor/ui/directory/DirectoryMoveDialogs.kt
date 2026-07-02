@@ -199,7 +199,14 @@ internal fun EpubBulkMoveChapterTargetDialog(
             val targetIndex = option.key.toIntOrNull()
             option.copy(
                 current = targetIndex in selectedIndexes,
-                enabled = targetIndex !in selectedIndexes
+                enabled = targetIndex != null &&
+                    epubBulkMoveTargetChangesOrder(
+                        chapterCount = controller.chapters.size,
+                        sourceIndices = selectedIndexes,
+                        targetIndex = targetIndex,
+                        bookStartTarget = MOVE_TARGET_BOOK_START,
+                        bookEndTarget = MOVE_TARGET_BOOK_END
+                    )
             )
         }
     }

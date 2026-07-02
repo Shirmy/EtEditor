@@ -694,6 +694,64 @@ class EpubStructureUtilsTest {
     }
 
     @Test
+    fun epubBulkMoveTargetChangesOrderRejectsNoopTargets() {
+        assertFalse(
+            epubBulkMoveTargetChangesOrder(
+                chapterCount = 4,
+                sourceIndices = setOf(1, 2),
+                targetIndex = 0,
+                bookStartTarget = MOVE_TARGET_BOOK_START,
+                bookEndTarget = MOVE_TARGET_BOOK_END
+            )
+        )
+        assertFalse(
+            epubBulkMoveTargetChangesOrder(
+                chapterCount = 4,
+                sourceIndices = setOf(0, 1),
+                targetIndex = MOVE_TARGET_BOOK_START,
+                bookStartTarget = MOVE_TARGET_BOOK_START,
+                bookEndTarget = MOVE_TARGET_BOOK_END
+            )
+        )
+        assertFalse(
+            epubBulkMoveTargetChangesOrder(
+                chapterCount = 4,
+                sourceIndices = setOf(2, 3),
+                targetIndex = MOVE_TARGET_BOOK_END,
+                bookStartTarget = MOVE_TARGET_BOOK_START,
+                bookEndTarget = MOVE_TARGET_BOOK_END
+            )
+        )
+        assertFalse(
+            epubBulkMoveTargetChangesOrder(
+                chapterCount = 4,
+                sourceIndices = setOf(1, 2),
+                targetIndex = 1,
+                bookStartTarget = MOVE_TARGET_BOOK_START,
+                bookEndTarget = MOVE_TARGET_BOOK_END
+            )
+        )
+        assertTrue(
+            epubBulkMoveTargetChangesOrder(
+                chapterCount = 4,
+                sourceIndices = setOf(1, 2),
+                targetIndex = MOVE_TARGET_BOOK_START,
+                bookStartTarget = MOVE_TARGET_BOOK_START,
+                bookEndTarget = MOVE_TARGET_BOOK_END
+            )
+        )
+        assertTrue(
+            epubBulkMoveTargetChangesOrder(
+                chapterCount = 4,
+                sourceIndices = setOf(1, 3),
+                targetIndex = 0,
+                bookStartTarget = MOVE_TARGET_BOOK_START,
+                bookEndTarget = MOVE_TARGET_BOOK_END
+            )
+        )
+    }
+
+    @Test
     fun deleteEpubChaptersFromBookRejectsEmptySelection() {
         val book = sampleBook(
             listOf(
