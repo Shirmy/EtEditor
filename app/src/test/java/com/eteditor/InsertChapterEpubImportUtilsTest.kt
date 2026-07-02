@@ -179,6 +179,48 @@ class InsertChapterEpubImportUtilsTest {
         assertEquals(chapter.html.toByteArray(Charsets.UTF_8).toList(), book.entries[chapter.path]?.toList())
     }
 
+    @Test
+    fun insertChaptersIntoEpubBookRenumbersAndKeepsOriginalTitleWhenSourceHasNoNumberedPrefix() {
+        val book = sampleBook(
+            listOf(
+                epubChapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"),
+                epubChapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章")
+            )
+        )
+        val source = InsertChapterSourceData(
+            sourceUri = "content://source",
+            sourceType = INSERT_CHAPTER_SOURCE_UPLOAD,
+            originalName = "source.txt",
+            chapters = listOf(insertable(0, "番外"))
+        )
+
+        val result = insertChaptersIntoEpubBook(
+            book = book,
+            source = source,
+            selected = source.chapters,
+            positionMode = INSERT_CHAPTER_POSITION_CURRENT_AFTER,
+            targetChapterIndex = null,
+            currentChapterIndex = 0
+        )
+
+        assertEquals(1, result.insertedCount)
+        assertEquals("第2章 番外", book.chapters[1].title)
+    }
+
+    private fun insertable(index: Int, title: String, isVolume: Boolean = false): InsertableChapter {
+        return InsertableChapter(
+            sourceIndex = index,
+            title = title,
+            fileName = "chapter$index.xhtml",
+            sourcePath = "chapter$index.xhtml",
+            html = null,
+            text = "正文",
+            wordCount = 2,
+            tocLevel = 0,
+            isVolume = isVolume
+        )
+    }
+
     private fun sampleBook(
         chapters: List<EpubChapter>,
         extraManifest: List<ManifestItem> = emptyList(),
