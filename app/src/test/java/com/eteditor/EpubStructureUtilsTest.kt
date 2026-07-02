@@ -527,6 +527,31 @@ class EpubStructureUtilsTest {
     }
 
     @Test
+    fun splitEpubChapterAtLineInBookKeepsFollowingChapterTitleLineBreakStyle() {
+        val firstHtml = "<html><head><title>第1章</title></head><body><h1>第1章</h1>\n<p>前半</p>\n<p>中间</p>\n<p>后半</p></body></html>"
+        val secondHtml = """<html><head><title>第2章 标题二</title></head><body><h1 class="chapter-title_01">第2章<br/>标题二</h1><p>正文</p></body></html>"""
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章", firstHtml),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章 标题二", secondHtml)
+            )
+        )
+
+        val result = splitEpubChapterAtLineInBook(
+            book = book,
+            chapterIndex = 0,
+            lineNumberText = "3",
+            newTitleText = "第2章 后半",
+            dropSplitLineFromBody = false
+        )
+
+        assertTrue(result.success)
+        assertEquals(3, book.chapters.size)
+        assertEquals("第3章 标题二", book.chapters[2].title)
+        assertTrue(book.chapters[2].html.contains("""<h1 class="chapter-title_01">第3章<br/>标题二</h1>"""))
+    }
+
+    @Test
     fun splitTitleSuggestionAndPathSkipBlankLinesAndExistingSplitPath() {
         val book = sampleBook(
             listOf(
