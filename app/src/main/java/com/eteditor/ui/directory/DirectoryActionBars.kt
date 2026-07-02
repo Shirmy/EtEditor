@@ -168,7 +168,7 @@ internal fun TxtBulkRemoveCatalogBar(
 }
 
 @Composable
-internal fun TxtBulkMoveChapterBar(
+internal fun BulkMoveChapterBar(
     selectedCount: Int,
     onCancel: () -> Unit,
     onConfirm: () -> Unit
@@ -208,7 +208,7 @@ internal fun TxtBulkMoveChapterBar(
 }
 
 @Composable
-internal fun TxtBulkDeleteChapterBar(
+internal fun BulkDeleteChapterBar(
     selectedCount: Int,
     onCancel: () -> Unit,
     onConfirm: () -> Unit

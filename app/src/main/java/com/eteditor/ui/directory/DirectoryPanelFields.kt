@@ -143,7 +143,7 @@ internal fun DirectoryPanel(
                         .padding(horizontal = 6.dp, vertical = 6.dp)
                 )
             } else if (bulkMoveChapterMode) {
-                TxtBulkMoveChapterBar(
+                BulkMoveChapterBar(
                     selectedCount = bulkMoveChapterIndexes.size,
                     onCancel = { cancelBulkMoveChapter() },
                     onConfirm = {
@@ -175,7 +175,7 @@ internal fun DirectoryPanel(
                     }
                 )
             } else if (bulkDeleteChapterMode) {
-                TxtBulkDeleteChapterBar(
+                BulkDeleteChapterBar(
                     selectedCount = bulkDeleteChapterIndexes.size,
                     onCancel = { cancelBulkDeleteChapter() },
                     onConfirm = {
