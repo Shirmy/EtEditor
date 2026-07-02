@@ -603,6 +603,145 @@ class EpubStructureUtilsTest {
         assertFalse(book.chapters[0].html.contains("../Notes/appendix.xhtml"))
     }
 
+    @Test
+    fun moveEpubChaptersAfterInBookRejectsEmptySelection() {
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章")
+            )
+        )
+        val originalIds = book.chapters.map { it.id }.toList()
+
+        val result = moveEpubChaptersAfterInBook(
+            book,
+            sourceIndices = setOf(99),
+            targetIndex = 0,
+            bookStartTarget = -1,
+            bookEndTarget = 99
+        )
+
+        assertFalse(result.success)
+        assertEquals(originalIds, book.chapters.map { it.id })
+    }
+
+    @Test
+    fun moveEpubChaptersAfterInBookRejectsSelectionContainingCover() {
+        val book = sampleBook(
+            listOf(
+                chapter("cover", "OEBPS/Text/Section0001.xhtml", "封面"),
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章")
+            )
+        )
+        val originalIds = book.chapters.map { it.id }.toList()
+
+        val result = moveEpubChaptersAfterInBook(
+            book,
+            sourceIndices = setOf(0, 1),
+            targetIndex = 2,
+            bookStartTarget = -1,
+            bookEndTarget = 99
+        )
+
+        assertFalse(result.success)
+        assertEquals(originalIds, book.chapters.map { it.id })
+    }
+
+    @Test
+    fun moveEpubChaptersAfterInBookRejectsTargetInSelection() {
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章"),
+                chapter("c3", "OEBPS/Text/Chapter0003.xhtml", "第3章")
+            )
+        )
+        val originalIds = book.chapters.map { it.id }.toList()
+
+        val result = moveEpubChaptersAfterInBook(
+            book,
+            sourceIndices = setOf(1, 2),
+            targetIndex = 1,
+            bookStartTarget = -1,
+            bookEndTarget = 99
+        )
+
+        assertFalse(result.success)
+        assertEquals(originalIds, book.chapters.map { it.id })
+    }
+
+    @Test
+    fun moveEpubChaptersAfterInBookRejectsOutOfBoundsTarget() {
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章")
+            )
+        )
+        val originalIds = book.chapters.map { it.id }.toList()
+
+        val result = moveEpubChaptersAfterInBook(
+            book,
+            sourceIndices = setOf(0),
+            targetIndex = 50,
+            bookStartTarget = -1,
+            bookEndTarget = 99
+        )
+
+        assertFalse(result.success)
+        assertEquals(originalIds, book.chapters.map { it.id })
+    }
+
+    @Test
+    fun deleteEpubChaptersFromBookRejectsEmptySelection() {
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章")
+            )
+        )
+        val originalIds = book.chapters.map { it.id }.toList()
+
+        val result = deleteEpubChaptersFromBook(book, chapterIndices = setOf(99))
+
+        assertFalse(result.success)
+        assertEquals(originalIds, book.chapters.map { it.id })
+    }
+
+    @Test
+    fun deleteEpubChaptersFromBookRejectsSelectionContainingCover() {
+        val book = sampleBook(
+            listOf(
+                chapter("cover", "OEBPS/Text/Section0001.xhtml", "封面"),
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章")
+            )
+        )
+        val originalIds = book.chapters.map { it.id }.toList()
+
+        val result = deleteEpubChaptersFromBook(book, chapterIndices = setOf(0, 1))
+
+        assertFalse(result.success)
+        assertEquals(originalIds, book.chapters.map { it.id })
+    }
+
+    @Test
+    fun deleteEpubChaptersFromBookRejectsDeletingAllChapters() {
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章")
+            )
+        )
+        val originalIds = book.chapters.map { it.id }.toList()
+
+        val result = deleteEpubChaptersFromBook(book, chapterIndices = setOf(0, 1))
+
+        assertFalse(result.success)
+        assertEquals(originalIds, book.chapters.map { it.id })
+    }
+
     private fun sampleBook(chapters: List<EpubChapter>): EpubBook {
         val entries = linkedMapOf<String, ByteArray>()
         val manifest = mutableMapOf<String, ManifestItem>()

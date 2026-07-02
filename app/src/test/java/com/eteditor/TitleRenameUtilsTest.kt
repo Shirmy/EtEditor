@@ -291,6 +291,45 @@ class TitleRenameUtilsTest {
         assertEquals(text, document.text)
     }
 
+    @Test
+    fun buildTitleRenamePlanModelSkipsCoverSectionChapters() {
+        val cover = epubChapter(
+            id = "cover",
+            path = "OEBPS/Text/Section0001.xhtml",
+            title = "封面",
+            html = "<html><body><h1>封面</h1></body></html>"
+        )
+        val body = epubChapter(
+            id = "c1",
+            path = "OEBPS/Text/Chapter0001.xhtml",
+            title = "旧标题",
+            html = "<html><body><h1>旧标题</h1></body></html>"
+        )
+        val epubChapters = listOf(cover, body)
+        val chapters = epubChapters.mapIndexed { index, chapter ->
+            ChapterInfo(
+                index = index + 1,
+                title = chapter.title,
+                wordCount = chapter.wordCount,
+                source = chapter.path,
+                fileName = chapter.path.substringAfterLast('/')
+            )
+        }
+
+        val result = buildTitleRenamePlanModel(
+            kind = DocumentKind.Epub,
+            epubChapters = epubChapters,
+            txtDocument = null,
+            chapters = chapters,
+            currentIndex = 0,
+            parameters = titleParameters(pattern = "第{Z2}章 {title}")
+        )
+
+        assertEquals("", result.message)
+        assertEquals(listOf(1), result.plan.map { it.chapterIndex })
+        assertEquals(listOf("第01章 旧标题"), result.plan.map { it.newTitle })
+    }
+
     private fun titleParameters(pattern: String): TitleRenameParameters {
         return TitleRenameParameters(
             pattern = pattern,

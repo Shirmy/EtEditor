@@ -8,6 +8,7 @@ import com.eteditor.core.ManifestItem
 import com.eteditor.core.TxtChapter
 import com.eteditor.core.TxtDocument
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -525,6 +526,53 @@ class TitleFormatUtilsTest {
         assertEquals(listOf(3, 4), extraItems.map { it.sequenceNumber })
         assertEquals(listOf("生日番外", "特别篇"), extraItems.map { it.newTitle })
         assertEquals(listOf(TITLE_FORMAT_STYLE_NONE, TITLE_FORMAT_STYLE_NONE), extraItems.map { it.styleCode })
+    }
+
+    @Test
+    fun updateEpubChapterTitleHtmlInsertsBrForVolumeChapterTitle() {
+        val chapter = chapter(
+            "v1",
+            "OEBPS/Text/Vol01.xhtml",
+            "第一卷 旧",
+            "<html><head><title>旧</title></head><body><h1>第一卷 旧</h1><p>正文</p></body></html>"
+        )
+
+        val updated = updateEpubChapterTitleHtml(chapter, "第一卷 开端")
+
+        assertTrue(updated.contains("<title>第一卷 开端</title>"))
+        assertTrue(updated.contains("第一卷<br/>开端"))
+    }
+
+    @Test
+    fun updateEpubChapterTitleHtmlInsertsBrForStyle01ChapterTitle() {
+        val chapter = chapter(
+            "c1",
+            "OEBPS/Text/Chapter0001.xhtml",
+            "第1章 旧",
+            """<html><head><title>旧</title></head><body><h1 class="chapter-title_01">第1章 旧</h1><p>正文</p></body></html>"""
+        )
+
+        val updated = updateEpubChapterTitleHtml(chapter, "第1章 开端")
+
+        assertTrue(updated.contains("<title>第1章 开端</title>"))
+        assertTrue(updated.contains("第1章<br/>开端"))
+        assertTrue(updated.contains("chapter-title_01"))
+    }
+
+    @Test
+    fun updateEpubChapterTitleHtmlUsesPlainTitleForUnstyledChapter() {
+        val chapter = chapter(
+            "c1",
+            "OEBPS/Text/Chapter0001.xhtml",
+            "旧",
+            "<html><head><title>旧</title></head><body><h1>旧</h1><p>正文</p></body></html>"
+        )
+
+        val updated = updateEpubChapterTitleHtml(chapter, "新标题")
+
+        assertTrue(updated.contains("<title>新标题</title>"))
+        assertTrue(updated.contains("<h1>新标题</h1>"))
+        assertFalse(updated.contains("<br/>"))
     }
 
     private fun detectTxtChapters(text: String): List<TxtChapter> {
