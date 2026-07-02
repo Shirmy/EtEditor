@@ -167,14 +167,6 @@ fun InsertChapterSourcePreviewPane(
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
-                                    Text(
-                                        text = item.fileName.ifBlank { "TXT" },
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontFamily = FontFamily.Monospace,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
                                 }
                                 Text(
                                     text = when {
@@ -404,14 +396,6 @@ fun InsertChapterSourcePickerDialog(
                                                     fontWeight = if (item.isVolume) FontWeight.SemiBold else FontWeight.Medium,
                                                     color = MaterialTheme.colorScheme.onSurface,
                                                     maxLines = 2,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                                Text(
-                                                    text = item.fileName.ifBlank { "TXT" },
-                                                    style = MaterialTheme.typography.labelMedium,
-                                                    fontFamily = FontFamily.Monospace,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis
                                                 )
                                             }
