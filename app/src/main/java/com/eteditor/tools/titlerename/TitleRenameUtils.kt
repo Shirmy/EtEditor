@@ -150,7 +150,9 @@ private fun titleRenameTargetIndicesModel(
         DocumentKind.Epub -> {
             val sourceChapters = epubChapters ?: return emptyList()
             scopedIndices.filter { index ->
-                index in sourceChapters.indices && !sourceChapters[index].isVolumeChapter()
+                index in sourceChapters.indices &&
+                    !sourceChapters[index].isVolumeChapter() &&
+                    !sourceChapters[index].isCoverSection0001Or0002()
             }
         }
         DocumentKind.Txt -> {
