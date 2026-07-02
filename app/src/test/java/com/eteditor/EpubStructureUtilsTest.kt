@@ -194,6 +194,32 @@ class EpubStructureUtilsTest {
     }
 
     @Test
+    fun moveEpubChaptersAfterInBookKeepsSelectedOrderAndResequencesTitles() {
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章"),
+                chapter("c3", "OEBPS/Text/Chapter0003.xhtml", "第3章"),
+                chapter("c4", "OEBPS/Text/Chapter0004.xhtml", "第4章")
+            )
+        )
+
+        val result = moveEpubChaptersAfterInBook(
+            book = book,
+            sourceIndices = setOf(1, 3),
+            targetIndex = 0,
+            bookStartTarget = -1,
+            bookEndTarget = 99
+        )
+
+        assertTrue(result.success)
+        assertEquals(EpubStructureResequenceResult(renamedFiles = 0, renamedTitles = 2), result.resequence)
+        assertEquals(listOf("c1", "c2", "c4", "c3"), book.chapters.map { it.id })
+        assertEquals(listOf("c1", "c2", "c4", "c3"), book.spineIds)
+        assertEquals(listOf("第1章", "第2章", "第3章", "第4章"), book.chapters.map { it.title })
+    }
+
+    @Test
     fun moveEpubChapterAfterInBookRebuildsSpineWhenSpineStateIsMismatched() {
         val book = sampleBook(
             listOf(
@@ -292,6 +318,28 @@ class EpubStructureUtilsTest {
         assertTrue(book.entries.containsKey("OEBPS/Text/Chapter0002.xhtml"))
         assertFalse(book.entries.containsKey("OEBPS/Text/Chapter0003.xhtml"))
         assertTrue(String(book.entries.getValue("OEBPS/Text/Chapter0002.xhtml"), StandardCharsets.UTF_8).contains("第2章"))
+    }
+
+    @Test
+    fun deleteEpubChaptersFromBookRemovesSelectedChaptersAndResequences() {
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章"),
+                chapter("c3", "OEBPS/Text/Chapter0003.xhtml", "第3章"),
+                chapter("c4", "OEBPS/Text/Chapter0004.xhtml", "第4章")
+            )
+        )
+
+        val result = deleteEpubChaptersFromBook(book, setOf(1, 3))
+
+        assertTrue(result.success)
+        assertEquals(EpubStructureResequenceResult(renamedFiles = 1, renamedTitles = 1), result.resequence)
+        assertEquals(listOf("c1", "c3"), book.chapters.map { it.id })
+        assertEquals(listOf("第1章", "第2章"), book.chapters.map { it.title })
+        assertEquals(listOf("OEBPS/Text/Chapter0001.xhtml", "OEBPS/Text/Chapter0002.xhtml"), book.chapters.map { it.path })
+        assertFalse(book.manifest.containsKey("c2"))
+        assertFalse(book.manifest.containsKey("c4"))
     }
 
     @Test

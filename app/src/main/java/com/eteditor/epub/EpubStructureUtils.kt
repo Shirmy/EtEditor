@@ -197,6 +197,51 @@ internal fun deleteEpubChapterFromBook(
     )
 }
 
+internal fun deleteEpubChaptersFromBook(
+    book: EpubBook,
+    chapterIndices: Set<Int>
+): EpubChapterDeleteResult {
+    val targetIndices = chapterIndices
+        .filter { index -> index in book.chapters.indices }
+        .distinct()
+        .sorted()
+    if (targetIndices.isEmpty()) return EpubChapterDeleteResult(success = false)
+    if (targetIndices.any { index -> book.chapters[index].isCoverSection0001Or0002() }) {
+        return EpubChapterDeleteResult(success = false)
+    }
+    if (book.chapters.size - targetIndices.size < 1) {
+        return EpubChapterDeleteResult(success = false, message = "至少需要保留 1 个 HTML 章节")
+    }
+    val preferredTitleSource = targetIndices.firstNotNullOfOrNull { index ->
+        book.chapters.getOrNull(index)?.title
+    }.orEmpty()
+    var deletedVolume = false
+    targetIndices.asReversed().forEach { index ->
+        val chapter = book.chapters.removeAt(index)
+        deletedVolume = deletedVolume || chapter.isVolumeChapter()
+        book.spineIds.removeAll { it == chapter.id }
+        book.manifest.remove(chapter.id)
+        book.entries.remove(chapter.path)
+        chapter.pathAliases.forEach { alias ->
+            if (alias != chapter.path && book.chapters.none { it.path == alias }) {
+                book.entries.remove(alias)
+            }
+        }
+    }
+    if (deletedVolume || book.chapters.any { it.isVolumeChapter() }) applyVolumeTocLevels(book)
+    val resequence = resequenceEpubBodyChaptersAfterStructureChange(
+        book = book,
+        preferredTitleSource = preferredTitleSource
+    )
+    val nextIndex = targetIndices.first().coerceAtMost(book.chapters.lastIndex).coerceAtLeast(0)
+    return EpubChapterDeleteResult(
+        success = true,
+        deletedDisplayTitle = "${targetIndices.size} 章",
+        nextPreviewIndex = nextIndex,
+        resequence = resequence
+    )
+}
+
 internal fun deleteEpubBodyLineFromBook(
     book: EpubBook,
     chapterIndex: Int,
@@ -261,6 +306,73 @@ internal fun moveEpubChapterAfterInBook(
     return EpubChapterMoveResult(
         success = true,
         movedDisplayTitle = movedDisplayTitle,
+        nextPreviewIndex = insertIndex,
+        resequence = EpubStructureResequenceResult(renamedFiles = 0, renamedTitles = titleChanges)
+    )
+}
+
+internal fun moveEpubChaptersAfterInBook(
+    book: EpubBook,
+    sourceIndices: Set<Int>,
+    targetIndex: Int,
+    bookStartTarget: Int,
+    bookEndTarget: Int
+): EpubChapterMoveResult {
+    val selectedIndices = sourceIndices
+        .filter { index -> index in book.chapters.indices }
+        .toSortedSet()
+    if (selectedIndices.isEmpty()) return EpubChapterMoveResult(success = false)
+    if (selectedIndices.any { index -> book.chapters[index].isCoverSection0001Or0002() }) {
+        return EpubChapterMoveResult(success = false)
+    }
+    if (targetIndex !in setOf(bookStartTarget, bookEndTarget) && targetIndex !in book.chapters.indices) {
+        return EpubChapterMoveResult(success = false)
+    }
+    if (targetIndex in selectedIndices) {
+        return EpubChapterMoveResult(success = false)
+    }
+
+    val originalChapters = book.chapters.toList()
+    val originalSpineIds = book.spineIds.toList()
+    val movingChapters = originalChapters.filterIndexed { index, _ -> index in selectedIndices }
+    val remainingChapters = originalChapters.filterIndexed { index, _ -> index !in selectedIndices }.toMutableList()
+    val insertIndex = when (targetIndex) {
+        bookStartTarget -> 0
+        bookEndTarget -> remainingChapters.size
+        else -> {
+            val targetChapter = originalChapters[targetIndex]
+            val remainingTargetIndex = remainingChapters.indexOfFirst { chapter -> chapter.id == targetChapter.id }
+            if (remainingTargetIndex < 0) return EpubChapterMoveResult(success = false)
+            remainingTargetIndex + 1
+        }
+    }.coerceIn(0, remainingChapters.size)
+
+    remainingChapters.addAll(insertIndex, movingChapters)
+    if (remainingChapters.map { it.id } == originalChapters.map { it.id }) {
+        return EpubChapterMoveResult(success = false)
+    }
+    book.chapters.clear()
+    book.chapters.addAll(remainingChapters)
+    if (originalSpineIds.size == originalChapters.size) {
+        val movingSpineIds = originalSpineIds.filterIndexed { index, _ -> index in selectedIndices }
+        val remainingSpineIds = originalSpineIds.filterIndexed { index, _ -> index !in selectedIndices }.toMutableList()
+        remainingSpineIds.addAll(insertIndex.coerceIn(0, remainingSpineIds.size), movingSpineIds)
+        book.spineIds.clear()
+        book.spineIds.addAll(remainingSpineIds)
+    } else {
+        book.spineIds.clear()
+        book.spineIds.addAll(book.chapters.map { it.id })
+    }
+    applyVolumeTocLevels(book)
+    val titleChanges = resequenceEpubNumberedTitles(
+        book = book,
+        targetIndices = epubBodyChapterIndices(book),
+        preferredTitleSource = movingChapters.firstOrNull()?.title.orEmpty(),
+        forceNumberedIndex = null
+    )
+    return EpubChapterMoveResult(
+        success = true,
+        movedDisplayTitle = "${movingChapters.size} 章",
         nextPreviewIndex = insertIndex,
         resequence = EpubStructureResequenceResult(renamedFiles = 0, renamedTitles = titleChanges)
     )

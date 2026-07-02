@@ -46,6 +46,30 @@ fun EditorController.deleteEpubChapter(chapterIndex: Int): Boolean {
     return true
 }
 
+fun EditorController.deleteEpubChapters(chapterIndices: Set<Int>): Boolean {
+    val book = (epub ?: run {
+        statusMessage = "删除章节仅支持 EPUB"
+        return false
+    }).mutableDeepCopy()
+    val result = deleteEpubChaptersFromBook(book, chapterIndices)
+    if (!result.success) {
+        if (result.message.isNotBlank()) statusMessage = result.message
+        return false
+    }
+    epub = book
+    previewChapterIndex = result.nextPreviewIndex
+    checkReport = null
+    markDocumentChanged()
+    clearFileRenamePlan()
+    clearTextSearchState()
+    refreshChapters()
+    statusMessage = buildEpubStructureChangeMessage(
+        prefix = "已批量删除 EPUB 章节：${result.deletedDisplayTitle}",
+        resequence = result.resequence
+    )
+    return true
+}
+
 fun EditorController.epubChapterBodyLineCount(chapterIndex: Int): Int {
     val chapter = epub?.chapters?.getOrNull(chapterIndex) ?: return 0
     return epubChapterBodyLines(chapter).size
@@ -151,6 +175,33 @@ fun EditorController.epubMoveChapterAfter(sourceIndex: Int, targetIndex: Int): B
     refreshChapters()
     statusMessage = buildEpubStructureChangeMessage(
         prefix = "已移动章节：${result.movedDisplayTitle}",
+        resequence = result.resequence
+    )
+    return true
+}
+
+fun EditorController.epubMoveChaptersAfter(sourceIndices: Set<Int>, targetIndex: Int): Boolean {
+    val book = (epub ?: run {
+        statusMessage = "移动章节仅支持 EPUB"
+        return false
+    }).mutableDeepCopy()
+    val result = moveEpubChaptersAfterInBook(
+        book = book,
+        sourceIndices = sourceIndices,
+        targetIndex = targetIndex,
+        bookStartTarget = MOVE_TARGET_BOOK_START,
+        bookEndTarget = MOVE_TARGET_BOOK_END
+    )
+    if (!result.success) return false
+    epub = book
+    previewChapterIndex = result.nextPreviewIndex
+    checkReport = null
+    markDocumentChanged()
+    clearFileRenamePlan()
+    clearTextSearchState()
+    refreshChapters()
+    statusMessage = buildEpubStructureChangeMessage(
+        prefix = "已批量移动 EPUB 章节：${result.movedDisplayTitle}",
         resequence = result.resequence
     )
     return true

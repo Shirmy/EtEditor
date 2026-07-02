@@ -153,6 +153,130 @@ internal fun EpubMoveChapterDialog(
 }
 
 @Composable
+internal fun EpubBulkMoveChapterTargetDialog(
+    controller: EditorController,
+    selectedChapterIndexes: Set<Int>,
+    onDismiss: () -> Unit,
+    onSelectTarget: (Int) -> Unit
+) {
+    var reverseOrder by remember(selectedChapterIndexes) { mutableStateOf(false) }
+    val selectedIndexes = remember(selectedChapterIndexes, controller.chapters) {
+        selectedChapterIndexes
+            .filter { index ->
+                index in controller.chapters.indices &&
+                    controller.epub?.chapters?.getOrNull(index)?.isCoverSection0001Or0002() != true
+            }
+            .toSet()
+    }
+    val options = remember(controller.chapters, selectedIndexes) {
+        listOf(
+            DirectoryPickerOption(
+                key = MOVE_TARGET_BOOK_START.toString(),
+                label = "书籍开头",
+                isSpecial = true
+            ),
+            DirectoryPickerOption(
+                key = MOVE_TARGET_BOOK_END.toString(),
+                label = "书籍结尾",
+                isSpecial = true
+            )
+        ) + controller.chapters.map { item ->
+            DirectoryPickerOption(
+                key = (item.index - 1).toString(),
+                label = item.title.ifBlank { item.fileName },
+                tocLevel = item.tocLevel,
+                isVolume = item.isVolume
+            )
+        }
+    }
+    val displayedOptions = remember(options, reverseOrder) {
+        val specialOptions = options.filter { it.isSpecial }
+        val chapterOptions = options.filterNot { it.isSpecial }
+        specialOptions + if (reverseOrder) chapterOptions.asReversed() else chapterOptions
+    }
+    val pickerOptions = remember(displayedOptions, selectedIndexes) {
+        displayedOptions.map { option ->
+            val targetIndex = option.key.toIntOrNull()
+            option.copy(
+                current = targetIndex in selectedIndexes,
+                enabled = targetIndex !in selectedIndexes
+            )
+        }
+    }
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            shape = PreviewShape,
+            color = MaterialTheme.colorScheme.surface,
+            border = DialogBorder,
+            shadowElevation = 10.dp,
+            modifier = Modifier.fixedDialogWidth(fraction = 0.72f, maxWidth = 320.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            text = "移动至",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "已选 ${selectedIndexes.size} 章",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    IconButton(
+                        onClick = onDismiss,
+                        colors = IconButtonDefaults.iconButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(Icons.Outlined.Close, contentDescription = "关闭", modifier = Modifier.size(18.dp))
+                    }
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                DirectoryOptionButton(
+                    text = "逆序显示",
+                    icon = Icons.Outlined.SwapVert,
+                    selected = reverseOrder,
+                    onClick = { reverseOrder = !reverseOrder },
+                    modifier = Modifier.widthIn(min = 96.dp)
+                )
+                DirectoryPickerList(
+                    options = pickerOptions,
+                    onSelect = { key ->
+                        val targetIndex = key.toIntOrNull() ?: return@DirectoryPickerList
+                        onSelectTarget(targetIndex)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 260.dp),
+                    scrollbarDirectDrag = true,
+                    scrollbarThumbFollowsDrag = true
+                )
+            }
+        }
+    }
+}
+
+@Composable
 internal fun TxtBulkMoveChapterTargetDialog(
     controller: EditorController,
     selectedChapterIndexes: Set<Int>,

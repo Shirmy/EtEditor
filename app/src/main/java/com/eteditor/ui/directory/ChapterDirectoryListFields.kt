@@ -255,6 +255,15 @@ internal fun ChapterDirectoryList(
                     }
                 ) { displayIndex, chapter ->
                     val longPressHandler = onLongPressChapter
+                    val bulkSelectable = when {
+                        chapter.index <= 0 -> false
+                        controller.kind == DocumentKind.Txt -> bulkRemoveMode || bulkMoveMode || bulkDeleteMode
+                        controller.kind == DocumentKind.Epub -> {
+                            (bulkMoveMode || bulkDeleteMode) &&
+                                controller.epub?.chapters?.getOrNull(chapter.index - 1)?.isCoverSection0001Or0002() != true
+                        }
+                        else -> false
+                    }
                     val rowBoxPosition = directoryRowBoxPosition(
                         chapter = chapter,
                         previous = displayedChapters.getOrNull(displayIndex - 1),
@@ -279,7 +288,7 @@ internal fun ChapterDirectoryList(
                         tocLevel = chapter.tocLevel,
                         isVolume = chapter.isVolume,
                         rowBoxPosition = rowBoxPosition,
-                        bulkSelectMode = (bulkRemoveMode || bulkMoveMode || bulkDeleteMode) && controller.kind == DocumentKind.Txt && chapter.index > 0,
+                        bulkSelectMode = bulkSelectable,
                         bulkSelected = chapter.index > 0 && (
                             (chapter.index - 1) in bulkRemoveSelectedChapterIndexes ||
                                 (chapter.index - 1) in bulkMoveSelectedChapterIndexes ||

@@ -189,8 +189,10 @@ internal fun EpubDirectoryItemMenuDialog(
     onDismiss: () -> Unit,
     onEdit: () -> Unit,
     onMove: () -> Unit,
+    onStartBulkMove: () -> Unit,
     onAddVolume: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onStartBulkDelete: () -> Unit
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -246,7 +248,8 @@ internal fun EpubDirectoryItemMenuDialog(
                     EpubDirectoryMenuButton(
                         icon = Icons.AutoMirrored.Outlined.DriveFileMove,
                         text = "移动章节",
-                        onClick = onMove
+                        onClick = onMove,
+                        onLongClick = onStartBulkMove
                     )
                 }
                 if (allowStructureActions) {
@@ -254,7 +257,8 @@ internal fun EpubDirectoryItemMenuDialog(
                         icon = Icons.Outlined.DeleteSweep,
                         text = "删除章节",
                         destructive = true,
-                        onClick = onDelete
+                        onClick = onDelete,
+                        onLongClick = onStartBulkDelete
                     )
                 }
             }

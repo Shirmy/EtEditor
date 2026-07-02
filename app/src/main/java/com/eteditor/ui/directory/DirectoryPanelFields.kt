@@ -58,6 +58,11 @@ internal fun DirectoryPanel(
             block()
         }
     }
+    fun canBulkSelectChapter(chapterIndex: Int): Boolean {
+        if (chapterIndex !in controller.chapters.indices) return false
+        return controller.kind != DocumentKind.Epub ||
+            controller.epub?.chapters?.getOrNull(chapterIndex)?.isCoverSection0001Or0002() != true
+    }
     fun cancelBulkRemoveCatalog() {
         bulkRemoveCatalogMode = false
         bulkRemoveCatalogIndexes = emptySet()
@@ -81,7 +86,7 @@ internal fun DirectoryPanel(
         bulkRemoveCatalogIndexes = setOf(chapterIndex)
     }
     fun startBulkMoveChapter(chapterIndex: Int) {
-        if (chapterIndex !in controller.chapters.indices) return
+        if (!canBulkSelectChapter(chapterIndex)) return
         actionMode = null
         moveTargetsByChapter = emptyMap()
         cancelBulkRemoveCatalog()
@@ -90,7 +95,7 @@ internal fun DirectoryPanel(
         bulkMoveChapterIndexes = setOf(chapterIndex)
     }
     fun startBulkDeleteChapter(chapterIndex: Int) {
-        if (chapterIndex !in controller.chapters.indices) return
+        if (!canBulkSelectChapter(chapterIndex)) return
         actionMode = null
         moveTargetsByChapter = emptyMap()
         cancelBulkRemoveCatalog()
@@ -107,7 +112,7 @@ internal fun DirectoryPanel(
         }
     }
     fun toggleBulkMoveChapter(chapterIndex: Int) {
-        if (chapterIndex !in controller.chapters.indices) return
+        if (!canBulkSelectChapter(chapterIndex)) return
         bulkMoveChapterIndexes = if (chapterIndex in bulkMoveChapterIndexes) {
             bulkMoveChapterIndexes - chapterIndex
         } else {
@@ -115,7 +120,7 @@ internal fun DirectoryPanel(
         }
     }
     fun toggleBulkDeleteChapter(chapterIndex: Int) {
-        if (chapterIndex !in controller.chapters.indices) return
+        if (!canBulkSelectChapter(chapterIndex)) return
         bulkDeleteChapterIndexes = if (chapterIndex in bulkDeleteChapterIndexes) {
             bulkDeleteChapterIndexes - chapterIndex
         } else {
@@ -128,58 +133,69 @@ internal fun DirectoryPanel(
         modifier = modifier
     ) {
         Column(Modifier.fillMaxSize()) {
-            if (controller.kind == DocumentKind.Txt) {
-                val bulkMoveProgress = controller.txtBulkMoveChapterProgress
-                if (bulkMoveProgress != null) {
-                    SaveProgressIndicator(
-                        text = controller.txtBulkMoveChapterProgressText.ifBlank { "批量移动章节" },
-                        progress = bulkMoveProgress,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 6.dp, vertical = 6.dp)
-                    )
-                } else if (bulkMoveChapterMode) {
-                    TxtBulkMoveChapterBar(
-                        selectedCount = bulkMoveChapterIndexes.size,
-                        onCancel = { cancelBulkMoveChapter() },
-                        onConfirm = {
-                            if (bulkMoveChapterIndexes.isNotEmpty()) {
-                                showBulkMoveChapterTargetDialog = true
-                            }
+            val bulkMoveProgress = if (controller.kind == DocumentKind.Txt) controller.txtBulkMoveChapterProgress else null
+            if (bulkMoveProgress != null) {
+                SaveProgressIndicator(
+                    text = controller.txtBulkMoveChapterProgressText.ifBlank { "批量移动章节" },
+                    progress = bulkMoveProgress,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 6.dp, vertical = 6.dp)
+                )
+            } else if (bulkMoveChapterMode) {
+                TxtBulkMoveChapterBar(
+                    selectedCount = bulkMoveChapterIndexes.size,
+                    onCancel = { cancelBulkMoveChapter() },
+                    onConfirm = {
+                        if (bulkMoveChapterIndexes.isNotEmpty()) {
+                            showBulkMoveChapterTargetDialog = true
                         }
-                    )
-                } else if (bulkRemoveCatalogMode) {
-                    TxtBulkRemoveCatalogBar(
-                        selectedCount = bulkRemoveCatalogIndexes.size,
-                        onCancel = { cancelBulkRemoveCatalog() },
-                        onConfirm = {
-                            val selectedIndexes = bulkRemoveCatalogIndexes
-                                .filter { index -> index in controller.chapters.indices }
-                                .toSet()
-                            if (selectedIndexes.isNotEmpty()) {
-                                deleteConfirm = DeleteConfirmRequest(
+                    }
+                )
+            } else if (controller.kind == DocumentKind.Txt && bulkRemoveCatalogMode) {
+                TxtBulkRemoveCatalogBar(
+                    selectedCount = bulkRemoveCatalogIndexes.size,
+                    onCancel = { cancelBulkRemoveCatalog() },
+                    onConfirm = {
+                        val selectedIndexes = bulkRemoveCatalogIndexes
+                            .filter { index -> index in controller.chapters.indices }
+                            .toSet()
+                        if (selectedIndexes.isNotEmpty()) {
+                            deleteConfirm = DeleteConfirmRequest(
                                 title = "\u786e\u8ba4\u79fb\u9664\u76ee\u5f55\u9879",
                                 message = "\u786e\u5b9a\u4ece TXT \u76ee\u5f55\u4e2d\u79fb\u9664\u9009\u4e2d\u7684 ${selectedIndexes.size} \u9879\u5417\uff1f\u6b63\u6587\u5185\u5bb9\u4e0d\u4f1a\u5220\u9664\u3002",
-                                    confirmLabel = "\u79fb\u9664",
+                                confirmLabel = "\u79fb\u9664",
+                                onConfirm = {
+                                    if (controller.removeTxtCatalogItems(selectedIndexes)) {
+                                        cancelBulkRemoveCatalog()
+                                    }
+                                }
+                            )
+                        }
+                    }
+                )
+            } else if (bulkDeleteChapterMode) {
+                TxtBulkDeleteChapterBar(
+                    selectedCount = bulkDeleteChapterIndexes.size,
+                    onCancel = { cancelBulkDeleteChapter() },
+                    onConfirm = {
+                        val selectedIndexes = bulkDeleteChapterIndexes
+                            .filter { index -> index in controller.chapters.indices }
+                            .filter { index -> controller.kind != DocumentKind.Epub || canBulkSelectChapter(index) }
+                            .toSet()
+                        if (selectedIndexes.isNotEmpty()) {
+                            deleteConfirm = if (controller.kind == DocumentKind.Epub) {
+                                DeleteConfirmRequest(
+                                    title = "确认删除章节",
+                                    message = "确定删除选中的 ${selectedIndexes.size} 个 EPUB 章节吗？将同步移除对应 HTML 文件和目录引用。",
                                     onConfirm = {
-                                        if (controller.removeTxtCatalogItems(selectedIndexes)) {
-                                            cancelBulkRemoveCatalog()
+                                        if (controller.deleteEpubChapters(selectedIndexes)) {
+                                            cancelBulkDeleteChapter()
                                         }
                                     }
                                 )
-                            }
-                        }
-                    )
-                } else if (bulkDeleteChapterMode) {
-                    TxtBulkDeleteChapterBar(
-                        selectedCount = bulkDeleteChapterIndexes.size,
-                        onCancel = { cancelBulkDeleteChapter() },
-                        onConfirm = {
-                            val selectedIndexes = bulkDeleteChapterIndexes
-                                .filter { index -> index in controller.chapters.indices }
-                                .toSet()
-                            if (selectedIndexes.isNotEmpty()) {
-                                deleteConfirm = DeleteConfirmRequest(
+                            } else {
+                                DeleteConfirmRequest(
                                     title = "确认删除章节",
                                     message = "确定从 TXT 正文中删除选中的 ${selectedIndexes.size} 章吗？将同时删除目录标题和正文，刷新目录无法恢复。",
                                     onConfirm = {
@@ -190,8 +206,10 @@ internal fun DirectoryPanel(
                                 )
                             }
                         }
-                    )
-                } else {
+                    }
+                )
+            } else {
+                if (controller.kind == DocumentKind.Txt) {
                     TxtDirectoryOptionBar(
                         controller = controller,
                         documentSessionKey = controller.documentSessionKey,
@@ -210,20 +228,20 @@ internal fun DirectoryPanel(
                             directoryScrollRequest = index
                         }
                     )
-                }
-            } else {
-                DirectoryOptionBar(
-                    reverseOrderSelected = reverseOrderSelected,
-                    onToggleReverseOrder = { reverseOrderSelected = !reverseOrderSelected },
-                    allVolumesCollapsed = allVolumesCollapsed,
-                    onToggleAllVolumes = {
-                        if (allVolumesCollapsed) {
-                            expandAllRequest += 1
-                        } else {
-                            collapseAllRequest += 1
+                } else {
+                    DirectoryOptionBar(
+                        reverseOrderSelected = reverseOrderSelected,
+                        onToggleReverseOrder = { reverseOrderSelected = !reverseOrderSelected },
+                        allVolumesCollapsed = allVolumesCollapsed,
+                        onToggleAllVolumes = {
+                            if (allVolumesCollapsed) {
+                                expandAllRequest += 1
+                            } else {
+                                collapseAllRequest += 1
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
             ChapterDirectoryList(
                 controller = controller,
@@ -238,8 +256,8 @@ internal fun DirectoryPanel(
                 onVolumeCollapseStateChange = { collapsed -> allVolumesCollapsed = collapsed },
                 moveMode = controller.kind == DocumentKind.Txt && actionMode == DirectoryActionMode.MoveChapter,
                 bulkRemoveMode = controller.kind == DocumentKind.Txt && bulkRemoveCatalogMode,
-                bulkMoveMode = controller.kind == DocumentKind.Txt && bulkMoveChapterMode,
-                bulkDeleteMode = controller.kind == DocumentKind.Txt && bulkDeleteChapterMode,
+                bulkMoveMode = bulkMoveChapterMode,
+                bulkDeleteMode = bulkDeleteChapterMode,
                 bulkRemoveSelectedChapterIndexes = bulkRemoveCatalogIndexes,
                 bulkMoveSelectedChapterIndexes = bulkMoveChapterIndexes,
                 bulkDeleteSelectedChapterIndexes = bulkDeleteChapterIndexes,
@@ -259,11 +277,11 @@ internal fun DirectoryPanel(
                     }
                 },
                 onPickChapter = { index ->
-                    if (controller.kind == DocumentKind.Txt && bulkMoveChapterMode) {
+                    if (bulkMoveChapterMode && (controller.kind == DocumentKind.Txt || controller.kind == DocumentKind.Epub)) {
                         toggleBulkMoveChapter(index)
                     } else if (controller.kind == DocumentKind.Txt && bulkRemoveCatalogMode) {
                         toggleBulkRemoveCatalog(index)
-                    } else if (controller.kind == DocumentKind.Txt && bulkDeleteChapterMode) {
+                    } else if (bulkDeleteChapterMode && (controller.kind == DocumentKind.Txt || controller.kind == DocumentKind.Epub)) {
                         toggleBulkDeleteChapter(index)
                     } else if (controller.kind == DocumentKind.Txt && actionMode == DirectoryActionMode.RemoveCatalogItem) {
                         runAfterTxtMoveSync("移除目录项") {
@@ -390,24 +408,41 @@ internal fun DirectoryPanel(
         )
     }
     if (showBulkMoveChapterTargetDialog) {
-        TxtBulkMoveChapterTargetDialog(
-            controller = controller,
-            selectedChapterIndexes = bulkMoveChapterIndexes,
-            onDismiss = { showBulkMoveChapterTargetDialog = false },
-            onSelectTarget = { targetIndex ->
-                val selectedIndexes = bulkMoveChapterIndexes
-                    .filter { index -> index in controller.chapters.indices }
-                    .toSet()
-                showBulkMoveChapterTargetDialog = false
-                if (selectedIndexes.isNotEmpty()) {
-                    runAfterTxtMoveSync("批量移动章节") {
-                        if (controller.txtMoveChapterBlocks(selectedIndexes, targetIndex)) {
-                            cancelBulkMoveChapter()
+        if (controller.kind == DocumentKind.Epub) {
+            EpubBulkMoveChapterTargetDialog(
+                controller = controller,
+                selectedChapterIndexes = bulkMoveChapterIndexes,
+                onDismiss = { showBulkMoveChapterTargetDialog = false },
+                onSelectTarget = { targetIndex ->
+                    val selectedIndexes = bulkMoveChapterIndexes
+                        .filter(::canBulkSelectChapter)
+                        .toSet()
+                    showBulkMoveChapterTargetDialog = false
+                    if (selectedIndexes.isNotEmpty() && controller.epubMoveChaptersAfter(selectedIndexes, targetIndex)) {
+                        cancelBulkMoveChapter()
+                    }
+                }
+            )
+        } else {
+            TxtBulkMoveChapterTargetDialog(
+                controller = controller,
+                selectedChapterIndexes = bulkMoveChapterIndexes,
+                onDismiss = { showBulkMoveChapterTargetDialog = false },
+                onSelectTarget = { targetIndex ->
+                    val selectedIndexes = bulkMoveChapterIndexes
+                        .filter { index -> index in controller.chapters.indices }
+                        .toSet()
+                    showBulkMoveChapterTargetDialog = false
+                    if (selectedIndexes.isNotEmpty()) {
+                        runAfterTxtMoveSync("批量移动章节") {
+                            if (controller.txtMoveChapterBlocks(selectedIndexes, targetIndex)) {
+                                cancelBulkMoveChapter()
+                            }
                         }
                     }
                 }
-            }
-        )
+            )
+        }
     }
     txtMoveChapter?.let { chapter ->
         TxtMoveChapterDialog(
@@ -433,6 +468,10 @@ internal fun DirectoryPanel(
                 epubMenuChapter = null
                 epubMoveChapter = chapter
             },
+            onStartBulkMove = {
+                epubMenuChapter = null
+                startBulkMoveChapter(chapter.index - 1)
+            },
             onAddVolume = {
                 epubMenuChapter = null
                 epubAddVolumeAfterChapter = chapter
@@ -446,6 +485,10 @@ internal fun DirectoryPanel(
                         controller.deleteEpubChapter(chapter.index - 1)
                     }
                 )
+            },
+            onStartBulkDelete = {
+                epubMenuChapter = null
+                startBulkDeleteChapter(chapter.index - 1)
             }
         )
     }
