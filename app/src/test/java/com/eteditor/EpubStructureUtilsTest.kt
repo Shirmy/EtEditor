@@ -741,6 +741,31 @@ class EpubStructureUtilsTest {
     }
 
     @Test
+    fun moveEpubChaptersAfterInBookReportsNoopTarget() {
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章"),
+                chapter("c3", "OEBPS/Text/Chapter0003.xhtml", "第3章"),
+                chapter("c4", "OEBPS/Text/Chapter0004.xhtml", "第4章")
+            )
+        )
+        val originalIds = book.chapters.map { it.id }.toList()
+
+        val result = moveEpubChaptersAfterInBook(
+            book,
+            sourceIndices = setOf(1, 2),
+            targetIndex = 0,
+            bookStartTarget = MOVE_TARGET_BOOK_START,
+            bookEndTarget = MOVE_TARGET_BOOK_END
+        )
+
+        assertFalse(result.success)
+        assertEquals("章节顺序未变化,未移动", result.message)
+        assertEquals(originalIds, book.chapters.map { it.id })
+    }
+
+    @Test
     fun epubBulkMoveTargetChangesOrderRejectsNoopTargets() {
         assertFalse(
             epubBulkMoveTargetChangesOrder(

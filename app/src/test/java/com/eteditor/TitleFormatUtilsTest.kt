@@ -560,6 +560,21 @@ class TitleFormatUtilsTest {
     }
 
     @Test
+    fun updateEpubChapterTitleHtmlDetectsUppercaseClassAttribute() {
+        val chapter = chapter(
+            "c1",
+            "OEBPS/Text/Chapter0001.xhtml",
+            "第1章 旧",
+            """<html><head><title>旧</title></head><body><h1 CLASS="chapter-title_01">第1章 旧</h1><p>正文</p></body></html>"""
+        )
+
+        val updated = updateEpubChapterTitleHtml(chapter, "第1章 开端")
+
+        assertTrue(updated.contains("<title>第1章 开端</title>"))
+        assertTrue(updated.contains("第1章<br/>开端"))
+    }
+
+    @Test
     fun updateEpubChapterTitleHtmlUsesPlainTitleForUnstyledChapter() {
         val chapter = chapter(
             "c1",

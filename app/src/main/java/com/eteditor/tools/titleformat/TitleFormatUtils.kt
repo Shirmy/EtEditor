@@ -12,7 +12,8 @@ private val TITLE_FORMAT_WHITESPACE_REGEX = Regex("""\s+""")
 private val TITLE_FORMAT_CHAPTER_PREFIX_REGEX =
     Regex("""^(第\s*[零〇一二两三四五六七八九十百千万亿\d]+\s*章)([\s\S]*)${'$'}""")
 private val TITLE_FORMAT_LEADING_SEPARATOR_REGEX = Regex("""^[\s|─—–-]+""")
-private val TITLE_FORMAT_CLASS_CAPTURE_REGEX = Regex("""class\s*=\s*["'][^"']*chapter-title_(\d+)""")
+private val TITLE_FORMAT_CLASS_CAPTURE_REGEX =
+    Regex("""class\s*=\s*["'][^"']*chapter-title_(\d+)""", RegexOption.IGNORE_CASE)
 private val TITLE_FORMAT_CLASS_TOKEN_REGEX = Regex("""^chapter-title_\d+${'$'}""")
 private val TITLE_FORMAT_HTML_TITLE_TAG_REGEX =
     Regex("""<title[^>]*>.*?</title>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))

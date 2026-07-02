@@ -361,6 +361,12 @@ internal fun moveEpubChaptersAfterInBook(
     if (selectedIndices.any { index -> book.chapters[index].isCoverSection0001Or0002() }) {
         return EpubChapterMoveResult(success = false)
     }
+    if (targetIndex !in setOf(bookStartTarget, bookEndTarget) && targetIndex !in book.chapters.indices) {
+        return EpubChapterMoveResult(success = false)
+    }
+    if (targetIndex in selectedIndices) {
+        return EpubChapterMoveResult(success = false)
+    }
     if (!epubBulkMoveTargetChangesOrder(
             chapterCount = book.chapters.size,
             sourceIndices = selectedIndices,
@@ -369,7 +375,7 @@ internal fun moveEpubChaptersAfterInBook(
             bookEndTarget = bookEndTarget
         )
     ) {
-        return EpubChapterMoveResult(success = false)
+        return EpubChapterMoveResult(success = false, message = "章节顺序未变化,未移动")
     }
 
     val originalChapters = book.chapters.toList()
