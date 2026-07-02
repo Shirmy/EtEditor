@@ -599,7 +599,7 @@ internal fun updateEpubChapterItemModel(
     if (nextTitle.isNotBlank() && nextTitle != chapter.title) {
         chapter.title = nextTitle
         if (!isCover) {
-        chapter.html = updateEpubChapterTitleHtml(chapter, nextTitle)
+            chapter.html = updateEpubChapterTitleHtml(chapter, nextTitle)
         }
     }
     chapter.wordCount = ChapterDetector.countHtmlChars(chapter.html)
