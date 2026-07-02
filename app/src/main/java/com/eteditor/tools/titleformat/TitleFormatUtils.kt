@@ -551,6 +551,31 @@ internal fun updateHtmlTitleForFormat(
     } ?: "<h1 class=\"chapter-title_$styleCode\">$headingHtml</h1>\n$updated"
 }
 
+internal fun updateEpubChapterTitleHtml(chapter: EpubChapter, nextTitle: String): String {
+    return when {
+        chapter.isVolumeChapter() -> {
+            val segments = nextTitle.trim().split(TITLE_FORMAT_WHITESPACE_REGEX).filter { it.isNotBlank() }
+            val headingHtml = segments.joinToString("<br/>") { it.escapeXmlText() }
+            updateHtmlTitleForFormat(chapter.html, nextTitle, headingHtml, TITLE_FORMAT_STYLE_LEFT)
+        }
+        isEpubChapterTitleStyle01(chapter) -> {
+            val parts = parseTitleFormatParts(nextTitle)
+            val prefix = parts.prefix
+            if (prefix == null) {
+                ChapterDetector.updateHtmlTitle(chapter.html, nextTitle)
+            } else {
+                val rendered = renderTitleFormat(prefix, parts.suffix, TITLE_FORMAT_STYLE_LEFT)
+                updateHtmlTitleForFormat(chapter.html, rendered.plainTitle, rendered.headingHtml, TITLE_FORMAT_STYLE_LEFT)
+            }
+        }
+        else -> ChapterDetector.updateHtmlTitle(chapter.html, nextTitle)
+    }
+}
+
+private fun isEpubChapterTitleStyle01(chapter: EpubChapter): Boolean {
+    return TITLE_FORMAT_CLASS_CAPTURE_REGEX.find(chapter.html)?.groupValues?.getOrNull(1) == TITLE_FORMAT_STYLE_LEFT
+}
+
 internal fun applyEpubTitleFormatToChapter(
     book: EpubBook,
     chapterIndex: Int,
