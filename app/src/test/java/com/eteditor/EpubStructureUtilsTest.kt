@@ -155,8 +155,8 @@ class EpubStructureUtilsTest {
             book = book,
             sourceIndex = 0,
             targetIndex = 99,
-            bookStartTarget = -1,
-            bookEndTarget = 99
+            bookStartTarget = MOVE_TARGET_BOOK_START,
+            bookEndTarget = MOVE_TARGET_BOOK_END
         )
 
         assertTrue(result.success)
@@ -180,8 +180,8 @@ class EpubStructureUtilsTest {
             book = book,
             sourceIndex = 2,
             targetIndex = -1,
-            bookStartTarget = -1,
-            bookEndTarget = 99
+            bookStartTarget = MOVE_TARGET_BOOK_START,
+            bookEndTarget = MOVE_TARGET_BOOK_END
         )
 
         assertTrue(result.success)
@@ -204,8 +204,8 @@ class EpubStructureUtilsTest {
             book = book,
             sourceIndex = 2,
             targetIndex = -1,
-            bookStartTarget = -1,
-            bookEndTarget = 99
+            bookStartTarget = MOVE_TARGET_BOOK_START,
+            bookEndTarget = MOVE_TARGET_BOOK_END
         )
 
         assertTrue(result.success)
@@ -233,8 +233,8 @@ class EpubStructureUtilsTest {
             book = book,
             sourceIndex = 2,
             targetIndex = -1,
-            bookStartTarget = -1,
-            bookEndTarget = 99
+            bookStartTarget = MOVE_TARGET_BOOK_START,
+            bookEndTarget = MOVE_TARGET_BOOK_END
         )
 
         assertTrue(result.success)
@@ -259,8 +259,8 @@ class EpubStructureUtilsTest {
             book = book,
             sourceIndices = setOf(1, 3),
             targetIndex = 0,
-            bookStartTarget = -1,
-            bookEndTarget = 99
+            bookStartTarget = MOVE_TARGET_BOOK_START,
+            bookEndTarget = MOVE_TARGET_BOOK_END
         )
 
         assertTrue(result.success)
@@ -285,8 +285,8 @@ class EpubStructureUtilsTest {
             book = book,
             sourceIndex = 2,
             targetIndex = 0,
-            bookStartTarget = -1,
-            bookEndTarget = 99
+            bookStartTarget = MOVE_TARGET_BOOK_START,
+            bookEndTarget = MOVE_TARGET_BOOK_END
         )
 
         assertTrue(result.success)
@@ -311,8 +311,8 @@ class EpubStructureUtilsTest {
             book = book,
             sourceIndex = 1,
             targetIndex = 1,
-            bookStartTarget = -1,
-            bookEndTarget = 99
+            bookStartTarget = MOVE_TARGET_BOOK_START,
+            bookEndTarget = MOVE_TARGET_BOOK_END
         )
 
         assertFalse(result.success)
@@ -617,8 +617,8 @@ class EpubStructureUtilsTest {
             book,
             sourceIndices = setOf(99),
             targetIndex = 0,
-            bookStartTarget = -1,
-            bookEndTarget = 99
+            bookStartTarget = MOVE_TARGET_BOOK_START,
+            bookEndTarget = MOVE_TARGET_BOOK_END
         )
 
         assertFalse(result.success)
@@ -640,8 +640,8 @@ class EpubStructureUtilsTest {
             book,
             sourceIndices = setOf(0, 1),
             targetIndex = 2,
-            bookStartTarget = -1,
-            bookEndTarget = 99
+            bookStartTarget = MOVE_TARGET_BOOK_START,
+            bookEndTarget = MOVE_TARGET_BOOK_END
         )
 
         assertFalse(result.success)
@@ -663,8 +663,8 @@ class EpubStructureUtilsTest {
             book,
             sourceIndices = setOf(1, 2),
             targetIndex = 1,
-            bookStartTarget = -1,
-            bookEndTarget = 99
+            bookStartTarget = MOVE_TARGET_BOOK_START,
+            bookEndTarget = MOVE_TARGET_BOOK_END
         )
 
         assertFalse(result.success)
@@ -685,8 +685,8 @@ class EpubStructureUtilsTest {
             book,
             sourceIndices = setOf(0),
             targetIndex = 50,
-            bookStartTarget = -1,
-            bookEndTarget = 99
+            bookStartTarget = MOVE_TARGET_BOOK_START,
+            bookEndTarget = MOVE_TARGET_BOOK_END
         )
 
         assertFalse(result.success)
