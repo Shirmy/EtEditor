@@ -279,8 +279,8 @@ class TitleFormatUtilsTest {
                 chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章", "<html><body><h1>第2章</h1></body></html>")
             )
         )
-        assertEquals(TITLE_FORMAT_STYLE_LEFT, epubInsertReferenceTitleStyle(book, insertPosition = 0))
-        assertEquals(TITLE_FORMAT_STYLE_LEFT, epubInsertReferenceTitleStyle(book, insertPosition = 2))
+        assertEquals(TITLE_FORMAT_STYLE_DOUBLE, epubInsertReferenceTitleStyle(book, insertPosition = 0))
+        assertEquals(TITLE_FORMAT_STYLE_DOUBLE, epubInsertReferenceTitleStyle(book, insertPosition = 2))
     }
 
     @Test

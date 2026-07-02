@@ -18,9 +18,6 @@ private val TITLE_FORMAT_HTML_TITLE_TAG_REGEX =
     Regex("""<title[^>]*>.*?</title>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
 private val TITLE_FORMAT_HTML_HEADING_REGEX =
     Regex("""<((?:h1|h2|h3))([^>]*)>.*?</\1>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
-private val TITLE_FORMAT_HTML_HEADING_SCAN_REGEX =
-    Regex("""<h[1-3][^>]*>(.*?)</h[1-3]>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
-private val TITLE_FORMAT_HTML_BR_REGEX = Regex("""<br\s*/?>""", RegexOption.IGNORE_CASE)
 private val TITLE_FORMAT_HTML_BODY_REGEX = Regex("""<body([^>]*)>""", RegexOption.IGNORE_CASE)
 private val TITLE_FORMAT_HTML_CLASS_ATTR_REGEX =
     Regex("""\sclass\s*=\s*(['"])(.*?)\1""", RegexOption.IGNORE_CASE)
@@ -485,12 +482,6 @@ internal fun epubChapterTitleStyle(chapter: EpubChapter): String {
         ?.getOrNull(1)
         ?.takeIf { style -> style in TITLE_FORMAT_STYLE_CODES }
         ?.let { return it }
-
-    val heading = TITLE_FORMAT_HTML_HEADING_SCAN_REGEX
-        .find(chapter.html)?.groupValues?.getOrNull(1).orEmpty()
-    if (TITLE_FORMAT_HTML_BR_REGEX.containsMatchIn(heading)) {
-        return TITLE_FORMAT_STYLE_LEFT
-    }
 
     val parts = parseTitleFormatParts(chapter.title)
     return if (parts.suffix.isBlank()) TITLE_FORMAT_STYLE_NONE else TITLE_FORMAT_STYLE_DOUBLE
