@@ -406,6 +406,7 @@ internal suspend fun EditorController.insertChaptersFromSource(
 
     return when (kind) {
         DocumentKind.Epub -> insertChaptersIntoEpub(source, chaptersToInsert, positionMode, targetChapterIndex, onProgress)
+        DocumentKind.Txt -> false
         DocumentKind.None -> false
     }
 }
