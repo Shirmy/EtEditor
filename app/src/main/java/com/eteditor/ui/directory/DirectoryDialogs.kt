@@ -268,9 +268,10 @@ internal fun EpubDirectoryEditDialog(
     chapter: ChapterInfo,
     onDismiss: () -> Unit
 ) {
+    val hideFileName = controller.hideDirectoryFileNameByDefault
     var fileName by remember(chapter.index, chapter.fileName) { mutableStateOf(chapter.fileName) }
     var title by remember(chapter.index, chapter.title) { mutableStateOf(chapter.title) }
-    val canSave = fileName.trim().isNotBlank() && title.trim().isNotBlank()
+    val canSave = (hideFileName || fileName.trim().isNotBlank()) && title.trim().isNotBlank()
     AlertDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier
@@ -289,12 +290,14 @@ internal fun EpubDirectoryEditDialog(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                ToolTextInputField(
-                    label = "文件名",
-                    value = fileName,
-                    onValueChange = { fileName = it },
-                    height = 42.dp
-                )
+                if (!hideFileName) {
+                    ToolTextInputField(
+                        label = "文件名",
+                        value = fileName,
+                        onValueChange = { fileName = it },
+                        height = 42.dp
+                    )
+                }
                 ToolTextInputField(
                     label = "标题",
                     value = title,
