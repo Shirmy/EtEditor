@@ -301,7 +301,8 @@ internal fun moveEpubChapterAfterInBook(
         book = book,
         targetIndices = epubBodyChapterIndices(book),
         preferredTitleSource = source.title,
-        forceNumberedIndex = null
+        forceNumberedIndex = null,
+        preserveTitleLineBreakStyle = true
     )
     return EpubChapterMoveResult(
         success = true,
@@ -368,7 +369,8 @@ internal fun moveEpubChaptersAfterInBook(
         book = book,
         targetIndices = epubBodyChapterIndices(book),
         preferredTitleSource = movingChapters.firstOrNull()?.title.orEmpty(),
-        forceNumberedIndex = null
+        forceNumberedIndex = null,
+        preserveTitleLineBreakStyle = true
     )
     return EpubChapterMoveResult(
         success = true,
@@ -679,7 +681,8 @@ private fun resequenceEpubNumberedTitles(
     book: EpubBook,
     targetIndices: List<Int>,
     preferredTitleSource: String,
-    forceNumberedIndex: Int?
+    forceNumberedIndex: Int?,
+    preserveTitleLineBreakStyle: Boolean = false
 ): Int {
     if (targetIndices.isEmpty()) return 0
     val preferredPattern = parseEpubNumberedTitle(preferredTitleSource)
@@ -705,7 +708,11 @@ private fun resequenceEpubNumberedTitles(
         nextNumber += 1
         if (chapter.title != nextTitle) {
             chapter.title = nextTitle
-            chapter.html = ChapterDetector.updateHtmlTitle(chapter.html, nextTitle)
+            chapter.html = if (preserveTitleLineBreakStyle) {
+                updateEpubChapterTitleHtml(chapter, nextTitle)
+            } else {
+                ChapterDetector.updateHtmlTitle(chapter.html, nextTitle)
+            }
             chapter.wordCount = ChapterDetector.countHtmlChars(chapter.html)
             updateEpubChapterHtmlEntry(book, chapter)
             changed += 1
