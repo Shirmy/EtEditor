@@ -58,6 +58,27 @@ class EpubStructureUtilsTest {
     }
 
     @Test
+    fun updateEpubChapterItemModelSyncsTitleToEntryWithoutRename() {
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章 旧标题")
+            )
+        )
+
+        val result = updateEpubChapterItemModel(
+            book = book,
+            chapterIndex = 0,
+            fileName = "Chapter0001",
+            chapterTitle = "第1章 新标题"
+        )
+
+        assertTrue(result.success)
+        val entryHtml = String(book.entries.getValue("OEBPS/Text/Chapter0001.xhtml"), StandardCharsets.UTF_8)
+        assertTrue(entryHtml.contains("<title>第1章 新标题</title>"))
+        assertFalse(entryHtml.contains("第1章 旧标题"))
+    }
+
+    @Test
     fun updateEpubChapterItemModelRebuildsVolumeLevelsWhenChildChapterBecomesSection() {
         val book = sampleBook(
             listOf(

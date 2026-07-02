@@ -596,13 +596,18 @@ internal fun updateEpubChapterItemModel(
     }
 
     val nextTitle = if (isCover) EPUB_COVER_DIRECTORY_TITLE else cleanedTitle
+    var chapterHtmlChanged = false
     if (nextTitle.isNotBlank() && nextTitle != chapter.title) {
         chapter.title = nextTitle
         if (!isCover) {
             chapter.html = updateEpubChapterTitleHtml(chapter, nextTitle)
+            chapterHtmlChanged = true
         }
     }
     chapter.wordCount = ChapterDetector.countHtmlChars(chapter.html)
+    if (chapterHtmlChanged) {
+        updateEpubChapterHtmlEntry(book, chapter)
+    }
     if (hadVolumeChapters || book.chapters.any { it.isVolumeChapter() }) {
         applyVolumeTocLevels(book)
     }
