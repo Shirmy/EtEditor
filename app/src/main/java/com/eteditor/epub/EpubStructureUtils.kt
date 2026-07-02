@@ -298,6 +298,7 @@ internal fun moveEpubChapterAfterInBook(
         book.spineIds.addAll(book.chapters.map { it.id })
     }
     applyVolumeTocLevels(book)
+    // 移动仅重排标题编号, 不重命名文件: 移动只改顺序, 保持文件名/内部链接稳定; 删除与拆分改变章节数量才重连号文件名
     val titleChanges = resequenceEpubNumberedTitles(
         book = book,
         targetIndices = epubBodyChapterIndices(book),
@@ -403,6 +404,7 @@ internal fun moveEpubChaptersAfterInBook(
         book.spineIds.addAll(book.chapters.map { it.id })
     }
     applyVolumeTocLevels(book)
+    // 移动仅重排标题编号, 不重命名文件: 移动只改顺序, 保持文件名/内部链接稳定; 删除与拆分改变章节数量才重连号文件名
     val titleChanges = resequenceEpubNumberedTitles(
         book = book,
         targetIndices = epubBodyChapterIndices(book),
