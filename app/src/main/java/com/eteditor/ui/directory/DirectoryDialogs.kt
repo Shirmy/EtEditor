@@ -237,13 +237,6 @@ internal fun EpubDirectoryItemMenuDialog(
                     text = "编辑",
                     onClick = onEdit
                 )
-                if (allowStructureActions) {
-                    EpubDirectoryMenuButton(
-                        icon = Icons.AutoMirrored.Outlined.DriveFileMove,
-                        text = "移动至",
-                        onClick = onMove
-                    )
-                }
                 EpubDirectoryMenuButton(
                     icon = Icons.Outlined.CreateNewFolder,
                     text = "增卷",
@@ -251,8 +244,15 @@ internal fun EpubDirectoryItemMenuDialog(
                 )
                 if (allowStructureActions) {
                     EpubDirectoryMenuButton(
+                        icon = Icons.AutoMirrored.Outlined.DriveFileMove,
+                        text = "移动章节",
+                        onClick = onMove
+                    )
+                }
+                if (allowStructureActions) {
+                    EpubDirectoryMenuButton(
                         icon = Icons.Outlined.DeleteSweep,
-                        text = "删除此章节",
+                        text = "删除章节",
                         destructive = true,
                         onClick = onDelete
                     )
