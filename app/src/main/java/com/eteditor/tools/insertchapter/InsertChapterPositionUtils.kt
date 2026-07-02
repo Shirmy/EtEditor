@@ -14,7 +14,7 @@ internal fun renumberInsertedChapterTitle(title: String, number: Int): String {
     val cleaned = ChapterDetector.cleanTitle(title)
     val match = Regex("""^第\s*[\d零〇一二两三四五六七八九十百千万亿]+\s*[章节回卷部集]\s*(.*)${'$'}""")
         .find(cleaned)
-        ?: return cleaned
+        ?: return if (cleaned.isBlank()) "第${number}章" else "第${number}章 $cleaned"
     val suffix = match.groupValues.getOrNull(1)?.trim().orEmpty()
     return if (suffix.isBlank()) "第${number}章" else "第${number}章$suffix"
 }

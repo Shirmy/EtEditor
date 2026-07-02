@@ -89,7 +89,7 @@ internal fun insertChaptersIntoEpubBook(
     val inserted = selected.mapIndexed { insertOffset, sourceChapter ->
         val isVolume = sourceChapter.isVolume
         val sourceParts = parseTitleFormatParts(sourceChapter.title)
-        val shouldRenumber = !isVolume && referenceNumbered && sourceParts.prefix != null
+        val shouldRenumber = !isVolume && referenceNumbered
         val numberedTitle = if (shouldRenumber) {
             renumberInsertedChapterTitle(sourceChapter.title, number++)
         } else {
