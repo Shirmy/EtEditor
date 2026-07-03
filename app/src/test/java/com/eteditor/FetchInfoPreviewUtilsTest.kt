@@ -296,7 +296,7 @@ class FetchInfoPreviewUtilsTest {
     }
 
     @Test
-    fun buildFetchInfoCatalogPreviewRowsAppliesRenameAndDeleteByChapterPosition() {
+    fun buildFetchInfoCatalogPreviewRowsAppliesRenameByChapterPosition() {
         val book = sampleBook(
             listOf(
                 chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章 旧"),
@@ -331,14 +331,11 @@ class FetchInfoPreviewUtilsTest {
             preview = preview,
             filtered = true,
             fallbackChapterIndex = 0,
-            renames = mapOf(1 to "手改标题"),
-            deletes = setOf(0)
+            renames = mapOf(1 to "手改标题")
         )
 
-        // 第 0 章被删除：deleted 标记、抓取标题清空、原标题保留
-        assertTrue(rows[0].deleted)
-        assertEquals("第1章 旧", rows[0].originalTitle)
-        assertEquals("", rows[0].fetchedTitle)
+        // 第 0 章正常拼装：原章号 + 抓取名字
+        assertEquals("第1章 新一", rows[0].fetchedTitle)
         // 第 1 章被重命名：使用手改值
         assertEquals("手改标题", rows[1].fetchedTitle)
         // 第 2 章正常拼装：原章号 + 抓取名字

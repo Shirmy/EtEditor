@@ -132,8 +132,7 @@ fun EditorController.fetchInfoCatalogSummary(preview: FetchInfoPreview): String 
 fun EditorController.fetchInfoCatalogPreviewRows(
     preview: FetchInfoPreview,
     filtered: Boolean,
-    renames: Map<Int, String> = emptyMap(),
-    deletes: Set<Int> = emptySet()
+    renames: Map<Int, String> = emptyMap()
 ): List<FetchInfoCatalogPreviewRow> {
     val book = epub ?: return emptyList()
     return buildFetchInfoCatalogPreviewRows(
@@ -141,8 +140,7 @@ fun EditorController.fetchInfoCatalogPreviewRows(
         preview = preview,
         filtered = filtered,
         fallbackChapterIndex = previewChapterIndex,
-        renames = renames,
-        deletes = deletes
+        renames = renames
     )
 }
 

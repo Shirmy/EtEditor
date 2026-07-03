@@ -192,15 +192,14 @@ fun FetchInfoPreviewPane(
     // 避免每次重组（滚动、按钮高亮等）都重新遍历整本书生成行。
     val renameSnapshot = renames.toMap()
     val deleteSnapshot = deletes.toSet()
-    val displayCatalogRows = remember(preview, filterActive, renameSnapshot, deleteSnapshot) {
+    val displayCatalogRows = remember(preview, filterActive, renameSnapshot) {
         controller.fetchInfoCatalogPreviewRows(
             preview,
             filtered = filterActive,
-            renames = renameSnapshot,
-            deletes = deleteSnapshot
+            renames = renameSnapshot
         )
     }
-    val visibleCatalogRows = displayCatalogRows.filterNot { it.skipped || it.deleted }
+    val visibleCatalogRows = displayCatalogRows.filterNot { it.skipped || it.chapterPosition in deleteSnapshot }
     val skippedCatalogRows = displayCatalogRows.filter { it.skipped }
     val displayedCatalogRows = if (catalogOrderReversed) visibleCatalogRows.asReversed() else visibleCatalogRows
     val catalogOriginalCount = remember(preview) {
@@ -777,9 +776,8 @@ private fun FetchCatalogCompareRow(
             add(
                 CatalogCompareLineSpec(
                     left = row.originalTitle,
-                    right = if (row.deleted) "已删除（保留原标题）" else row.fetchedTitle,
-                    rightStrong = !row.deleted && row.fetchedTitle.isNotBlank(),
-                    rightError = row.deleted
+                    right = row.fetchedTitle,
+                    rightStrong = row.fetchedTitle.isNotBlank()
                 )
             )
         }
@@ -804,7 +802,6 @@ private fun FetchCatalogCompareRow(
                 ) {
                     DropdownMenuItem(
                         text = { Text("重命名") },
-                        enabled = !row.deleted,
                         onClick = {
                             menuExpanded = false
                             onRename(row.chapterPosition)
@@ -813,8 +810,8 @@ private fun FetchCatalogCompareRow(
                     DropdownMenuItem(
                         text = {
                             Text(
-                                text = if (row.deleted) "撤销删除" else "删除",
-                                color = if (row.deleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                text = "删除",
+                                color = MaterialTheme.colorScheme.error
                             )
                         },
                         onClick = {
