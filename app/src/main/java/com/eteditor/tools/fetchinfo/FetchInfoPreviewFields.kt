@@ -200,7 +200,7 @@ fun FetchInfoPreviewPane(
             deletes = deleteSnapshot
         )
     }
-    val visibleCatalogRows = displayCatalogRows.filterNot { it.skipped }
+    val visibleCatalogRows = displayCatalogRows.filterNot { it.skipped || it.deleted }
     val skippedCatalogRows = displayCatalogRows.filter { it.skipped }
     val displayedCatalogRows = if (catalogOrderReversed) visibleCatalogRows.asReversed() else visibleCatalogRows
     val catalogOriginalCount = remember(preview) {
