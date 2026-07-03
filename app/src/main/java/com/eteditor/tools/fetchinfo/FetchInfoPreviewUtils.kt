@@ -84,8 +84,9 @@ internal fun buildFetchInfoCatalogPreviewRows(
                 val baseTitle = chapter
                     ?.let { fetchInfoCatalogWriteBackTitle(it.title, fetched, autoStyle) }
                     ?: fetched.previewText()
+                val isRenamed = renames.containsKey(position)
                 val fetchedTitle = when {
-                    renames.containsKey(position) -> renames.getValue(position)
+                    isRenamed -> renames.getValue(position)
                     else -> baseTitle
                 }
                 add(
@@ -95,7 +96,10 @@ internal fun buildFetchInfoCatalogPreviewRows(
                         fetchedTitle = fetchedTitle,
                         isVolume = false,
                         skipped = chapter == null,
-                        chapterPosition = position
+                        chapterPosition = position,
+                        fetchedItem = fetched,
+                        autoStyle = autoStyle,
+                        renamed = isRenamed
                     )
                 )
             }

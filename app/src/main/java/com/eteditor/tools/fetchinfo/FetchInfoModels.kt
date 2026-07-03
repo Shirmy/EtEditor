@@ -85,7 +85,10 @@ data class FetchInfoCatalogPreviewRow(
     val willCreateVolume: Boolean = false,
     val skipped: Boolean = false,
     val missingFetch: Boolean = false,
-    val chapterPosition: Int = -1
+    val chapterPosition: Int = -1,
+    val fetchedItem: FetchedCatalogItem? = null,
+    val autoStyle: String? = null,
+    val renamed: Boolean = false
 )
 
 internal data class FetchInfoWriteResult(

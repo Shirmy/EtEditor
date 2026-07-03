@@ -284,12 +284,12 @@ class FetchInfoPreviewUtilsTest {
 
         assertEquals(
             listOf(
-                FetchInfoCatalogPreviewRow("Chapter0001.xhtml", "第1章 旧", "第1章 第1章 新", isVolume = false, chapterPosition = 0),
+                FetchInfoCatalogPreviewRow("Chapter0001.xhtml", "第1章 旧", "第1章 第1章 新", isVolume = false, chapterPosition = 0, fetchedItem = catalog[0], renamed = false),
                 FetchInfoCatalogPreviewRow("Vol01.xhtml", "第一卷", "第一卷", isVolume = true, willCreateVolume = false),
-                FetchInfoCatalogPreviewRow("Chapter0002.xhtml", "第2章 旧", "第2章 第2章 新", isVolume = false, chapterPosition = 1),
+                FetchInfoCatalogPreviewRow("Chapter0002.xhtml", "第2章 旧", "第2章 第2章 新", isVolume = false, chapterPosition = 1, fetchedItem = catalog[2], renamed = false),
                 FetchInfoCatalogPreviewRow("", "", "第二卷", isVolume = true, willCreateVolume = true),
-                FetchInfoCatalogPreviewRow("Chapter0003.xhtml", "第3章 旧", "第3章 第3章 新", isVolume = false, chapterPosition = 2),
-                FetchInfoCatalogPreviewRow("", "", "4", isVolume = false, skipped = true, chapterPosition = 3)
+                FetchInfoCatalogPreviewRow("Chapter0003.xhtml", "第3章 旧", "第3章 第3章 新", isVolume = false, chapterPosition = 2, fetchedItem = catalog[4], renamed = false),
+                FetchInfoCatalogPreviewRow("", "", "4", isVolume = false, skipped = true, chapterPosition = 3, fetchedItem = catalog[5], renamed = false)
             ),
             rows
         )
@@ -378,7 +378,7 @@ class FetchInfoPreviewUtilsTest {
             listOf(
                 FetchInfoCatalogPreviewRow("Vol01.xhtml", "第一卷 旧", "第一卷", isVolume = true, willCreateVolume = false),
                 FetchInfoCatalogPreviewRow("", "", "第二卷", isVolume = true, willCreateVolume = true),
-                FetchInfoCatalogPreviewRow("Chapter0001.xhtml", "第1章 旧", "第1章 第1章 新", isVolume = false, chapterPosition = 0)
+                FetchInfoCatalogPreviewRow("Chapter0001.xhtml", "第1章 旧", "第1章 第1章 新", isVolume = false, chapterPosition = 0, fetchedItem = FetchedCatalogItem(index = 3, title = "第1章 新", sequence = "1"), renamed = false)
             ),
             rows
         )
@@ -421,8 +421,8 @@ class FetchInfoPreviewUtilsTest {
 
         assertEquals(
             listOf(
-                FetchInfoCatalogPreviewRow("Chapter0001.xhtml", "第1章 旧", "第1章 第1章 原始", isVolume = false, chapterPosition = 0),
-                FetchInfoCatalogPreviewRow("", "", "2", isVolume = false, skipped = true, chapterPosition = 1)
+                FetchInfoCatalogPreviewRow("Chapter0001.xhtml", "第1章 旧", "第1章 第1章 原始", isVolume = false, chapterPosition = 0, fetchedItem = FetchedCatalogItem(index = 1, title = "第1章 原始", sequence = "1"), renamed = false),
+                FetchInfoCatalogPreviewRow("", "", "2", isVolume = false, skipped = true, chapterPosition = 1, fetchedItem = FetchedCatalogItem(index = 2, title = "第2章 原始", sequence = "2"), renamed = false)
             ),
             rows
         )
@@ -460,7 +460,7 @@ class FetchInfoPreviewUtilsTest {
 
         assertEquals(
             listOf(
-                FetchInfoCatalogPreviewRow("Chapter0001.xhtml", "第1章 旧", "第1章 第1章 新", isVolume = false, chapterPosition = 0),
+                FetchInfoCatalogPreviewRow("Chapter0001.xhtml", "第1章 旧", "第1章 第1章 新", isVolume = false, chapterPosition = 0, fetchedItem = FetchedCatalogItem(index = 1, title = "第1章 新", sequence = "1"), renamed = false),
                 FetchInfoCatalogPreviewRow("Chapter0002.xhtml", "第2章 旧", "", isVolume = false, missingFetch = true)
             ),
             rows

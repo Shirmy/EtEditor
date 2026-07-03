@@ -1079,6 +1079,8 @@ private fun FetchCoverImage(
 // 无卷时把预览行重排成“左列固定 epub 章节、右列未删除标题往上顶”，与写回行为一致。
 // 左列按 epub 章节顺序保留（普通行 + 未抓到行），右列把未被删除的抓取标题依次填上来；
 // 填不上的左列行显示“未抓到·保持原样”。超出的抓取项（无 epub 章节对应）不显示。
+// 重拼右列标题时用左列那一章的原标题取章号前缀，保证压实后序号跟着新位置走；
+// 手改项保持用户输入原样不动。
 internal fun compactCatalogPreviewRows(
     rows: List<FetchInfoCatalogPreviewRow>,
     deletes: Set<Int>
@@ -1089,13 +1091,23 @@ internal fun compactCatalogPreviewRows(
         leftRows.forEachIndexed { index, left ->
             val matched = surviving.getOrNull(index)
             if (matched != null) {
+                val repacked = if (matched.renamed) {
+                    matched.fetchedTitle
+                } else {
+                    matched.fetchedItem?.let { item ->
+                        fetchInfoCatalogWriteBackTitle(left.originalTitle, item, matched.autoStyle)
+                    } ?: matched.fetchedTitle
+                }
                 add(
                     FetchInfoCatalogPreviewRow(
                         fileName = left.fileName,
                         originalTitle = left.originalTitle,
-                        fetchedTitle = matched.fetchedTitle,
+                        fetchedTitle = repacked,
                         isVolume = false,
-                        chapterPosition = matched.chapterPosition
+                        chapterPosition = matched.chapterPosition,
+                        fetchedItem = matched.fetchedItem,
+                        autoStyle = matched.autoStyle,
+                        renamed = matched.renamed
                     )
                 )
             } else {
