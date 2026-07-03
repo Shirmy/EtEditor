@@ -199,7 +199,14 @@ fun FetchInfoPreviewPane(
             renames = renameSnapshot
         )
     }
-    val visibleCatalogRows = displayCatalogRows.filterNot { it.skipped || it.chapterPosition in deleteSnapshot }
+    val hasVolumeRows = displayCatalogRows.any { it.isVolume || it.willCreateVolume }
+    // 无卷时左列固定 epub 章节、右列未删除标题往上顶，与写回行为一致；
+    // 有卷时仍按原配对整行过滤（卷与章节的归属关系复杂，保持现状）。
+    val visibleCatalogRows = if (hasVolumeRows) {
+        displayCatalogRows.filterNot { it.skipped || it.chapterPosition in deleteSnapshot }
+    } else {
+        compactCatalogPreviewRows(displayCatalogRows, deleteSnapshot)
+    }
     val skippedCatalogRows = displayCatalogRows.filter { it.skipped }
     val displayedCatalogRows = if (catalogOrderReversed) visibleCatalogRows.asReversed() else visibleCatalogRows
     val catalogOriginalCount = remember(preview) {
@@ -1064,6 +1071,43 @@ private fun FetchCoverImage(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+// 无卷时把预览行重排成“左列固定 epub 章节、右列未删除标题往上顶”，与写回行为一致。
+// 左列按 epub 章节顺序保留（普通行 + 未抓到行），右列把未被删除的抓取标题依次填上来；
+// 填不上的左列行显示“未抓到·保持原样”。超出的抓取项（无 epub 章节对应）不显示。
+internal fun compactCatalogPreviewRows(
+    rows: List<FetchInfoCatalogPreviewRow>,
+    deletes: Set<Int>
+): List<FetchInfoCatalogPreviewRow> {
+    val leftRows = rows.filter { !it.skipped && !it.isVolume && !it.willCreateVolume }
+    val surviving = rows.filter { !it.skipped && !it.isVolume && !it.willCreateVolume && it.chapterPosition >= 0 && it.chapterPosition !in deletes }
+    return buildList {
+        leftRows.forEachIndexed { index, left ->
+            val matched = surviving.getOrNull(index)
+            if (matched != null) {
+                add(
+                    FetchInfoCatalogPreviewRow(
+                        fileName = left.fileName,
+                        originalTitle = left.originalTitle,
+                        fetchedTitle = matched.fetchedTitle,
+                        isVolume = false,
+                        chapterPosition = matched.chapterPosition
+                    )
+                )
+            } else {
+                add(
+                    FetchInfoCatalogPreviewRow(
+                        fileName = left.fileName,
+                        originalTitle = left.originalTitle,
+                        fetchedTitle = "",
+                        isVolume = false,
+                        missingFetch = true
+                    )
+                )
             }
         }
     }
