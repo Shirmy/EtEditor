@@ -207,7 +207,11 @@ fun FetchInfoPreviewPane(
     } else {
         compactCatalogPreviewRows(displayCatalogRows, deleteSnapshot)
     }
-    val skippedCatalogRows = displayCatalogRows.filter { it.skipped }
+    val skippedCatalogRows = if (hasVolumeRows) {
+        displayCatalogRows.filter { it.skipped }
+    } else {
+        effectiveSkippedCatalogRows(displayCatalogRows, visibleCatalogRows)
+    }
     val displayedCatalogRows = if (catalogOrderReversed) visibleCatalogRows.asReversed() else visibleCatalogRows
     val catalogOriginalCount = remember(preview) {
         if (preview.parameters.fetchCatalog) controller.fetchInfoWritableChapterCount() else 0
@@ -1082,7 +1086,7 @@ private fun FetchCoverImage(
 
 // 无卷时把预览行重排成“左列固定 epub 章节、右列未删除标题往上顶”，与写回行为一致。
 // 左列按 epub 章节顺序保留（普通行 + 未抓到行），右列把未被删除的抓取标题依次填上来；
-// 填不上的左列行显示“未抓到·保持原样”。超出的抓取项（无 epub 章节对应）不显示。
+// 填不上的左列行显示“未抓到·保持原样”。超出的抓取项在前面删出空位后也继续补上。
 // 重拼右列标题时用左列那一章的原标题取章号前缀，保证压实后序号跟着新位置走；
 // 手改项保持用户输入原样不动。
 internal fun compactCatalogPreviewRows(
@@ -1090,7 +1094,7 @@ internal fun compactCatalogPreviewRows(
     deletes: Set<Int>
 ): List<FetchInfoCatalogPreviewRow> {
     val leftRows = rows.filter { !it.skipped && !it.isVolume && !it.willCreateVolume }
-    val surviving = rows.filter { !it.skipped && !it.isVolume && !it.willCreateVolume && it.chapterPosition >= 0 && it.chapterPosition !in deletes }
+    val surviving = rows.filter { !it.isVolume && !it.willCreateVolume && it.chapterPosition >= 0 && it.chapterPosition !in deletes }
     return buildList {
         leftRows.forEachIndexed { index, left ->
             val matched = surviving.getOrNull(index)
@@ -1139,4 +1143,15 @@ internal fun fetchCatalogRenameInitialValue(
         ?: visibleRows.firstOrNull { it.chapterPosition == position }?.fetchedTitle
         ?: displayRows.firstOrNull { it.chapterPosition == position }?.fetchedTitle
         ?: ""
+}
+
+internal fun effectiveSkippedCatalogRows(
+    rows: List<FetchInfoCatalogPreviewRow>,
+    visibleRows: List<FetchInfoCatalogPreviewRow>
+): List<FetchInfoCatalogPreviewRow> {
+    val visiblePositions = visibleRows
+        .map { it.chapterPosition }
+        .filter { it >= 0 }
+        .toSet()
+    return rows.filter { it.skipped && it.chapterPosition !in visiblePositions }
 }

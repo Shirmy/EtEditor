@@ -112,6 +112,28 @@ class FetchInfoPreviewFieldsTest {
     }
 
     @Test
+    fun compactCatalogPreviewRowsUsesSkippedExtraFetchedTitleAfterEarlierDelete() {
+        val rows = listOf(
+            row("Chapter0001.xhtml", "第1章 旧一", "新一", position = 0),
+            row("Chapter0002.xhtml", "第2章 旧二", "新二", position = 1),
+            row("Chapter0003.xhtml", "第3章 旧三", "新三", position = 2),
+            row("", "", "新四", position = 3, skipped = true)
+        )
+
+        val compacted = compactCatalogPreviewRows(rows, deletes = setOf(0))
+
+        assertEquals(3, compacted.size)
+        assertEquals("第1章 新二", compacted[0].fetchedTitle)
+        assertEquals(1, compacted[0].chapterPosition)
+        assertEquals("第2章 新三", compacted[1].fetchedTitle)
+        assertEquals(2, compacted[1].chapterPosition)
+        assertEquals("第3章 新四", compacted[2].fetchedTitle)
+        assertEquals(3, compacted[2].chapterPosition)
+        assertFalse(compacted[2].missingFetch)
+        assertTrue(effectiveSkippedCatalogRows(rows, compacted).isEmpty())
+    }
+
+    @Test
     fun fetchCatalogRenameInitialValueUsesCompactedVisibleTitleAfterDelete() {
         val rows = listOf(
             row("Chapter0001.xhtml", "第1章 旧一", "新一", position = 0),
@@ -135,7 +157,8 @@ class FetchInfoPreviewFieldsTest {
         fetchedName: String,
         position: Int = -1,
         missingFetch: Boolean = false,
-        renamedTitle: String? = null
+        renamedTitle: String? = null,
+        skipped: Boolean = false
     ): FetchInfoCatalogPreviewRow {
         val isRenamed = renamedTitle != null
         return FetchInfoCatalogPreviewRow(
@@ -143,6 +166,7 @@ class FetchInfoPreviewFieldsTest {
             originalTitle = originalTitle,
             fetchedTitle = if (isRenamed) renamedTitle else fetchedName,
             isVolume = false,
+            skipped = skipped,
             missingFetch = missingFetch,
             chapterPosition = position,
             fetchedItem = FetchedCatalogItem(index = position + 1, title = fetchedName),
