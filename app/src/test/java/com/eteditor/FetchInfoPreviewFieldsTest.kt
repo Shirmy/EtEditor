@@ -151,6 +151,43 @@ class FetchInfoPreviewFieldsTest {
         assertEquals("第1章 新二", initial)
     }
 
+    @Test
+    fun effectiveSkippedCatalogRowsRetainsOverflowWhenNoDelete() {
+        val rows = listOf(
+            row("Chapter0001.xhtml", "第1章 旧一", "新一", position = 0),
+            row("Chapter0002.xhtml", "第2章 旧二", "新二", position = 1),
+            row("Chapter0003.xhtml", "第3章 旧三", "新三", position = 2),
+            row("", "", "新四", position = 3, skipped = true)
+        )
+
+        val compacted = compactCatalogPreviewRows(rows, deletes = emptySet())
+
+        // 没有删除就没有空位，超出的新四仍留在“不写入章节”对话框里。
+        val skipped = effectiveSkippedCatalogRows(rows, compacted)
+        assertEquals(1, skipped.size)
+        assertEquals(3, skipped[0].chapterPosition)
+        assertTrue(skipped[0].skipped)
+    }
+
+    @Test
+    fun fetchCatalogRenameInitialValuePrefersStoredRenameOverVisibleTitle() {
+        val rows = listOf(
+            row("Chapter0001.xhtml", "第1章 旧一", "新一", position = 0),
+            row("Chapter0002.xhtml", "第2章 旧二", "新二", position = 1)
+        )
+        val compacted = compactCatalogPreviewRows(rows, deletes = setOf(0))
+
+        val initial = fetchCatalogRenameInitialValue(
+            position = 1,
+            renames = mapOf(1 to "我的标题"),
+            visibleRows = compacted,
+            displayRows = rows
+        )
+
+        // 已有手改值时优先用它，不被压实后的显示标题覆盖。
+        assertEquals("我的标题", initial)
+    }
+
     private fun row(
         fileName: String,
         originalTitle: String,
