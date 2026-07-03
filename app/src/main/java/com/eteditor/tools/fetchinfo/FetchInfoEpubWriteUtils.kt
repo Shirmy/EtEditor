@@ -28,6 +28,7 @@ internal fun applyFetchedCatalogToEpub(
     val autoStyle = fetchInfoCatalogAutoTitleStyle(parameters, targetChapters, catalog)
     val usedVolumePaths = mutableSetOf<String>()
     var targetCursor = 0
+    var catalogItemIndex = 0
     var changed = 0
     var touchedCurrent = false
     catalog.forEach { item ->
@@ -56,10 +57,11 @@ internal fun applyFetchedCatalogToEpub(
                 changed += 1
             }
         } else {
-            val position = targetCursor
+            val position = catalogItemIndex
+            catalogItemIndex += 1
+            if (position in deletes) return@forEach
             val chapter = targetChapters.getOrNull(targetCursor) ?: return@forEach
             targetCursor += 1
-            if (position in deletes) return@forEach
             val renamed = renames[position]
             if (renamed != null) {
                 // 用户手动输入的重命名保持原样，仅去首尾空白。
