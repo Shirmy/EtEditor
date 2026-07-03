@@ -232,6 +232,16 @@ internal fun defaultEditorToolDefinitions(): List<ToolDefinition> {
                     label = "自动判断格式",
                     defaultValue = BOOL_FALSE,
                     options = BOOLEAN_OPTIONS
+                ),
+                ToolParameterDefinition(
+                    key = FETCH_INFO_PARAM_CATALOG_FILTER,
+                    label = "目录净化规则",
+                    defaultValue = ""
+                ),
+                ToolParameterDefinition(
+                    key = FETCH_INFO_PARAM_INTRO_FILTER,
+                    label = "简介净化规则",
+                    defaultValue = ""
                 )
             )
         ),
