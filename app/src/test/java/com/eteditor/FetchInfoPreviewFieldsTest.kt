@@ -111,6 +111,24 @@ class FetchInfoPreviewFieldsTest {
         assertTrue(compacted[1].missingFetch)
     }
 
+    @Test
+    fun fetchCatalogRenameInitialValueUsesCompactedVisibleTitleAfterDelete() {
+        val rows = listOf(
+            row("Chapter0001.xhtml", "第1章 旧一", "新一", position = 0),
+            row("Chapter0002.xhtml", "第2章 旧二", "新二", position = 1)
+        )
+        val compacted = compactCatalogPreviewRows(rows, deletes = setOf(0))
+
+        val initial = fetchCatalogRenameInitialValue(
+            position = 1,
+            renames = emptyMap(),
+            visibleRows = compacted,
+            displayRows = rows
+        )
+
+        assertEquals("第1章 新二", initial)
+    }
+
     private fun row(
         fileName: String,
         originalTitle: String,

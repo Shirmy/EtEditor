@@ -491,8 +491,12 @@ fun FetchInfoPreviewPane(
     }
 
     renameTarget?.let { position ->
-        val initial = renames[position]
-            ?: displayCatalogRows.firstOrNull { it.chapterPosition == position }?.fetchedTitle.orEmpty()
+        val initial = fetchCatalogRenameInitialValue(
+            position = position,
+            renames = renames,
+            visibleRows = visibleCatalogRows,
+            displayRows = displayCatalogRows
+        )
         FetchCatalogRenameDialog(
             initialValue = initial,
             onDismiss = { renameTarget = null },
@@ -1123,4 +1127,16 @@ internal fun compactCatalogPreviewRows(
             }
         }
     }
+}
+
+internal fun fetchCatalogRenameInitialValue(
+    position: Int,
+    renames: Map<Int, String>,
+    visibleRows: List<FetchInfoCatalogPreviewRow>,
+    displayRows: List<FetchInfoCatalogPreviewRow>
+): String {
+    return renames[position]
+        ?: visibleRows.firstOrNull { it.chapterPosition == position }?.fetchedTitle
+        ?: displayRows.firstOrNull { it.chapterPosition == position }?.fetchedTitle
+        ?: ""
 }
