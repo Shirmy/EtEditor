@@ -832,7 +832,6 @@ private data class CatalogCompareLineSpec(
     val right: String,
     val leftError: Boolean = false,
     val rightStrong: Boolean = false,
-    val rightError: Boolean = false,
     val leftDimmed: Boolean = false,
     val rightDimmed: Boolean = false
 )
@@ -886,7 +885,6 @@ private fun CatalogCompareBlock(
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = if (line.rightStrong) FontWeight.Medium else FontWeight.Normal,
                         color = when {
-                            line.rightError -> MaterialTheme.colorScheme.error
                             line.rightDimmed -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
                             line.right.isBlank() -> MaterialTheme.colorScheme.onSurfaceVariant
                             else -> MaterialTheme.colorScheme.onSurface
