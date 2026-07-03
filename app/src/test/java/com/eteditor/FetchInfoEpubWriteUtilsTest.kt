@@ -106,6 +106,62 @@ class FetchInfoEpubWriteUtilsTest {
     }
 
     @Test
+    fun applyFetchedCatalogToEpubShiftsAllTitlesForwardWhenDeletingFirstItem() {
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章 旧标题"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章 旧标题"),
+                chapter("c3", "OEBPS/Text/Chapter0003.xhtml", "第3章 旧标题")
+            )
+        )
+
+        val result = applyFetchedCatalogToEpub(
+            book = book,
+            parameters = fetchParameters(autoTitleFormat = false),
+            catalog = listOf(
+                FetchedCatalogItem(index = 1, title = "新一", sequence = "1"),
+                FetchedCatalogItem(index = 2, title = "新二", sequence = "2"),
+                FetchedCatalogItem(index = 3, title = "新三", sequence = "3")
+            ),
+            currentChapterIndex = 0,
+            deletes = setOf(0)
+        )
+
+        assertEquals(FetchInfoCatalogWriteResult(changed = 2, touchedCurrentChapter = true), result)
+        assertEquals("第1章 新二", book.chapters[0].title)
+        assertEquals("第2章 新三", book.chapters[1].title)
+        assertEquals("第3章 旧标题", book.chapters[2].title)
+    }
+
+    @Test
+    fun applyFetchedCatalogToEpubShiftsRemainingTitlesForwardAfterMultipleDeletes() {
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章 旧标题"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章 旧标题"),
+                chapter("c3", "OEBPS/Text/Chapter0003.xhtml", "第3章 旧标题")
+            )
+        )
+
+        val result = applyFetchedCatalogToEpub(
+            book = book,
+            parameters = fetchParameters(autoTitleFormat = false),
+            catalog = listOf(
+                FetchedCatalogItem(index = 1, title = "新一", sequence = "1"),
+                FetchedCatalogItem(index = 2, title = "新二", sequence = "2"),
+                FetchedCatalogItem(index = 3, title = "新三", sequence = "3")
+            ),
+            currentChapterIndex = 0,
+            deletes = setOf(0, 2)
+        )
+
+        assertEquals(FetchInfoCatalogWriteResult(changed = 1, touchedCurrentChapter = true), result)
+        assertEquals("第1章 新二", book.chapters[0].title)
+        assertEquals("第2章 旧标题", book.chapters[1].title)
+        assertEquals("第3章 旧标题", book.chapters[2].title)
+    }
+
+    @Test
     fun applyFetchedCatalogToEpubCreatesVolumeChaptersAndTocLevels() {
         val book = sampleBook(
             listOf(
