@@ -158,7 +158,7 @@ internal fun EpubParagraphEditDialog(
     LaunchedEffect(chapterIndex, bodyOffset, editableParagraph) {
         delay(120)
         runCatching { focusRequester.requestFocus() }
-        hostView.showSoftKeyboard()
+        runCatching { hostView.showSoftKeyboard() }
     }
     Dialog(
         onDismissRequest = onDismiss,
