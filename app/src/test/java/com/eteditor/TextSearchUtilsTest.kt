@@ -489,4 +489,113 @@ class TextSearchUtilsTest {
             preview = true
         )
     }
+
+    @Test
+    fun countTextSearchMatchesCountsAllMatchesWithoutBuildingObjects() {
+        val sources = listOf(
+            SearchSource(0, "第一章", "a.xhtml", "foo bar foo baz foo"),
+            SearchSource(1, "第二章", "b.xhtml", "foo foo")
+        )
+        val rule = TextReplaceRule(find = "foo", replacement = "", regex = false)
+        assertEquals(5, countTextSearchMatches(sources, rule, caseSensitive = false))
+    }
+
+    @Test
+    fun countTextSearchMatchesReturnsZeroForEmptyFind() {
+        val sources = listOf(SearchSource(0, "章", "a.xhtml", "abc"))
+        val rule = TextReplaceRule(find = "", replacement = "", regex = false)
+        assertEquals(0, countTextSearchMatches(sources, rule, caseSensitive = false))
+    }
+
+    @Test
+    fun buildTextSearchResultsIncrementalBuildsFirstBatchAndReturnsCursor() {
+        val sources = listOf(
+            SearchSource(0, "第一章", "a.xhtml", "foo bar foo baz foo"),
+            SearchSource(1, "第二章", "b.xhtml", "foo foo")
+        )
+        val rule = TextReplaceRule(find = "foo", replacement = "", regex = false)
+        val resolveLocation = { start: Int, end: Int, chapterIndex: Int, title: String ->
+            TextSearchResultLocation(chapterIndex, "$title@$start-$end")
+        }
+        // 一次取 2 条
+        val batch1 = buildTextSearchResultsIncremental(
+            sources = sources, rule = rule, caseSensitive = false,
+            ruleIndex = 0, idPrefix = "r", cursor = null, targetCount = 2,
+            resolveLocation = resolveLocation
+        )
+        assertEquals(2, batch1.results.size)
+        assertEquals(false, batch1.reachedEnd)
+        // 游标指向 source 0 的第 2 个命中
+        assertEquals(0, batch1.cursor!!.sourceIndex)
+        assertEquals(2, batch1.cursor!!.matchIndexInSource)
+
+        // 从游标处接着取 2 条
+        val batch2 = buildTextSearchResultsIncremental(
+            sources = sources, rule = rule, caseSensitive = false,
+            ruleIndex = 0, idPrefix = "r", cursor = batch1.cursor, targetCount = 2,
+            resolveLocation = resolveLocation
+        )
+        assertEquals(2, batch2.results.size)
+        assertEquals(false, batch2.reachedEnd)
+        // 游标跳到 source 1 的第 1 个命中
+        assertEquals(1, batch2.cursor!!.sourceIndex)
+        assertEquals(1, batch2.cursor!!.matchIndexInSource)
+
+        // 从游标处接着取剩余
+        val batch3 = buildTextSearchResultsIncremental(
+            sources = sources, rule = rule, caseSensitive = false,
+            ruleIndex = 0, idPrefix = "r", cursor = batch2.cursor, targetCount = 10,
+            resolveLocation = resolveLocation
+        )
+        assertEquals(1, batch3.results.size)
+        assertEquals(true, batch3.reachedEnd)
+        assertEquals(null, batch3.cursor)
+    }
+
+    @Test
+    fun buildTextSearchResultsIncrementalReturnsAllWhenTargetExceedsTotal() {
+        val sources = listOf(SearchSource(0, "章", "a.xhtml", "foo foo"))
+        val rule = TextReplaceRule(find = "foo", replacement = "", regex = false)
+        val resolveLocation = { start: Int, end: Int, chapterIndex: Int, title: String ->
+            TextSearchResultLocation(chapterIndex, "$title@$start-$end")
+        }
+        val batch = buildTextSearchResultsIncremental(
+            sources = sources, rule = rule, caseSensitive = false,
+            ruleIndex = 0, idPrefix = "r", cursor = null, targetCount = 100,
+            resolveLocation = resolveLocation
+        )
+        assertEquals(2, batch.results.size)
+        assertEquals(true, batch.reachedEnd)
+        assertEquals(null, batch.cursor)
+    }
+
+    @Test
+    fun buildTextSearchResultsIncrementalProducesConsistentIdsWithFullScan() {
+        val sources = listOf(
+            SearchSource(0, "第一章", "a.xhtml", "foo bar foo"),
+            SearchSource(1, "第二章", "b.xhtml", "foo")
+        )
+        val rule = TextReplaceRule(find = "foo", replacement = "", regex = false)
+        val resolveLocation = { start: Int, end: Int, chapterIndex: Int, title: String ->
+            TextSearchResultLocation(chapterIndex, "$title@$start-$end")
+        }
+        // 全量扫描的 id
+        val fullIds = buildTextSearchResults(
+            sources = sources, rule = rule, caseSensitive = false,
+            ruleIndex = 0, idPrefix = "r", resolveLocation = resolveLocation
+        ).map { it.id }
+        // 分两批增量扫描的 id
+        val batch1 = buildTextSearchResultsIncremental(
+            sources = sources, rule = rule, caseSensitive = false,
+            ruleIndex = 0, idPrefix = "r", cursor = null, targetCount = 2,
+            resolveLocation = resolveLocation
+        )
+        val batch2 = buildTextSearchResultsIncremental(
+            sources = sources, rule = rule, caseSensitive = false,
+            ruleIndex = 0, idPrefix = "r", cursor = batch1.cursor, targetCount = 10,
+            resolveLocation = resolveLocation
+        )
+        val incrementalIds = (batch1.results + batch2.results).map { it.id }
+        assertEquals(fullIds, incrementalIds)
+    }
 }

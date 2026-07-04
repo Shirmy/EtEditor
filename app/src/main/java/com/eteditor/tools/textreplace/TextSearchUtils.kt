@@ -47,48 +47,155 @@ internal fun buildTextSearchResults(
     resolveLocation: (Int, Int, Int, String) -> TextSearchResultLocation
 ): List<TextSearchResult> {
     if (maxMatches <= 0) return emptyList()
-    // 每条规则的正则只编译一次，复用到所有 source（不改匹配结果，只省掉逐章重复编译）
-    val regex = if (rule.regex) {
-        val options = if (caseSensitive) emptySet<RegexOption>() else setOf(RegexOption.IGNORE_CASE)
-        Regex(rule.find, options)
-    } else {
-        null
-    }
+    val regex = compileTextReplaceSearchRegex(rule, caseSensitive)
     val results = mutableListOf<TextSearchResult>()
     for (source in sources) {
         if (results.size >= maxMatches) break
-        val matches = if (regex != null) {
-            regexSearchRanges(source.text, regex)
-        } else {
-            plainSearchRanges(source.text, rule.find, caseSensitive)
-        }
+        val matches = searchMatchRanges(source.text, rule.find, regex, caseSensitive)
         for ((matchIndex, range) in matches.withIndex()) {
             if (results.size >= maxMatches) break
             val (start, end) = range
-            val context = searchContext(source.text, start, end)
-            val absoluteStart = source.sourceOffset + start
-            val absoluteEnd = source.sourceOffset + end
-            val location = resolveLocation(
-                absoluteStart,
-                absoluteEnd,
-                source.chapterIndex,
-                source.title
-            )
-            results += TextSearchResult(
-                id = "$idPrefix-${source.chapterIndex}-${source.sourceOffset}-$matchIndex-$start",
+            results += buildTextSearchResult(
+                source = source,
+                matchIndex = matchIndex,
+                start = start,
+                end = end,
                 ruleIndex = ruleIndex,
-                chapterIndex = location.chapterIndex,
-                chapterTitle = location.title,
-                context = context.text,
-                matchText = source.text.substring(start, end),
-                contextMatchStart = context.matchStart,
-                contextMatchEnd = context.matchEnd,
-                sourceStart = absoluteStart,
-                sourceEnd = absoluteEnd
+                idPrefix = idPrefix,
+                resolveLocation = resolveLocation
             )
         }
     }
     return results
+}
+
+// 轻量计数：遍历所有 source 只数命中数，不建任何命中对象。
+// 用于拿真实总数，内存开销恒定，无论命中多少都只存一个 Int。
+internal fun countTextSearchMatches(
+    sources: List<SearchSource>,
+    rule: TextReplaceRule,
+    caseSensitive: Boolean
+): Int {
+    if (rule.find.isEmpty() && !rule.regex) return 0
+    val regex = compileTextReplaceSearchRegex(rule, caseSensitive)
+    var count = 0
+    for (source in sources) {
+        val matches = searchMatchRanges(source.text, rule.find, regex, caseSensitive)
+        count += matches.size
+    }
+    return count
+}
+
+// 增量建详情的游标：标明扫到了哪个 source、该 source 内已建到第几个命中。
+// 从游标处接着扫，建到 targetCount 条就停，返回新结果和新游标。
+// 游标为 null 表示从头开始；返回的游标为 null 表示已扫完全部 source。
+internal data class TextSearchIncrementalCursor(
+    val sourceIndex: Int,
+    val matchIndexInSource: Int
+)
+
+internal data class TextSearchIncrementalBatch(
+    val results: List<TextSearchResult>,
+    val cursor: TextSearchIncrementalCursor?,
+    val reachedEnd: Boolean
+)
+
+internal fun buildTextSearchResultsIncremental(
+    sources: List<SearchSource>,
+    rule: TextReplaceRule,
+    caseSensitive: Boolean,
+    ruleIndex: Int,
+    idPrefix: String,
+    cursor: TextSearchIncrementalCursor?,
+    targetCount: Int,
+    resolveLocation: (Int, Int, Int, String) -> TextSearchResultLocation
+): TextSearchIncrementalBatch {
+    if (targetCount <= 0) {
+        return TextSearchIncrementalBatch(emptyList(), cursor, cursor == null)
+    }
+    val regex = compileTextReplaceSearchRegex(rule, caseSensitive)
+    val results = mutableListOf<TextSearchResult>()
+    val startSourceIndex = cursor?.sourceIndex ?: 0
+    val startMatchIndex = cursor?.matchIndexInSource ?: 0
+    for (sourceIndex in startSourceIndex until sources.size) {
+        val source = sources[sourceIndex]
+        val matches = searchMatchRanges(source.text, rule.find, regex, caseSensitive)
+        val beginAt = if (sourceIndex == startSourceIndex) startMatchIndex else 0
+        for (matchIndex in beginAt until matches.size) {
+            if (results.size >= targetCount) {
+                // 本 source 还有剩余命中，游标停在本 source 的下一个 matchIndex
+                val nextMatchIndex = matchIndex
+                return TextSearchIncrementalBatch(
+                    results = results,
+                    cursor = TextSearchIncrementalCursor(sourceIndex, nextMatchIndex),
+                    reachedEnd = false
+                )
+            }
+            val (start, end) = matches[matchIndex]
+            results += buildTextSearchResult(
+                source = source,
+                matchIndex = matchIndex,
+                start = start,
+                end = end,
+                ruleIndex = ruleIndex,
+                idPrefix = idPrefix,
+                resolveLocation = resolveLocation
+            )
+        }
+    }
+    // 扫完全部 source
+    return TextSearchIncrementalBatch(results = results, cursor = null, reachedEnd = true)
+}
+
+private fun compileTextReplaceSearchRegex(rule: TextReplaceRule, caseSensitive: Boolean): Regex? {
+    if (!rule.regex) return null
+    val options = if (caseSensitive) emptySet<RegexOption>() else setOf(RegexOption.IGNORE_CASE)
+    return Regex(rule.find, options)
+}
+
+private fun searchMatchRanges(
+    text: String,
+    find: String,
+    regex: Regex?,
+    caseSensitive: Boolean
+): List<Pair<Int, Int>> {
+    return if (regex != null) {
+        regexSearchRanges(text, regex)
+    } else {
+        plainSearchRanges(text, find, caseSensitive)
+    }
+}
+
+private fun buildTextSearchResult(
+    source: SearchSource,
+    matchIndex: Int,
+    start: Int,
+    end: Int,
+    ruleIndex: Int,
+    idPrefix: String,
+    resolveLocation: (Int, Int, Int, String) -> TextSearchResultLocation
+): TextSearchResult {
+    val context = searchContext(source.text, start, end)
+    val absoluteStart = source.sourceOffset + start
+    val absoluteEnd = source.sourceOffset + end
+    val location = resolveLocation(
+        absoluteStart,
+        absoluteEnd,
+        source.chapterIndex,
+        source.title
+    )
+    return TextSearchResult(
+        id = "$idPrefix-${source.chapterIndex}-${source.sourceOffset}-$matchIndex-$start",
+        ruleIndex = ruleIndex,
+        chapterIndex = location.chapterIndex,
+        chapterTitle = location.title,
+        context = context.text,
+        matchText = source.text.substring(start, end),
+        contextMatchStart = context.matchStart,
+        contextMatchEnd = context.matchEnd,
+        sourceStart = absoluteStart,
+        sourceEnd = absoluteEnd
+    )
 }
 
 internal fun textSearchResultsAfterSingleReplacement(

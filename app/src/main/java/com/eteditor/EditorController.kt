@@ -265,6 +265,15 @@ class EditorController(internal val appContext: Context) {
     var textSearchResults: List<TextSearchResult>
         get() = toolState.textSearchResults
         internal set(value) { toolState.textSearchResults = value }
+    var textSearchTotalMatchCount: Int
+        get() = toolState.textSearchTotalMatchCount
+        internal set(value) { toolState.textSearchTotalMatchCount = value }
+    var textSearchRuleTotalCounts: Map<Int, Int>
+        get() = toolState.textSearchRuleTotalCounts
+        internal set(value) { toolState.textSearchRuleTotalCounts = value }
+    internal var textSearchRuleCursors: Map<Int, TextSearchIncrementalCursor>
+        get() = toolState.textSearchRuleCursors
+        set(value) { toolState.textSearchRuleCursors = value }
     var textSearchToolId: String?
         get() = toolState.textSearchToolId
         internal set(value) { toolState.textSearchToolId = value }

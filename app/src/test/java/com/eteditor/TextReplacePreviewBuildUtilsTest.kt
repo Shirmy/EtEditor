@@ -158,21 +158,7 @@ class TextReplacePreviewBuildUtilsTest {
 
     @Test
     fun textSearchFoundStatusMessageForDisplayHintsExpandAndSelectAllWhenOverBatch() {
-        val results = (1..40).map { i ->
-            TextSearchResult(
-                id = "r-$i",
-                ruleIndex = 0,
-                chapterIndex = 0,
-                chapterTitle = "c",
-                context = "x",
-                matchText = "foo",
-                contextMatchStart = 0,
-                contextMatchEnd = 3,
-                sourceStart = i,
-                sourceEnd = i + 3
-            )
-        }
-        val message = textSearchFoundStatusMessageForDisplay(results)
+        val message = textSearchFoundStatusMessageForDisplay(40)
         assertTrue(message.contains("40"))
         assertTrue(message.contains("30"))
     }

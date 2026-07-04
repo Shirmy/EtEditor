@@ -70,13 +70,16 @@ fun EditorController.applySelectedTextSearchResult(toolId: String): Boolean {
             replacementDelta = replacementDelta,
             resolveLocation = ::textSearchResultLocation
         )
+        textSearchTotalMatchCount = textSearchResults.size
+        textSearchRuleCursors = emptyMap()
     } else {
         refreshChapters()
-        textSearchResults = try {
-            buildTextSearchResults(activeRules, parameters)
+        val rebuilt = try {
+            initializeIncrementalTextSearchPreview(activeRules, parameters)
         } catch (error: IllegalArgumentException) {
             emptyList()
         }
+        textSearchResults = rebuilt
     }
     val nextResult = when {
         textSearchResults.isEmpty() -> null
@@ -90,14 +93,14 @@ fun EditorController.applySelectedTextSearchResult(toolId: String): Boolean {
     } else if (!nextSelected) {
         clearPreviewHighlight()
     }
-    statusMessage = if (textSearchResults.isEmpty()) {
+    statusMessage = if (textSearchTotalMatchCount == 0) {
         "已替换此处，没有剩余匹配"
     } else if (nextResult == null) {
         "已替换此处，没有下一项"
     } else if (selectedResultIndex !in textSearchResults.indices) {
-        "已替换此处，已定位上一项，剩余 ${textSearchResults.size} 处"
+        "已替换此处，已定位上一项，剩余 ${textSearchTotalMatchCount} 处"
     } else {
-        "已替换此处，剩余 ${textSearchResults.size} 处"
+        "已替换此处，剩余 ${textSearchTotalMatchCount} 处"
     }
     return true
 }
@@ -105,8 +108,7 @@ fun EditorController.applySelectedTextSearchResult(toolId: String): Boolean {
 suspend fun EditorController.applySelectedTextSearchResultsWithProgress(
     toolId: String,
     resultIds: Set<String>,
-    onProgress: (completed: Int, total: Int) -> Unit,
-    displayedCount: Int = Int.MAX_VALUE
+    onProgress: (completed: Int, total: Int) -> Unit
 ): Boolean {
     if (textSearchToolId != toolId) {
         statusMessage = "没有可执行的替换预览"
@@ -126,9 +128,9 @@ suspend fun EditorController.applySelectedTextSearchResultsWithProgress(
         ?.filter { it.enabled && it.find.isNotEmpty() }
         ?: return false
     // 勾选意图按「规则」判定（与 .replacement 分组预览一致）：
-    // 某条规则展示已达预览上限(未展示全)且展示出来的匹配全部勾选 -> 视为整条规则全要，
+    // 某条规则已建详情全部勾选、且该规则还有未建详情(真实总数 > 已建数) -> 视为整条规则全要，
     // 交引擎按与预览相同口径(忽略大小写、保留仅文本)扫全书替换，覆盖未展示的部分；
-    // 其余(未达上限，或仅勾选部分) -> 只按预览快照里被勾选的位置精确替换，不误碰未展示内容。
+    // 其余(已建完所有详情，或仅勾选部分) -> 只按预览快照里被勾选的位置精确替换，不误碰未展示内容。
     val engineRules = mutableListOf<TextReplaceRule>()
     val plans = mutableListOf<ReplacementMatchPlan>()
     try {
@@ -136,9 +138,10 @@ suspend fun EditorController.applySelectedTextSearchResultsWithProgress(
             val rule = activeRules.getOrNull(ruleIndex) ?: continue
             val selectedResults = ruleResults.filter { it.id in resultIds }
             if (selectedResults.isEmpty()) continue
+            val ruleTotal = textSearchRuleTotalCounts[ruleIndex] ?: ruleResults.size
             if (replacementSelectionTriggersFullScanByDisplay(
-                    totalMatches = ruleResults.size,
-                    displayedMatches = displayedCount,
+                    totalMatches = ruleTotal,
+                    displayedMatches = ruleResults.size,
                     selectedMatches = selectedResults.size,
                     findPatternNotEmpty = rule.find.isNotEmpty()
                 )) {
@@ -430,7 +433,7 @@ internal fun EditorController.rebuildCurrentTextSearchPreviewAfterDocumentChange
         ?: return false
     if (activeRules.isEmpty()) return false
     val rebuiltResults = try {
-        buildTextSearchResults(activeRules, parameters)
+        initializeIncrementalTextSearchPreview(activeRules, parameters)
     } catch (error: IllegalArgumentException) {
         statusMessage = textReplaceRegexErrorMessage(error)
         return false
@@ -454,11 +457,11 @@ private fun EditorController.refreshTextSearchPreviewAfterSelectedReplacement(
     }
     refreshChapters()
     val rebuiltResults = try {
-        buildTextSearchResults(activeRules, parameters)
+        initializeIncrementalTextSearchPreview(activeRules, parameters)
     } catch (error: IllegalArgumentException) {
         emptyList()
     }
-    if (rebuiltResults.isEmpty()) {
+    if (rebuiltResults.isEmpty() && textSearchTotalMatchCount == 0) {
         clearTextSearchState()
     } else {
         textSearchToolId = toolId
@@ -502,13 +505,13 @@ internal fun EditorController.runTextReplaceTool(tool: EditorTool, manual: Boole
     }
     if (parameters.preview) {
         val results = try {
-            buildTextSearchResults(activeRules, parameters)
+            initializeIncrementalTextSearchPreview(activeRules, parameters)
         } catch (error: IllegalArgumentException) {
             statusMessage = textReplaceRegexErrorMessage(error)
             clearTextSearchState()
             return false
         }
-        if (results.isEmpty()) {
+        if (results.isEmpty() && textSearchTotalMatchCount == 0) {
             clearTextSearchState()
             statusMessage = textReplaceNoMatchMessage(kind, statusMessage, parameters, activeRules)
             return false
@@ -516,7 +519,7 @@ internal fun EditorController.runTextReplaceTool(tool: EditorTool, manual: Boole
         textSearchToolId = tool.id
         textSearchResults = results
         clearPreviewHighlight()
-        statusMessage = textSearchFoundStatusMessageForDisplay(results)
+        statusMessage = textSearchFoundStatusMessageForDisplay(textSearchTotalMatchCount)
         if (manual) return true
         statusMessage = needsConfirmationMessage()
         return false
@@ -580,7 +583,7 @@ internal suspend fun EditorController.runTextReplaceToolAsync(tool: EditorTool, 
             clearTextSearchState()
             return false
         }
-        if (results.isEmpty()) {
+        if (results.isEmpty() && textSearchTotalMatchCount == 0) {
             clearTextSearchState()
             statusMessage = textReplaceNoMatchMessage(kind, statusMessage, parameters, activeRules)
             return false
@@ -588,7 +591,7 @@ internal suspend fun EditorController.runTextReplaceToolAsync(tool: EditorTool, 
         textSearchToolId = tool.id
         textSearchResults = results
         clearPreviewHighlight()
-        statusMessage = textSearchFoundStatusMessageForDisplay(results)
+        statusMessage = textSearchFoundStatusMessageForDisplay(textSearchTotalMatchCount)
         if (manual) return true
         statusMessage = needsConfirmationMessage()
         return false
@@ -652,7 +655,7 @@ internal suspend fun EditorController.runTextReplaceToolForAutomationPreview(
         clearTextSearchState()
         return false
     }
-    if (results.isEmpty()) {
+    if (results.isEmpty() && textSearchTotalMatchCount == 0) {
         clearTextSearchState()
         statusMessage = textReplaceNoMatchMessage(kind, statusMessage, parameters, activeRules)
         return true
@@ -660,7 +663,7 @@ internal suspend fun EditorController.runTextReplaceToolForAutomationPreview(
     textSearchToolId = tool.id
     textSearchResults = results
     clearPreviewHighlight()
-    statusMessage = textSearchFoundMessage(results.size)
+    statusMessage = textSearchFoundMessage(textSearchTotalMatchCount)
     statusMessage = needsConfirmationMessage()
     return false
 }
@@ -826,6 +829,105 @@ private fun EditorController.buildTextSearchResults(
     )
 }
 
+// 初始化增量搜索预览：先轻量计数拿真实总数，再建第一批详情，设置游标和总数状态。
+// 返回建出的第一批详情列表。调用方负责把返回值赋给 textSearchResults。
+private fun EditorController.initializeIncrementalTextSearchPreview(
+    rules: List<TextReplaceRule>,
+    parameters: TextReplaceParameters
+): List<TextSearchResult> {
+    val resolveLocation = ::textSearchResultLocation
+    var totalCount = 0
+    val ruleTotalCounts = mutableMapOf<Int, Int>()
+    val cursors = mutableMapOf<Int, TextSearchIncrementalCursor>()
+    val firstBatch = mutableListOf<TextSearchResult>()
+    for ((ruleIndex, rule) in rules.withIndex()) {
+        val sources = searchSources(
+            parameters.copy(
+                target = if (rule.textOnly) TEXT_REPLACE_TARGET_VISIBLE else TEXT_REPLACE_TARGET_SOURCE
+            )
+        )
+        val ruleCount = countTextSearchMatches(sources, rule, caseSensitive = false)
+        totalCount += ruleCount
+        ruleTotalCounts[ruleIndex] = ruleCount
+        val batch = buildTextSearchResultsIncremental(
+            sources = sources,
+            rule = rule,
+            caseSensitive = false,
+            ruleIndex = ruleIndex,
+            idPrefix = "rule-$ruleIndex",
+            cursor = null,
+            targetCount = TEXT_SEARCH_DISPLAY_BATCH_SIZE,
+            resolveLocation = resolveLocation
+        )
+        firstBatch += batch.results
+        if (batch.cursor != null) {
+            cursors[ruleIndex] = batch.cursor
+        }
+    }
+    textSearchTotalMatchCount = totalCount
+    textSearchRuleTotalCounts = ruleTotalCounts
+    textSearchRuleCursors = cursors
+    return firstBatch
+}
+
+// 展开更多：从已有游标处接着扫，追加下一批详情，更新游标。
+// 返回是否还有更多未展示的命中。
+internal suspend fun EditorController.expandTextSearchResults(
+    rules: List<TextReplaceRule>,
+    parameters: TextReplaceParameters,
+    batchCount: Int = TEXT_SEARCH_DISPLAY_BATCH_SIZE
+): Boolean {
+    val existingCursors = textSearchRuleCursors
+    if (existingCursors.isEmpty()) return false
+    val resolveLocation = textSearchResultLocationResolverSnapshot()
+    val appended = mutableListOf<TextSearchResult>()
+    val updatedCursors = existingCursors.toMutableMap()
+    for ((ruleIndex, cursor) in existingCursors) {
+        val rule = rules.getOrNull(ruleIndex) ?: continue
+        val sources = searchSources(
+            parameters.copy(
+                target = if (rule.textOnly) TEXT_REPLACE_TARGET_VISIBLE else TEXT_REPLACE_TARGET_SOURCE
+            )
+        )
+        val batch = withContext(Dispatchers.Default) {
+            buildTextSearchResultsIncremental(
+                sources = sources,
+                rule = rule,
+                caseSensitive = false,
+                ruleIndex = ruleIndex,
+                idPrefix = "rule-$ruleIndex",
+                cursor = cursor,
+                targetCount = batchCount,
+                resolveLocation = resolveLocation
+            )
+        }
+        appended += batch.results
+        if (batch.cursor != null) {
+            updatedCursors[ruleIndex] = batch.cursor
+        } else {
+            updatedCursors.remove(ruleIndex)
+        }
+        currentCoroutineContext().ensureActive()
+        yield()
+    }
+    textSearchResults = textSearchResults + appended
+    textSearchRuleCursors = updatedCursors
+    return textSearchRuleCursors.isNotEmpty()
+}
+
+// 公开的"展开更多"入口：自动取当前预览对应的规则和参数，调增量建详情扫描追加下一批。
+// 返回是否还有更多未展示的命中。
+suspend fun EditorController.expandTextSearchResultsForCurrentPreview(): Boolean {
+    val toolId = textSearchToolId ?: return false
+    val tool = textReplaceToolForPreview(toolId) ?: return false
+    val parameters = effectiveTextReplaceParameters(tool)
+    if (parameters.isReplacementMode()) return false
+    val activeRules = textReplaceRules(parameters)
+        ?.filter { it.enabled && it.find.isNotEmpty() }
+        ?: return false
+    return expandTextSearchResults(activeRules, parameters)
+}
+
 private suspend fun EditorController.buildTextSearchResultsWithProgress(
     rules: List<TextReplaceRule>,
     parameters: TextReplaceParameters,
@@ -846,41 +948,64 @@ private suspend fun EditorController.buildTextSearchResultsWithProgress(
     val total = jobs.sumOf { (_, _, sources) -> sources.size.coerceAtLeast(1) }
         .coerceAtLeast(1)
     var completed = 0
-    val results = mutableListOf<TextSearchResult>()
+    val resolveLocation = textSearchResultLocationResolverSnapshot()
     onProgress("加载预览", completed, total)
     yield()
+    // 第一步：轻量计数拿真实总数
+    var totalCount = 0
+    val ruleTotalCounts = mutableMapOf<Int, Int>()
     for ((index, rule, sources) in jobs) {
         currentCoroutineContext().ensureActive()
         if (sources.isEmpty()) {
             completed += 1
             onProgress("加载预览", completed, total)
             yield()
-        } else {
-            var ruleMatchCount = 0
-            for (source in sources) {
-                currentCoroutineContext().ensureActive()
-                val resolveLocation = textSearchResultLocationResolverSnapshot()
-                val chunk = withContext(Dispatchers.Default) {
-                    currentCoroutineContext().ensureActive()
-                    buildTextSearchResults(
-                        sources = listOf(source),
-                        rule = rule,
-                        caseSensitive = false,
-                        ruleIndex = index,
-                        idPrefix = "rule-$index",
-                        maxMatches = Int.MAX_VALUE,
-                        resolveLocation = resolveLocation
-                    )
-                }
-                results += chunk
-                ruleMatchCount += chunk.size
-                completed += 1
-                onProgress("加载预览", completed, total)
-                yield()
-            }
+            continue
         }
+        val count = withContext(Dispatchers.Default) {
+            currentCoroutineContext().ensureActive()
+            var c = 0
+            for (source in sources) {
+                c += countTextSearchMatches(listOf(source), rule, caseSensitive = false)
+                currentCoroutineContext().ensureActive()
+            }
+            c
+        }
+        totalCount += count
+        ruleTotalCounts[index] = count
+        completed += sources.size
+        onProgress("加载预览", completed.coerceAtMost(total), total)
+        yield()
     }
-    return results
+    textSearchTotalMatchCount = totalCount
+    textSearchRuleTotalCounts = ruleTotalCounts
+    // 第二步：建第一批详情
+    val cursors = mutableMapOf<Int, TextSearchIncrementalCursor>()
+    val firstBatch = mutableListOf<TextSearchResult>()
+    for ((index, rule, sources) in jobs) {
+        currentCoroutineContext().ensureActive()
+        if (sources.isEmpty()) continue
+        val batch = withContext(Dispatchers.Default) {
+            currentCoroutineContext().ensureActive()
+            buildTextSearchResultsIncremental(
+                sources = sources,
+                rule = rule,
+                caseSensitive = false,
+                ruleIndex = index,
+                idPrefix = "rule-$index",
+                cursor = null,
+                targetCount = TEXT_SEARCH_DISPLAY_BATCH_SIZE,
+                resolveLocation = resolveLocation
+            )
+        }
+        firstBatch += batch.results
+        if (batch.cursor != null) {
+            cursors[index] = batch.cursor
+        }
+        yield()
+    }
+    textSearchRuleCursors = cursors
+    return firstBatch
 }
 
 private suspend fun buildReplacementFilePreviewWithProgress(

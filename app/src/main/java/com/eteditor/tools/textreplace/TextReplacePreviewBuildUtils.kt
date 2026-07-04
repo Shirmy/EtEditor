@@ -174,14 +174,15 @@ internal fun textSearchFoundStatusMessage(results: List<TextSearchResult>): Stri
     }
 }
 
-// 单条文本搜索替换已改为全量扫描+分批展示：命中超过一批时提示可展开查看全部，全选执行替换全部。
-internal fun textSearchFoundStatusMessageForDisplay(results: List<TextSearchResult>): String {
-    if (results.isEmpty()) return textSearchFoundMessage(0)
-    val overBatch = results.size > TEXT_SEARCH_DISPLAY_BATCH_SIZE
+// 单条文本搜索替换已改为全量计数+分批展示：命中超过一批时提示可展开查看全部，全选执行替换全部。
+// totalMatchCount 为轻量计数扫描拿到的真实总数，不随展示批次变化。
+internal fun textSearchFoundStatusMessageForDisplay(totalMatchCount: Int): String {
+    if (totalMatchCount <= 0) return textSearchFoundMessage(0)
+    val overBatch = totalMatchCount > TEXT_SEARCH_DISPLAY_BATCH_SIZE
     return if (overBatch) {
-        "命中 ${results.size} 处，默认显示前 $TEXT_SEARCH_DISPLAY_BATCH_SIZE 条，点“展开更多”查看全部；勾选当前展示项后“执行替换”会替换全部"
+        "命中 $totalMatchCount 处，默认显示前 $TEXT_SEARCH_DISPLAY_BATCH_SIZE 条，点“展开更多”查看全部；勾选当前展示项后“执行替换”会替换全部"
     } else {
-        textSearchFoundMessage(results.size)
+        textSearchFoundMessage(totalMatchCount)
     }
 }
 

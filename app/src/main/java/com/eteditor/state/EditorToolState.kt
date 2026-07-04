@@ -6,6 +6,12 @@ import androidx.compose.runtime.setValue
 
 internal class EditorToolState {
     var textSearchResults by mutableStateOf<List<TextSearchResult>>(emptyList())
+    // 真实命中总数（来自轻量计数扫描，不随展示批次变化）；0 表示未计数或无命中。
+    var textSearchTotalMatchCount by mutableStateOf(0)
+    // 每条规则的真实命中总数；key = ruleIndex。
+    var textSearchRuleTotalCounts by mutableStateOf<Map<Int, Int>>(emptyMap())
+    // 每条规则的增量建详情游标，供"展开更多"接着扫用；key = ruleIndex。
+    var textSearchRuleCursors by mutableStateOf<Map<Int, TextSearchIncrementalCursor>>(emptyMap())
     var textSearchToolId by mutableStateOf<String?>(null)
     var replacementFilePreview by mutableStateOf<ReplacementFilePreview?>(null)
     var fetchInfoPreview by mutableStateOf<FetchInfoPreview?>(null)

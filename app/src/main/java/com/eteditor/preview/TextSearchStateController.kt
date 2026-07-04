@@ -5,6 +5,9 @@ internal fun EditorController.clearTextSearchState() {
         applyDeferredTxtTextReplacementRefresh()
     }
     textSearchResults = emptyList()
+    textSearchTotalMatchCount = 0
+    textSearchRuleTotalCounts = emptyMap()
+    textSearchRuleCursors = emptyMap()
     textSearchToolId = null
     replacementFilePreview = null
     selectedTextSearchResultId = null
