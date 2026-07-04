@@ -100,6 +100,13 @@ internal data class TextSearchIncrementalBatch(
     val reachedEnd: Boolean
 )
 
+internal data class TextSearchPreviewRebuild(
+    val results: List<TextSearchResult>,
+    val totalCount: Int,
+    val ruleTotalCounts: Map<Int, Int>,
+    val cursors: Map<Int, TextSearchIncrementalCursor>
+)
+
 internal fun buildTextSearchResultsIncremental(
     sources: List<SearchSource>,
     rule: TextReplaceRule,
@@ -145,6 +152,56 @@ internal fun buildTextSearchResultsIncremental(
     }
     // 扫完全部 source
     return TextSearchIncrementalBatch(results = results, cursor = null, reachedEnd = true)
+}
+
+internal fun rebuildTextSearchPreviewAfterSingleReplacement(
+    rules: List<TextReplaceRule>,
+    sourceResolver: (ruleIndex: Int, rule: TextReplaceRule) -> List<SearchSource>,
+    previousDisplayedCounts: Map<Int, Int>,
+    replacedRuleIndex: Int,
+    caseSensitive: Boolean,
+    resolveLocation: (Int, Int, Int, String) -> TextSearchResultLocation
+): TextSearchPreviewRebuild {
+    var totalCount = 0
+    val ruleTotalCounts = mutableMapOf<Int, Int>()
+    val cursors = mutableMapOf<Int, TextSearchIncrementalCursor>()
+    val rebuiltResults = mutableListOf<TextSearchResult>()
+    for ((ruleIndex, rule) in rules.withIndex()) {
+        val sources = sourceResolver(ruleIndex, rule)
+        val ruleCount = countTextSearchMatches(sources, rule, caseSensitive)
+        totalCount += ruleCount
+        ruleTotalCounts[ruleIndex] = ruleCount
+        val previousDisplayed = previousDisplayedCounts[ruleIndex] ?: 0
+        val desiredCount = if (ruleIndex == replacedRuleIndex) {
+            (previousDisplayed - 1).coerceAtLeast(0)
+        } else {
+            previousDisplayed
+        }
+        val targetCount = if (desiredCount == 0 && ruleCount > 0) 1 else desiredCount
+        if (targetCount <= 0) {
+            continue
+        }
+        val batch = buildTextSearchResultsIncremental(
+            sources = sources,
+            rule = rule,
+            caseSensitive = caseSensitive,
+            ruleIndex = ruleIndex,
+            idPrefix = "rule-$ruleIndex",
+            cursor = null,
+            targetCount = targetCount,
+            resolveLocation = resolveLocation
+        )
+        rebuiltResults += batch.results
+        if (batch.cursor != null) {
+            cursors[ruleIndex] = batch.cursor
+        }
+    }
+    return TextSearchPreviewRebuild(
+        results = rebuiltResults,
+        totalCount = totalCount,
+        ruleTotalCounts = ruleTotalCounts,
+        cursors = cursors
+    )
 }
 
 private fun compileTextReplaceSearchRegex(rule: TextReplaceRule, caseSensitive: Boolean): Regex? {

@@ -38,6 +38,7 @@ fun EditorController.applySelectedTextSearchResult(toolId: String): Boolean {
         statusMessage = "替换规则已变化，请重新预览"
         return false
     }
+    val previousDisplayedCounts = textSearchResults.groupingBy { it.ruleIndex }.eachCount()
     val replacementDelta = try {
         applySingleTextReplacement(
             chapterIndex = result.chapterIndex,
@@ -61,25 +62,23 @@ fun EditorController.applySelectedTextSearchResult(toolId: String): Boolean {
     clearPreviewHighlight()
     textSearchToolId = toolId
     if (kind == DocumentKind.Txt) {
-        textSearchResults = textSearchResultsAfterSingleReplacement(
-            results = textSearchResults,
-            sourceText = txt?.text,
-            replacedId = result.id,
-            sourceStart = result.sourceStart,
-            sourceEnd = result.sourceEnd,
-            replacementDelta = replacementDelta,
-            resolveLocation = ::textSearchResultLocation
+        applyDeferredTxtTextReplacementRefresh()
+    }
+    if (kind == DocumentKind.Txt) {
+        rebuildTextSearchPreviewAfterSingleReplacement(
+            activeRules = activeRules,
+            parameters = parameters,
+            previousDisplayedCounts = previousDisplayedCounts,
+            replacedRuleIndex = result.ruleIndex
         )
-        textSearchTotalMatchCount = textSearchResults.size
-        textSearchRuleCursors = emptyMap()
     } else {
         refreshChapters()
-        val rebuilt = try {
-            initializeIncrementalTextSearchPreview(activeRules, parameters)
-        } catch (error: IllegalArgumentException) {
-            emptyList()
-        }
-        textSearchResults = rebuilt
+        rebuildTextSearchPreviewAfterSingleReplacement(
+            activeRules = activeRules,
+            parameters = parameters,
+            previousDisplayedCounts = previousDisplayedCounts,
+            replacedRuleIndex = result.ruleIndex
+        )
     }
     val nextResult = when {
         textSearchResults.isEmpty() -> null
@@ -469,6 +468,38 @@ private fun EditorController.refreshTextSearchPreviewAfterSelectedReplacement(
         selectedTextSearchResultId = null
         selectedReplacementPreviewMatchId = null
     }
+}
+
+private fun EditorController.rebuildTextSearchPreviewAfterSingleReplacement(
+    activeRules: List<TextReplaceRule>,
+    parameters: TextReplaceParameters,
+    previousDisplayedCounts: Map<Int, Int>,
+    replacedRuleIndex: Int
+) {
+    val rebuilt = try {
+        rebuildTextSearchPreviewAfterSingleReplacement(
+            rules = activeRules,
+            sourceResolver = { _, rule ->
+                searchSources(
+                    parameters.copy(
+                        target = if (rule.textOnly) TEXT_REPLACE_TARGET_VISIBLE else TEXT_REPLACE_TARGET_SOURCE
+                    )
+                )
+            },
+            previousDisplayedCounts = previousDisplayedCounts,
+            replacedRuleIndex = replacedRuleIndex,
+            caseSensitive = false,
+            resolveLocation = ::textSearchResultLocation
+        )
+    } catch (error: IllegalArgumentException) {
+        clearTextSearchState()
+        statusMessage = textReplaceRegexErrorMessage(error)
+        return
+    }
+    textSearchTotalMatchCount = rebuilt.totalCount
+    textSearchRuleTotalCounts = rebuilt.ruleTotalCounts
+    textSearchRuleCursors = rebuilt.cursors
+    textSearchResults = rebuilt.results
 }
 
 internal fun EditorController.runTextReplaceTool(tool: EditorTool, manual: Boolean): Boolean {

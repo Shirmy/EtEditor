@@ -598,4 +598,29 @@ class TextSearchUtilsTest {
         val incrementalIds = (batch1.results + batch2.results).map { it.id }
         assertEquals(fullIds, incrementalIds)
     }
+
+    @Test
+    fun rebuildTextSearchPreviewAfterSingleReplacementKeepsDisplayedAndTotalCountsSeparate() {
+        val sources = listOf(
+            SearchSource(0, "第一章", "a.xhtml", (1..99).joinToString(" ") { "foo" })
+        )
+        val rule = TextReplaceRule(find = "foo", replacement = "", regex = false)
+        val resolveLocation = { start: Int, end: Int, chapterIndex: Int, title: String ->
+            TextSearchResultLocation(chapterIndex, "$title@$start-$end")
+        }
+
+        val preview = rebuildTextSearchPreviewAfterSingleReplacement(
+            rules = listOf(rule),
+            sourceResolver = { _, _ -> sources },
+            previousDisplayedCounts = mapOf(0 to 30),
+            replacedRuleIndex = 0,
+            caseSensitive = false,
+            resolveLocation = resolveLocation
+        )
+
+        assertEquals(29, preview.results.size)
+        assertEquals(mapOf(0 to 99), preview.ruleTotalCounts)
+        assertEquals(99, preview.totalCount)
+        assertEquals(true, preview.cursors.containsKey(0))
+    }
 }
