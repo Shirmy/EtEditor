@@ -135,7 +135,7 @@ internal fun EpubParagraphEditDialog(
     chapterIndex: Int,
     bodyOffset: Int,
     onDismiss: () -> Unit,
-    onConfirm: (String) -> Unit
+    onConfirm: (String, Int) -> Unit
 ) {
     val book = controller.epub
     val chapter = book?.chapters?.getOrNull(chapterIndex)
@@ -212,10 +212,16 @@ internal fun EpubParagraphEditDialog(
                         onClick = {
                             val start = paragraphRange.first.coerceIn(0, bodyText.length)
                             val end = paragraphRange.second.coerceIn(0, bodyText.length)
+                            val editedParagraphText = editableParagraph.withEditedText(editValue)
                             val newBody = bodyText.substring(0, start) +
-                                editableParagraph.withEditedText(editValue) +
+                                editedParagraphText +
                                 bodyText.substring(end)
-                            onConfirm(newBody)
+                            val restoreOffset = paragraphEditRestoreOffset(
+                                paragraphRange = start to end,
+                                bodyOffset = bodyOffset,
+                                editedTextLength = editValue.length
+                            )
+                            onConfirm(newBody, restoreOffset)
                         },
                         enabled = editValue != editableParagraph.text,
                         shape = ControlShape,

@@ -126,6 +126,17 @@ internal fun findParagraphIndexAtOffset(ranges: List<Pair<Int, Int>>, bodyOffset
     return ranges.lastIndex.coerceAtLeast(0)
 }
 
+internal fun paragraphEditRestoreOffset(
+    paragraphRange: Pair<Int, Int>,
+    bodyOffset: Int,
+    editedTextLength: Int
+): Int {
+    val start = paragraphRange.first.coerceAtLeast(0)
+    val end = paragraphRange.second.coerceAtLeast(start)
+    val relativeOffset = bodyOffset.coerceIn(start, end) - start
+    return start + relativeOffset.coerceIn(0, editedTextLength.coerceAtLeast(0))
+}
+
 internal data class EditableParagraphContent(
     val text: String,
     val trailingLineBreak: String

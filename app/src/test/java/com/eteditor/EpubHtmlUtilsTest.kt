@@ -365,6 +365,14 @@ class EpubHtmlUtilsTest {
     }
 
     @Test
+    fun paragraphEditRestoreOffsetKeepsTapInsideEditedParagraphAfterLengthChanges() {
+        val paragraphRange = 6 to 16
+
+        assertEquals(14, paragraphEditRestoreOffset(paragraphRange, bodyOffset = 14, editedTextLength = 20))
+        assertEquals(11, paragraphEditRestoreOffset(paragraphRange, bodyOffset = 14, editedTextLength = 5))
+    }
+
+    @Test
     fun findParagraphIndexAtOffsetLocatesCorrectParagraph() {
         val body = "<p>第一段</p>\n<p>第二段</p>\r\n第三段"
         val ranges = splitBodyIntoParagraphRanges(body)
