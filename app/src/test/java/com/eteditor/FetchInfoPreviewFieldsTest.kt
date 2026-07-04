@@ -252,6 +252,33 @@ class FetchInfoPreviewFieldsTest {
         assertEquals(listOf(2, 0, 1), moved)
     }
 
+    @Test
+    fun moveCatalogItemMovesItemToEndBySelectingLastVisibleItem() {
+        val rows = listOf(
+            row("Chapter0001.xhtml", "第1章 旧一", "新一", position = 0),
+            row("Chapter0002.xhtml", "第2章 旧二", "新二", position = 1),
+            row("Chapter0003.xhtml", "第3章 旧三", "新三", position = 2)
+        )
+
+        val moved = moveCatalogItem(null, currentPosition = 0, targetPosition = 2, movableRows = rows, defaultCount = 3)
+
+        assertEquals(listOf(1, 2, 0), moved)
+    }
+
+    @Test
+    fun moveCatalogItemUsesPositionsWhenPreviewDisplayIsReversed() {
+        val rows = listOf(
+            row("Chapter0001.xhtml", "第1章 旧一", "新一", position = 0),
+            row("Chapter0002.xhtml", "第2章 旧二", "新二", position = 1),
+            row("Chapter0003.xhtml", "第3章 旧三", "新三", position = 2)
+        )
+
+        // 外层预览反向显示时，点到的仍是原始 position；移动对话框按正常顺序确认落点。
+        val moved = moveCatalogItem(null, currentPosition = 2, targetPosition = 0, movableRows = rows, defaultCount = 3)
+
+        assertEquals(listOf(0, 2, 1), moved)
+    }
+
     private fun row(
         fileName: String,
         originalTitle: String,
