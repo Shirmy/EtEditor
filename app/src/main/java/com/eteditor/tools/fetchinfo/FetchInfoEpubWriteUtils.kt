@@ -29,13 +29,13 @@ internal fun applyFetchedCatalogToEpub(
     val autoStyle = fetchInfoCatalogAutoTitleStyle(parameters, targetChapters, catalog)
     val usedVolumePaths = mutableSetOf<String>()
     var targetCursor = 0
-    var catalogItemIndex = 0
     var changed = 0
     var touchedCurrent = false
+    val nonVolumeCatalog = catalog.filter { !it.isVolume }
     // 移动只支持无卷情况：catalogOrder 非 null 时按它给定的原始 position 顺序遍历非卷项，
     // position 取原始 position（稳定编号，deletes/renames 用它匹配），targetCursor 只用于配对 epub 章节。
     val orderedNonVolumeItems: List<Pair<Int, FetchedCatalogItem>>? = catalogOrder?.mapNotNull { originalPosition ->
-        catalog.filter { !it.isVolume }.getOrNull(originalPosition)?.let { originalPosition to it }
+        nonVolumeCatalog.getOrNull(originalPosition)?.let { originalPosition to it }
     }
     if (orderedNonVolumeItems != null) {
         orderedNonVolumeItems.forEach { (position, item) ->
@@ -63,6 +63,7 @@ internal fun applyFetchedCatalogToEpub(
             changed += 1
         }
     } else {
+        var catalogItemIndex = 0
         catalog.forEach { item ->
             if (item.isVolume) {
                 // 目标章节已用尽后出现的卷不再写回，与预览一致。
