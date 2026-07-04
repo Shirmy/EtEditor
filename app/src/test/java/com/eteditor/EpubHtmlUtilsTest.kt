@@ -338,6 +338,33 @@ class EpubHtmlUtilsTest {
     }
 
     @Test
+    fun editableParagraphContentKeepsTrailingLineBreakOutsideEditorText() {
+        val lf = editableParagraphContent("<p>一</p>\n")
+        assertEquals("<p>一</p>", lf.text)
+        assertEquals("\n", lf.trailingLineBreak)
+        assertEquals("<p>一改</p>\n", lf.withEditedText("<p>一改</p>"))
+
+        val crlf = editableParagraphContent("<p>一</p>\r\n")
+        assertEquals("<p>一</p>", crlf.text)
+        assertEquals("\r\n", crlf.trailingLineBreak)
+        assertEquals("<p>上</p>\n<p>下</p>\r\n", crlf.withEditedText("<p>上</p>\n<p>下</p>"))
+
+        val cr = editableParagraphContent("<p>一</p>\r")
+        assertEquals("<p>一</p>", cr.text)
+        assertEquals("\r", cr.trailingLineBreak)
+        assertEquals("<p>一改</p>\r", cr.withEditedText("<p>一改</p>"))
+    }
+
+    @Test
+    fun editableParagraphContentLeavesInternalLineBreaksEditable() {
+        val editable = editableParagraphContent("<p>上</p>\n<p>下</p>\n")
+
+        assertEquals("<p>上</p>\n<p>下</p>", editable.text)
+        assertEquals("\n", editable.trailingLineBreak)
+        assertEquals("<p>上</p>\n<p>下</p>\n\n", editable.withEditedText("<p>上</p>\n<p>下</p>\n"))
+    }
+
+    @Test
     fun findParagraphIndexAtOffsetLocatesCorrectParagraph() {
         val body = "<p>第一段</p>\n<p>第二段</p>\r\n第三段"
         val ranges = splitBodyIntoParagraphRanges(body)

@@ -126,6 +126,28 @@ internal fun findParagraphIndexAtOffset(ranges: List<Pair<Int, Int>>, bodyOffset
     return ranges.lastIndex.coerceAtLeast(0)
 }
 
+internal data class EditableParagraphContent(
+    val text: String,
+    val trailingLineBreak: String
+) {
+    fun withEditedText(editedText: String): String = editedText + trailingLineBreak
+}
+
+internal fun editableParagraphContent(paragraphText: String): EditableParagraphContent {
+    val trailingLineBreak = when {
+        paragraphText.endsWith("\r\n") -> "\r\n"
+        paragraphText.endsWith("\n") -> "\n"
+        paragraphText.endsWith("\r") -> "\r"
+        else -> ""
+    }
+    val text = if (trailingLineBreak.isEmpty()) {
+        paragraphText
+    } else {
+        paragraphText.dropLast(trailingLineBreak.length)
+    }
+    return EditableParagraphContent(text, trailingLineBreak)
+}
+
 internal fun htmlVisibleBodyRelativeRange(
     html: String,
     sourceStart: Int,

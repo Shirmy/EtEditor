@@ -146,7 +146,8 @@ internal fun EpubParagraphEditDialog(
     val paragraphText = remember(bodyText, paragraphRange) {
         bodyText.substring(paragraphRange.first.coerceIn(0, bodyText.length), paragraphRange.second.coerceIn(0, bodyText.length))
     }
-    var editValue by remember(paragraphText) { mutableStateOf(paragraphText) }
+    val editableParagraph = remember(paragraphText) { editableParagraphContent(paragraphText) }
+    var editValue by remember(editableParagraph) { mutableStateOf(editableParagraph.text) }
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -198,10 +199,12 @@ internal fun EpubParagraphEditDialog(
                         onClick = {
                             val start = paragraphRange.first.coerceIn(0, bodyText.length)
                             val end = paragraphRange.second.coerceIn(0, bodyText.length)
-                            val newBody = bodyText.substring(0, start) + editValue + bodyText.substring(end)
+                            val newBody = bodyText.substring(0, start) +
+                                editableParagraph.withEditedText(editValue) +
+                                bodyText.substring(end)
                             onConfirm(newBody)
                         },
-                        enabled = editValue != paragraphText,
+                        enabled = editValue != editableParagraph.text,
                         shape = ControlShape,
                         contentPadding = CompactButtonPadding
                     ) {
