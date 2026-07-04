@@ -105,7 +105,8 @@ fun EditorController.applySelectedTextSearchResult(toolId: String): Boolean {
 suspend fun EditorController.applySelectedTextSearchResultsWithProgress(
     toolId: String,
     resultIds: Set<String>,
-    onProgress: (completed: Int, total: Int) -> Unit
+    onProgress: (completed: Int, total: Int) -> Unit,
+    displayedCount: Int = Int.MAX_VALUE
 ): Boolean {
     if (textSearchToolId != toolId) {
         statusMessage = "没有可执行的替换预览"
@@ -135,10 +136,10 @@ suspend fun EditorController.applySelectedTextSearchResultsWithProgress(
             val rule = activeRules.getOrNull(ruleIndex) ?: continue
             val selectedResults = ruleResults.filter { it.id in resultIds }
             if (selectedResults.isEmpty()) continue
-            if (replacementSelectionTriggersFullScan(
+            if (replacementSelectionTriggersFullScanByDisplay(
                     totalMatches = ruleResults.size,
+                    displayedMatches = displayedCount,
                     selectedMatches = selectedResults.size,
-                    maxMatches = REPLACEMENT_PREVIEW_MAX_MATCHES_PER_RULE,
                     findPatternNotEmpty = rule.find.isNotEmpty()
                 )) {
                 engineRules += rule.copy(caseSensitive = false)
@@ -515,7 +516,7 @@ internal fun EditorController.runTextReplaceTool(tool: EditorTool, manual: Boole
         textSearchToolId = tool.id
         textSearchResults = results
         clearPreviewHighlight()
-        statusMessage = textSearchFoundStatusMessage(results)
+        statusMessage = textSearchFoundStatusMessageForDisplay(results)
         if (manual) return true
         statusMessage = needsConfirmationMessage()
         return false
@@ -587,7 +588,7 @@ internal suspend fun EditorController.runTextReplaceToolAsync(tool: EditorTool, 
         textSearchToolId = tool.id
         textSearchResults = results
         clearPreviewHighlight()
-        statusMessage = textSearchFoundStatusMessage(results)
+        statusMessage = textSearchFoundStatusMessageForDisplay(results)
         if (manual) return true
         statusMessage = needsConfirmationMessage()
         return false
@@ -820,7 +821,8 @@ private fun EditorController.buildTextSearchResults(
         rules = rules,
         parameters = parameters,
         sourceResolver = ::searchSources,
-        resolveLocation = ::textSearchResultLocation
+        resolveLocation = ::textSearchResultLocation,
+        maxMatches = Int.MAX_VALUE
     )
 }
 
@@ -857,14 +859,7 @@ private suspend fun EditorController.buildTextSearchResultsWithProgress(
             var ruleMatchCount = 0
             for (source in sources) {
                 currentCoroutineContext().ensureActive()
-                if (ruleMatchCount >= REPLACEMENT_PREVIEW_MAX_MATCHES_PER_RULE) {
-                    completed += 1
-                    onProgress("加载预览", completed, total)
-                    yield()
-                    continue
-                }
                 val resolveLocation = textSearchResultLocationResolverSnapshot()
-                val remaining = REPLACEMENT_PREVIEW_MAX_MATCHES_PER_RULE - ruleMatchCount
                 val chunk = withContext(Dispatchers.Default) {
                     currentCoroutineContext().ensureActive()
                     buildTextSearchResults(
@@ -873,7 +868,7 @@ private suspend fun EditorController.buildTextSearchResultsWithProgress(
                         caseSensitive = false,
                         ruleIndex = index,
                         idPrefix = "rule-$index",
-                        maxMatches = remaining,
+                        maxMatches = Int.MAX_VALUE,
                         resolveLocation = resolveLocation
                     )
                 }

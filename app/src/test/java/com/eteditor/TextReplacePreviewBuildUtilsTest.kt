@@ -136,6 +136,47 @@ class TextReplacePreviewBuildUtilsTest {
         ))
     }
 
+    @Test
+    fun replacementSelectionTriggersFullScanByDisplayOnlyWhenAllDisplayedSelectedAndMoreRemain() {
+        // 展示30全部勾选，且还有未展示的 -> 触发全书扫描
+        assertTrue(replacementSelectionTriggersFullScanByDisplay(
+            totalMatches = 120, displayedMatches = 30, selectedMatches = 30, findPatternNotEmpty = true
+        ))
+        // 全部展示完（无更多）+ 全选 -> 不触发（精确替换即可覆盖全部）
+        assertFalse(replacementSelectionTriggersFullScanByDisplay(
+            totalMatches = 30, displayedMatches = 30, selectedMatches = 30, findPatternNotEmpty = true
+        ))
+        // 只勾选部分展示项 -> 不触发
+        assertFalse(replacementSelectionTriggersFullScanByDisplay(
+            totalMatches = 120, displayedMatches = 30, selectedMatches = 15, findPatternNotEmpty = true
+        ))
+        // 查找词为空 -> 不触发
+        assertFalse(replacementSelectionTriggersFullScanByDisplay(
+            totalMatches = 120, displayedMatches = 30, selectedMatches = 30, findPatternNotEmpty = false
+        ))
+    }
+
+    @Test
+    fun textSearchFoundStatusMessageForDisplayHintsExpandAndSelectAllWhenOverBatch() {
+        val results = (1..40).map { i ->
+            TextSearchResult(
+                id = "r-$i",
+                ruleIndex = 0,
+                chapterIndex = 0,
+                chapterTitle = "c",
+                context = "x",
+                matchText = "foo",
+                contextMatchStart = 0,
+                contextMatchEnd = 3,
+                sourceStart = i,
+                sourceEnd = i + 3
+            )
+        }
+        val message = textSearchFoundStatusMessageForDisplay(results)
+        assertTrue(message.contains("40"))
+        assertTrue(message.contains("30"))
+    }
+
     private fun parameters(): TextReplaceParameters {
         return TextReplaceParameters(
             mode = TEXT_REPLACE_MODE_SINGLE,

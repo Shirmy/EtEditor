@@ -113,7 +113,10 @@ fun TextSearchResultsPane(
     var paneMessage by remember(toolId) { mutableStateOf<String?>(null) }
     var checkedResultIds by remember(toolId) { mutableStateOf<Set<String>>(emptySet()) }
     var knownResultIds by remember(toolId) { mutableStateOf<Set<String>>(emptySet()) }
+    var displayLimit by remember(toolId) { mutableStateOf(TEXT_SEARCH_DISPLAY_BATCH_SIZE) }
     val currentResultIds = remember(results) { results.mapTo(linkedSetOf()) { it.id } }
+    val displayedResults = remember(results, displayLimit) { results.take(displayLimit) }
+    val hasMoreToDisplay = displayLimit < results.size
     val automationStep = controller.automationConfirmationRequest
         ?.takeIf { it.stepId == toolId }
         ?.let(controller::automationConfirmationStep)
@@ -144,7 +147,7 @@ fun TextSearchResultsPane(
         executionJob = controller.controllerScope.launch {
             delay(16)
             yieldToAppUiBeforeHeavyWork()
-            val applied = controller.applySelectedTextSearchResultsWithProgress(toolId, resultIds, ::updateExecutionProgress)
+            val applied = controller.applySelectedTextSearchResultsWithProgress(toolId, resultIds, ::updateExecutionProgress, displayedCount = results.size)
             if (applied) {
                 if (controller.textSearchResults.isNotEmpty()) {
                     controller.clearTextSearchState()
@@ -186,8 +189,8 @@ fun TextSearchResultsPane(
                     color = MaterialTheme.colorScheme.primary
                 )
                 TextButton(
-                    onClick = { checkedResultIds = currentResultIds },
-                    enabled = !executing && checkedResultIds.size < results.size,
+                    onClick = { checkedResultIds = displayedResults.map { it.id }.toSet() },
+                    enabled = !executing && checkedResultIds.size < displayedResults.size,
                     shape = ControlShape,
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                 ) {
@@ -229,7 +232,7 @@ fun TextSearchResultsPane(
                         .padding(end = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(results, key = { it.id }) { result ->
+                    items(displayedResults, key = { it.id }) { result ->
                         TextSearchResultRow(
                             result = result,
                             selected = controller.selectedTextSearchResultId == result.id,
@@ -266,10 +269,28 @@ fun TextSearchResultsPane(
                             enabled = !executing
                         )
                     }
+                    if (hasMoreToDisplay) {
+                        item("expand-more") {
+                            TextButton(
+                                onClick = {
+                                    displayLimit = (displayLimit + TEXT_SEARCH_DISPLAY_BATCH_SIZE).coerceAtMost(results.size)
+                                },
+                                enabled = !executing,
+                                shape = ControlShape,
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = PaddingValues(vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = "展开更多（${displayedResults.size}/${results.size}）",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                        }
+                    }
                 }
                 ContentScrollbar(
                     state = listState,
-                    itemCount = results.size,
+                    itemCount = displayedResults.size + if (hasMoreToDisplay) 1 else 0,
                     prominent = false,
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
@@ -291,9 +312,9 @@ fun TextSearchResultsPane(
                             executionLabel = "执行替换 0/${resultIds.size}"
                             executionJob = scope.launch {
                                 yieldToAppUiBeforeHeavyWork()
-                                val applied = controller.applySelectedTextSearchResultsWithProgress(toolId, resultIds) { completed, total ->
+                                val applied = controller.applySelectedTextSearchResultsWithProgress(toolId, resultIds, { completed, total ->
                                     updateExecutionProgress(completed, total)
-                                }
+                                }, displayedCount = displayedResults.size)
                                 executing = false
                                 if (applied) {
                                     val keepOpen = shouldKeepTextSearchPreviewOpenAfterSelectedApply(

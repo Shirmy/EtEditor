@@ -1,12 +1,14 @@
 ﻿package com.eteditor
 
 internal const val REPLACEMENT_PREVIEW_MAX_MATCHES_PER_RULE = 50
+internal const val TEXT_SEARCH_DISPLAY_BATCH_SIZE = 30
 
 internal fun buildTextReplaceSearchResultsForRules(
     rules: List<TextReplaceRule>,
     parameters: TextReplaceParameters,
     sourceResolver: (TextReplaceParameters) -> List<SearchSource>,
-    resolveLocation: (Int, Int, Int, String) -> TextSearchResultLocation
+    resolveLocation: (Int, Int, Int, String) -> TextSearchResultLocation,
+    maxMatches: Int = REPLACEMENT_PREVIEW_MAX_MATCHES_PER_RULE
 ): List<TextSearchResult> {
     return rules.flatMapIndexed { index, rule ->
         val sources = sourceResolver(
@@ -25,7 +27,7 @@ internal fun buildTextReplaceSearchResultsForRules(
             caseSensitive = false,
             ruleIndex = index,
             idPrefix = "rule-$index",
-            maxMatches = REPLACEMENT_PREVIEW_MAX_MATCHES_PER_RULE,
+            maxMatches = maxMatches,
             resolveLocation = resolveLocation
         )
     }
@@ -172,6 +174,17 @@ internal fun textSearchFoundStatusMessage(results: List<TextSearchResult>): Stri
     }
 }
 
+// 单条文本搜索替换已改为全量扫描+分批展示：命中超过一批时提示可展开查看全部，全选执行替换全部。
+internal fun textSearchFoundStatusMessageForDisplay(results: List<TextSearchResult>): String {
+    if (results.isEmpty()) return textSearchFoundMessage(0)
+    val overBatch = results.size > TEXT_SEARCH_DISPLAY_BATCH_SIZE
+    return if (overBatch) {
+        "命中 ${results.size} 处，默认显示前 $TEXT_SEARCH_DISPLAY_BATCH_SIZE 条，点“展开更多”查看全部；勾选当前展示项后“执行替换”会替换全部"
+    } else {
+        textSearchFoundMessage(results.size)
+    }
+}
+
 // 预览超限时的"全选"意图判定：某条规则展示已达上限（未展示全）且展示出来的匹配全部勾选，
 // 视为整条规则全要，交引擎按与预览相同口径扫全书替换以覆盖未展示部分；否则只按快照位置精确替换。
 internal fun replacementSelectionTriggersFullScan(
@@ -183,5 +196,19 @@ internal fun replacementSelectionTriggersFullScan(
     return selectedMatches > 0 &&
         selectedMatches == totalMatches &&
         totalMatches >= maxMatches &&
+        findPatternNotEmpty
+}
+
+// 分批展示时的"全选"意图判定：当前展示出来的匹配全部勾选，且还有未展示的命中，
+// 视为整条规则全要，交引擎按与预览相同口径扫全书替换以覆盖未展示部分；否则只按快照位置精确替换。
+internal fun replacementSelectionTriggersFullScanByDisplay(
+    totalMatches: Int,
+    displayedMatches: Int,
+    selectedMatches: Int,
+    findPatternNotEmpty: Boolean
+): Boolean {
+    return selectedMatches > 0 &&
+        selectedMatches == displayedMatches &&
+        displayedMatches < totalMatches &&
         findPatternNotEmpty
 }
