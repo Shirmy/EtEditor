@@ -207,3 +207,19 @@ fun EditorController.updateEditableBodyTextAt(
         }
     }
 }
+
+// EPUB 段落编辑写回：把指定章节的整章正文替换为新文本。
+// 段落编辑对话框已按段落起止偏移把改动拼回整章正文，这里按章节写入并刷新预览。
+fun EditorController.applyEpubParagraphEdit(chapterIndex: Int, newBodyText: String): Boolean {
+    if (kind != DocumentKind.Epub) return false
+    val book = epub ?: return false
+    val chapter = book.chapters.getOrNull(chapterIndex) ?: return false
+    val originalIndex = previewChapterIndex
+    return try {
+        previewChapterIndex = chapterIndex
+        updateEditableBodyText(newBodyText)
+    } finally {
+        previewChapterIndex = originalIndex
+        refreshPreview()
+    }
+}

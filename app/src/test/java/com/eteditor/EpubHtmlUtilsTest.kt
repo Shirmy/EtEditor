@@ -286,4 +286,37 @@ class EpubHtmlUtilsTest {
             chapters = mutableListOf(chapter)
         )
     }
+
+    @Test
+    fun splitBodyIntoParagraphRangesSplitsByNewlines() {
+        val body = "<p>第一段</p>\n<p>第二段</p>\r\n第三段"
+        val ranges = splitBodyIntoParagraphRanges(body)
+        assertEquals(3, ranges.size)
+        assertEquals(0 to 11, ranges[0])
+        assertEquals(11 to 23, ranges[1])
+        assertEquals(23 to 26, ranges[2])
+    }
+
+    @Test
+    fun splitBodyIntoParagraphRangesHandlesEmptyAndSingleLine() {
+        assertEquals(emptyList<Pair<Int, Int>>(), splitBodyIntoParagraphRanges(""))
+        val single = "只有一段"
+        val ranges = splitBodyIntoParagraphRanges(single)
+        assertEquals(1, ranges.size)
+        assertEquals(0 to 4, ranges[0])
+    }
+
+    @Test
+    fun findParagraphIndexAtOffsetLocatesCorrectParagraph() {
+        val body = "<p>第一段</p>\n<p>第二段</p>\r\n第三段"
+        val ranges = splitBodyIntoParagraphRanges(body)
+        // 偏移5在第一段内
+        assertEquals(0, findParagraphIndexAtOffset(ranges, 5))
+        // 偏移15在第二段内
+        assertEquals(1, findParagraphIndexAtOffset(ranges, 15))
+        // 偏移24在第三段内
+        assertEquals(2, findParagraphIndexAtOffset(ranges, 24))
+        // 越界返回最后一段
+        assertEquals(2, findParagraphIndexAtOffset(ranges, 999))
+    }
 }

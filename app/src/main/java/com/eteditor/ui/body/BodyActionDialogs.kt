@@ -2,10 +2,18 @@ package com.eteditor
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -14,11 +22,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
 @Composable
@@ -111,6 +122,95 @@ internal fun EpubLongPressSplitChapterDialog(
         shape = PreviewShape,
         containerColor = MaterialTheme.colorScheme.surface
     )
+}
+
+@Composable
+internal fun EpubParagraphEditDialog(
+    controller: EditorController,
+    chapterIndex: Int,
+    bodyOffset: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    val book = controller.epub
+    val chapter = book?.chapters?.getOrNull(chapterIndex)
+    val bodyText = remember(chapterIndex, controller.documentContentVersion) {
+        chapter?.let { htmlVisibleBodyContent(it.html) } ?: ""
+    }
+    val paragraphRange = remember(bodyText, bodyOffset) {
+        val ranges = splitBodyIntoParagraphRanges(bodyText)
+        if (ranges.isEmpty()) return@remember 0 to 0
+        val idx = findParagraphIndexAtOffset(ranges, bodyOffset)
+        ranges[idx]
+    }
+    val paragraphText = remember(bodyText, paragraphRange) {
+        bodyText.substring(paragraphRange.first.coerceIn(0, bodyText.length), paragraphRange.second.coerceIn(0, bodyText.length))
+    }
+    var editValue by remember(paragraphText) { mutableStateOf(paragraphText) }
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            shape = PreviewShape,
+            color = MaterialTheme.colorScheme.surface,
+            border = DialogBorder,
+            shadowElevation = 8.dp,
+            modifier = Modifier
+                .adaptiveDialogWidth(AdaptiveDialogWidth.Preview)
+                .heightIn(max = 520.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = "编辑段落",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                BasicTextField(
+                    value = editValue,
+                    onValueChange = { editValue = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 120.dp, max = 360.dp)
+                        .verticalScroll(rememberScrollState()),
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Spacer(Modifier.weight(1f))
+                    TextButton(
+                        onClick = onDismiss,
+                        shape = ControlShape,
+                        contentPadding = CompactButtonPadding
+                    ) {
+                        Text("取消", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Button(
+                        onClick = {
+                            val start = paragraphRange.first.coerceIn(0, bodyText.length)
+                            val end = paragraphRange.second.coerceIn(0, bodyText.length)
+                            val newBody = bodyText.substring(0, start) + editValue + bodyText.substring(end)
+                            onConfirm(newBody)
+                        },
+                        enabled = editValue != paragraphText,
+                        shape = ControlShape,
+                        contentPadding = CompactButtonPadding
+                    ) {
+                        Text("保存")
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable

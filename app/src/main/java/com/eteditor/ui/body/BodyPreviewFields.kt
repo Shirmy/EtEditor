@@ -130,6 +130,7 @@ internal fun BodyPreview(
     val txtSupplementLongPressMode = controller.txtSupplementLongPressMode
     var supplementDialogLineIndex by remember(controller.documentSessionKey) { mutableStateOf<Int?>(null) }
     var epubSplitDialogRequest by remember(controller.documentSessionKey) { mutableStateOf<Pair<Int, Int>?>(null) }
+    var epubParagraphEditRequest by remember(controller.documentSessionKey) { mutableStateOf<Pair<Int, Int>?>(null) }
     fun runBodyStructureOperation(label: String, action: () -> Boolean) {
         if (controller.busy) return
         scope.launch {
@@ -340,10 +341,10 @@ internal fun BodyPreview(
             // 章节较长、从中间开窗显示时，预览文本可能在本章前面有重复内容，
             // indexOf 会命中错误的第一处导致光标定位偏移；选区操作一直用的就是这个偏移。
             val windowStart = controller.previewVisibleSourceOffsetValue()
-            startBodyEditing(
-                initialSelection = (windowStart + visibleOffset).coerceIn(0, editableText.length),
-                showKeyboard = true
-            )
+            val bodyOffset = (windowStart + visibleOffset).coerceIn(0, editableText.length)
+            // EPUB 双击改为段落编辑：按双击点在整章正文里的偏移找到所属段落，
+            // 弹出该段编辑框，确认后写回。只定位到段，避免坐标→字符偏移在长文本下的累计误差。
+            epubParagraphEditRequest = controller.previewDisplayChapterIndex() to bodyOffset
         }
     }
     LaunchedEffect(
@@ -785,6 +786,20 @@ internal fun BodyPreview(
                 epubSplitDialogRequest = null
                 runBodyStructureOperation("EPUB 分章") {
                     controller.splitEpubChapterAtBodyLine(chapterIndex, lineIndex, title)
+                }
+            }
+        )
+    }
+    epubParagraphEditRequest?.let { (chapterIndex, bodyOffset) ->
+        EpubParagraphEditDialog(
+            controller = controller,
+            chapterIndex = chapterIndex,
+            bodyOffset = bodyOffset,
+            onDismiss = { epubParagraphEditRequest = null },
+            onConfirm = { newBodyText ->
+                epubParagraphEditRequest = null
+                runBodyStructureOperation("EPUB 段落编辑") {
+                    controller.applyEpubParagraphEdit(chapterIndex, newBodyText)
                 }
             }
         )

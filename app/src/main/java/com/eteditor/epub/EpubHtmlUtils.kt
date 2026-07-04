@@ -82,6 +82,50 @@ internal fun htmlVisibleBodyContent(html: String): String {
     return htmlBodyContentParts(html).body
 }
 
+// 按换行切分正文，返回每段的起止偏移（含行尾换行符）。
+// 段落定义为两个换行之间的内容；空行算独立段落。
+internal fun splitBodyIntoParagraphRanges(bodyText: String): List<Pair<Int, Int>> {
+    if (bodyText.isEmpty()) return emptyList()
+    val ranges = mutableListOf<Pair<Int, Int>>()
+    var start = 0
+    var i = 0
+    while (i < bodyText.length) {
+        val ch = bodyText[i]
+        if (ch == '\n' || ch == '\r') {
+            // 包含 \r\n 整体
+            val end = if (ch == '\r' && i + 1 < bodyText.length && bodyText[i + 1] == '\n') i + 2 else i + 1
+            ranges.add(start to end)
+            start = end
+            i = end
+        } else {
+            i++
+        }
+    }
+    if (start < bodyText.length) {
+        ranges.add(start to bodyText.length)
+    }
+    return ranges
+}
+
+// 找 bodyOffset 落在第几段，返回段索引；越界返回最后一段或 0。
+internal fun findParagraphIndexAtOffset(ranges: List<Pair<Int, Int>>, bodyOffset: Int): Int {
+    if (ranges.isEmpty()) return 0
+    var low = 0
+    var high = ranges.lastIndex
+    while (low <= high) {
+        val mid = (low + high) / 2
+        val (start, end) = ranges[mid]
+        if (bodyOffset < start) {
+            high = mid - 1
+        } else if (bodyOffset >= end && mid < ranges.lastIndex) {
+            low = mid + 1
+        } else {
+            return mid
+        }
+    }
+    return ranges.lastIndex.coerceAtLeast(0)
+}
+
 internal fun htmlVisibleBodyRelativeRange(
     html: String,
     sourceStart: Int,
