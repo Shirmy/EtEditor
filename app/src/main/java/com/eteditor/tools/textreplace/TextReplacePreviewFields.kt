@@ -573,12 +573,11 @@ private fun ReplacementFilePreviewPane(
                                             .map { it.id }
                                             .filter { it in selectedMatchIds }
                                             .toSet()
-                                        if (matchIds.isNotEmpty()) {
-                                            // 仅标记为「待应用」：收缩 + 变淡，保留在列表，不立即写入；
-                                            // 实际替换交给底部「执行替换」统一执行
-                                            expandedRuleIds = expandedRuleIds - rule.id
-                                            dimmedRuleIds = dimmedRuleIds + rule.id
-                                        }
+                                        // 仅标记为「待应用」：收缩 + 变淡，保留在列表，不立即写入；
+                                        // 实际替换交给底部「执行替换」统一执行（没勾选则不替换任何项）
+                                        expandedRuleIds = expandedRuleIds - rule.id
+                                        dimmedRuleIds = dimmedRuleIds + rule.id
+                                        matchIds
                                     },
                                     dimmed = rule.id in dimmedRuleIds,
                                     enabled = !executing

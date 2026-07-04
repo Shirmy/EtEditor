@@ -278,7 +278,7 @@ internal fun ReplacementMultiRuleRow(
                     ReplacementRuleActionButton(
                         text = "应用选中",
                         onClick = onApplySelected,
-                        enabled = enabled && selectedCount > 0,
+                        enabled = enabled,
                         modifier = Modifier
                             .weight(1f)
                             .height(28.dp)
