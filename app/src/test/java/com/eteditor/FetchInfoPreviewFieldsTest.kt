@@ -239,6 +239,19 @@ class FetchInfoPreviewFieldsTest {
         assertEquals(listOf(0, 2, 1), moved)
     }
 
+    @Test
+    fun moveCatalogItemMovesItemToStartPlaceholder() {
+        val rows = listOf(
+            row("Chapter0001.xhtml", "第1章 旧一", "新一", position = 0),
+            row("Chapter0002.xhtml", "第2章 旧二", "新二", position = 1),
+            row("Chapter0003.xhtml", "第3章 旧三", "新三", position = 2)
+        )
+
+        val moved = moveCatalogItem(null, currentPosition = 2, targetPosition = CATALOG_MOVE_START_TARGET, movableRows = rows, defaultCount = 3)
+
+        assertEquals(listOf(2, 0, 1), moved)
+    }
+
     private fun row(
         fileName: String,
         originalTitle: String,

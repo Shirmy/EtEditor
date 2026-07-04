@@ -1192,6 +1192,8 @@ internal fun effectiveSkippedCatalogRows(
 
 // 把抓取项从当前位置挪到目标项后面，立即重排 catalogOrder。
 // catalogOrder 为 null 时按原始顺序 0..defaultCount-1 建立；移动后返回新的排列。
+internal const val CATALOG_MOVE_START_TARGET = -2
+
 internal fun moveCatalogItem(
     catalogOrder: List<Int>?,
     currentPosition: Int,
@@ -1205,15 +1207,19 @@ internal fun moveCatalogItem(
     val fromIndex = workingOrder.indexOf(currentPosition)
     if (fromIndex < 0) return workingOrder
     val visiblePositions = movableRows.map { it.chapterPosition }.filter { it >= 0 }.toSet()
-    if (targetPosition !in visiblePositions) return workingOrder
+    if (targetPosition != CATALOG_MOVE_START_TARGET && targetPosition !in visiblePositions) return workingOrder
     val visibleOrder = workingOrder.filter { it in visiblePositions }
     val visibleFromIndex = visibleOrder.indexOf(currentPosition)
     if (visibleFromIndex < 0) return workingOrder
     val movedVisibleOrder = visibleOrder.toMutableList()
     movedVisibleOrder.removeAt(visibleFromIndex)
-    val targetIndexAfterRemoval = movedVisibleOrder.indexOf(targetPosition)
-    if (targetIndexAfterRemoval < 0) return workingOrder
-    movedVisibleOrder.add((targetIndexAfterRemoval + 1).coerceIn(0, movedVisibleOrder.size), currentPosition)
+    if (targetPosition == CATALOG_MOVE_START_TARGET) {
+        movedVisibleOrder.add(0, currentPosition)
+    } else {
+        val targetIndexAfterRemoval = movedVisibleOrder.indexOf(targetPosition)
+        if (targetIndexAfterRemoval < 0) return workingOrder
+        movedVisibleOrder.add((targetIndexAfterRemoval + 1).coerceIn(0, movedVisibleOrder.size), currentPosition)
+    }
     var visibleCursor = 0
     return workingOrder.map { position ->
         if (position in visiblePositions) {
@@ -1231,7 +1237,7 @@ private fun FetchCatalogMoveDialog(
     onDismiss: () -> Unit,
     onConfirm: (Int) -> Unit
 ) {
-    var selectedIndex by remember { mutableStateOf(movableRows.indexOfFirst { it.chapterPosition == currentPosition }.coerceAtLeast(0)) }
+    var selectedTargetPosition by remember { mutableStateOf(currentPosition) }
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -1249,7 +1255,7 @@ private fun FetchCatalogMoveDialog(
             ) {
                 RuleCreateDialogHeader(title = "移动抓取标题", onDismiss = onDismiss)
                 Text(
-                    text = "选择目标位置",
+                    text = "选择要放到哪个位置后面",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1257,10 +1263,44 @@ private fun FetchCatalogMoveDialog(
                     modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    itemsIndexed(movableRows, key = { index, row -> "${index}-${row.chapterPosition}" }) { index, row ->
-                        val selected = index == selectedIndex
+                    item("move-start") {
+                        val selected = selectedTargetPosition == CATALOG_MOVE_START_TARGET
                         Surface(
-                            onClick = { selectedIndex = index },
+                            onClick = { selectedTargetPosition = CATALOG_MOVE_START_TARGET },
+                            shape = ControlShape,
+                            color = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(
+                                1.dp,
+                                if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = "起点",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.width(36.dp)
+                                )
+                                Text(
+                                    text = "目录开头",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                    itemsIndexed(movableRows, key = { index, row -> "${index}-${row.chapterPosition}" }) { index, row ->
+                        val selected = selectedTargetPosition == row.chapterPosition
+                        Surface(
+                            onClick = { selectedTargetPosition = row.chapterPosition },
                             shape = ControlShape,
                             color = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface,
                             border = BorderStroke(
@@ -1294,9 +1334,7 @@ private fun FetchCatalogMoveDialog(
                 }
                 RuleCreateDialogActions(
                     onDismiss = onDismiss,
-                    onConfirm = {
-                        movableRows.getOrNull(selectedIndex)?.chapterPosition?.let(onConfirm)
-                    },
+                    onConfirm = { onConfirm(selectedTargetPosition) },
                     confirmEnabled = movableRows.isNotEmpty()
                 )
             }
