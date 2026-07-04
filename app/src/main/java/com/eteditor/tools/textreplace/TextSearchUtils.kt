@@ -69,8 +69,8 @@ internal fun buildTextSearchResults(
     return results
 }
 
-// 轻量计数：遍历所有 source 只数命中数，不建任何命中对象。
-// 用于拿真实总数，内存开销恒定，无论命中多少都只存一个 Int。
+// 轻量计数：遍历所有 source 只数命中数，不创建完整预览结果。
+// 用于拿真实总数，避免为大量命中构建展示对象。
 internal fun countTextSearchMatches(
     sources: List<SearchSource>,
     rule: TextReplaceRule,
