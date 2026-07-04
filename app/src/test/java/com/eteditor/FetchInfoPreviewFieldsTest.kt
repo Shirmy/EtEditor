@@ -190,26 +190,26 @@ class FetchInfoPreviewFieldsTest {
 
     @Test
     fun moveCatalogItemMovesItemToTargetPositionInDefaultOrder() {
-        // 默认顺序 [0,1,2]，把第0项移到第2位（即放到 position=2 那项的前面）
+        // 默认顺序 [0,1,2]，把第0项移到 position=1 后面
         val rows = listOf(
             row("Chapter0001.xhtml", "第1章 旧一", "新一", position = 0),
             row("Chapter0002.xhtml", "第2章 旧二", "新二", position = 1),
             row("Chapter0003.xhtml", "第3章 旧三", "新三", position = 2)
         )
-        val moved = moveCatalogItem(null, currentPosition = 0, targetIndex = 2, movableRows = rows, defaultCount = 3)
-        assertEquals(listOf(1, 2, 0), moved)
+        val moved = moveCatalogItem(null, currentPosition = 0, targetPosition = 1, movableRows = rows, defaultCount = 3)
+        assertEquals(listOf(1, 0, 2), moved)
     }
 
     @Test
     fun moveCatalogItemMovesItemToTargetPositionInExistingOrder() {
-        // 已有顺序 [1,2,0]，把 position=2 移到第0位
+        // 已有顺序 [1,2,0]，把 position=2 移到 position=1 后面
         val rows = listOf(
             row("Chapter0001.xhtml", "第1章 旧二", "新二", position = 1),
             row("Chapter0002.xhtml", "第2章 新三", "新三", position = 2),
             row("Chapter0003.xhtml", "第3章 新一", "新一", position = 0)
         )
-        val moved = moveCatalogItem(listOf(1, 2, 0), currentPosition = 2, targetIndex = 0, movableRows = rows, defaultCount = 3)
-        assertEquals(listOf(2, 1, 0), moved)
+        val moved = moveCatalogItem(listOf(1, 2, 0), currentPosition = 2, targetPosition = 1, movableRows = rows, defaultCount = 3)
+        assertEquals(listOf(1, 2, 0), moved)
     }
 
     @Test
@@ -218,8 +218,8 @@ class FetchInfoPreviewFieldsTest {
             row("Chapter0001.xhtml", "第1章 旧一", "新一", position = 0),
             row("Chapter0002.xhtml", "第2章 旧二", "新二", position = 1)
         )
-        // 把第0项移到第0位 = 不动
-        val moved = moveCatalogItem(null, currentPosition = 0, targetIndex = 0, movableRows = rows, defaultCount = 2)
+        // 把第0项移到第0项后面 = 不动
+        val moved = moveCatalogItem(null, currentPosition = 0, targetPosition = 0, movableRows = rows, defaultCount = 2)
         assertEquals(listOf(0, 1), moved)
     }
 
@@ -231,11 +231,11 @@ class FetchInfoPreviewFieldsTest {
         )
 
         // position=0 已删除且不可见；确认当前第一项仍应不动。
-        val unchanged = moveCatalogItem(null, currentPosition = 1, targetIndex = 0, movableRows = rows, defaultCount = 3)
+        val unchanged = moveCatalogItem(null, currentPosition = 1, targetPosition = 1, movableRows = rows, defaultCount = 3)
         assertEquals(listOf(0, 1, 2), unchanged)
 
-        // 把当前第二个可见项移到第一个可见位，隐藏的已删除项仍留在原处。
-        val moved = moveCatalogItem(null, currentPosition = 2, targetIndex = 0, movableRows = rows, defaultCount = 3)
+        // 把当前第一个可见项移到第二个可见项后面，隐藏的已删除项仍留在原处。
+        val moved = moveCatalogItem(null, currentPosition = 1, targetPosition = 2, movableRows = rows, defaultCount = 3)
         assertEquals(listOf(0, 2, 1), moved)
     }
 

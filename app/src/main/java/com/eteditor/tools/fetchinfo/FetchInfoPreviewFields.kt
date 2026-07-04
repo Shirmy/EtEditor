@@ -526,9 +526,9 @@ fun FetchInfoPreviewPane(
             currentPosition = position,
             movableRows = movableRows,
             onDismiss = { moveTarget = null },
-            onConfirm = { targetIndex ->
+            onConfirm = { targetPosition ->
                 val nonVolumeCount = displayCatalogRows.count { !it.isVolume && !it.willCreateVolume }
-                catalogOrder = moveCatalogItem(catalogOrder, position, targetIndex, movableRows, nonVolumeCount)
+                catalogOrder = moveCatalogItem(catalogOrder, position, targetPosition, movableRows, nonVolumeCount)
                 moveTarget = null
             }
         )
@@ -1190,26 +1190,30 @@ internal fun effectiveSkippedCatalogRows(
     return rows.filter { it.skipped && it.chapterPosition !in visiblePositions }
 }
 
-// 把抓取项从当前位置挪到目标位次（移动后该项位于 movableRows 的第 targetIndex 位），立即重排 catalogOrder。
+// 把抓取项从当前位置挪到目标项后面，立即重排 catalogOrder。
 // catalogOrder 为 null 时按原始顺序 0..defaultCount-1 建立；移动后返回新的排列。
 internal fun moveCatalogItem(
     catalogOrder: List<Int>?,
     currentPosition: Int,
-    targetIndex: Int,
+    targetPosition: Int,
     movableRows: List<FetchInfoCatalogPreviewRow>,
     defaultCount: Int
 ): List<Int> {
+    if (currentPosition == targetPosition) return catalogOrder ?: (0 until defaultCount).toList()
     val base = catalogOrder ?: (0 until defaultCount).toList()
     val workingOrder = base.toMutableList()
     val fromIndex = workingOrder.indexOf(currentPosition)
     if (fromIndex < 0) return workingOrder
     val visiblePositions = movableRows.map { it.chapterPosition }.filter { it >= 0 }.toSet()
+    if (targetPosition !in visiblePositions) return workingOrder
     val visibleOrder = workingOrder.filter { it in visiblePositions }
     val visibleFromIndex = visibleOrder.indexOf(currentPosition)
     if (visibleFromIndex < 0) return workingOrder
     val movedVisibleOrder = visibleOrder.toMutableList()
     movedVisibleOrder.removeAt(visibleFromIndex)
-    movedVisibleOrder.add(targetIndex.coerceIn(0, movedVisibleOrder.size), currentPosition)
+    val targetIndexAfterRemoval = movedVisibleOrder.indexOf(targetPosition)
+    if (targetIndexAfterRemoval < 0) return workingOrder
+    movedVisibleOrder.add((targetIndexAfterRemoval + 1).coerceIn(0, movedVisibleOrder.size), currentPosition)
     var visibleCursor = 0
     return workingOrder.map { position ->
         if (position in visiblePositions) {
@@ -1290,7 +1294,9 @@ private fun FetchCatalogMoveDialog(
                 }
                 RuleCreateDialogActions(
                     onDismiss = onDismiss,
-                    onConfirm = { onConfirm(selectedIndex) },
+                    onConfirm = {
+                        movableRows.getOrNull(selectedIndex)?.chapterPosition?.let(onConfirm)
+                    },
                     confirmEnabled = movableRows.isNotEmpty()
                 )
             }
