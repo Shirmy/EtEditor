@@ -190,6 +190,42 @@ class FetchInfoEpubWriteUtilsTest {
     }
 
     @Test
+    fun applyFetchedCatalogToEpubWritesMovedCatalogOrderAfterDeleteToEntries() {
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章 旧标题"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章 旧标题"),
+                chapter("c3", "OEBPS/Text/Chapter0003.xhtml", "第3章 旧标题")
+            )
+        )
+
+        val result = applyFetchedCatalogToEpub(
+            book = book,
+            parameters = fetchParameters(autoTitleFormat = false),
+            catalog = listOf(
+                FetchedCatalogItem(index = 1, title = "新一", sequence = "1"),
+                FetchedCatalogItem(index = 2, title = "新二", sequence = "2"),
+                FetchedCatalogItem(index = 3, title = "新三", sequence = "3")
+            ),
+            currentChapterIndex = 0,
+            deletes = setOf(2),
+            catalogOrder = listOf(1, 2, 0)
+        )
+
+        assertEquals(FetchInfoCatalogWriteResult(changed = 2, touchedCurrentChapter = true), result)
+        assertEquals(listOf("第1章 新二", "第2章 新一", "第3章 旧标题"), book.chapters.map { it.title })
+
+        val firstEntryHtml = decodeEpubHtmlBytes(book.entries.getValue("OEBPS/Text/Chapter0001.xhtml"))
+        val secondEntryHtml = decodeEpubHtmlBytes(book.entries.getValue("OEBPS/Text/Chapter0002.xhtml"))
+        val thirdEntryHtml = decodeEpubHtmlBytes(book.entries.getValue("OEBPS/Text/Chapter0003.xhtml"))
+        assertTrue(firstEntryHtml.contains("<h1>第1章 新二</h1>"))
+        assertTrue(secondEntryHtml.contains("<h1>第2章 新一</h1>"))
+        assertTrue(thirdEntryHtml.contains("<h1>第3章 旧标题</h1>"))
+        assertTrue(!firstEntryHtml.contains("新三"))
+        assertTrue(!secondEntryHtml.contains("新三"))
+    }
+
+    @Test
     fun applyFetchedCatalogToEpubCreatesVolumeChaptersAndTocLevels() {
         val book = sampleBook(
             listOf(
