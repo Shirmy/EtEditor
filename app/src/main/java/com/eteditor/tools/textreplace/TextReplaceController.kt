@@ -38,7 +38,8 @@ fun EditorController.applySelectedTextSearchResult(toolId: String): Boolean {
         statusMessage = "替换规则已变化，请重新预览"
         return false
     }
-    val previousDisplayedCounts = textSearchResults.groupingBy { it.ruleIndex }.eachCount()
+    val previousResults = textSearchResults
+    val previousRuleTotalCounts = textSearchRuleTotalCounts
     val replacementDelta = try {
         applySingleTextReplacement(
             chapterIndex = result.chapterIndex,
@@ -68,16 +69,20 @@ fun EditorController.applySelectedTextSearchResult(toolId: String): Boolean {
         rebuildTextSearchPreviewAfterSingleReplacement(
             activeRules = activeRules,
             parameters = parameters,
-            previousDisplayedCounts = previousDisplayedCounts,
-            replacedRuleIndex = result.ruleIndex
+            previousResults = previousResults,
+            previousRuleTotalCounts = previousRuleTotalCounts,
+            replacedResult = result,
+            replacementDelta = replacementDelta
         )
     } else {
         refreshChapters()
         rebuildTextSearchPreviewAfterSingleReplacement(
             activeRules = activeRules,
             parameters = parameters,
-            previousDisplayedCounts = previousDisplayedCounts,
-            replacedRuleIndex = result.ruleIndex
+            previousResults = previousResults,
+            previousRuleTotalCounts = previousRuleTotalCounts,
+            replacedResult = result,
+            replacementDelta = replacementDelta
         )
     }
     val nextResult = when {
@@ -473,8 +478,10 @@ private fun EditorController.refreshTextSearchPreviewAfterSelectedReplacement(
 private fun EditorController.rebuildTextSearchPreviewAfterSingleReplacement(
     activeRules: List<TextReplaceRule>,
     parameters: TextReplaceParameters,
-    previousDisplayedCounts: Map<Int, Int>,
-    replacedRuleIndex: Int
+    previousResults: List<TextSearchResult>,
+    previousRuleTotalCounts: Map<Int, Int>,
+    replacedResult: TextSearchResult,
+    replacementDelta: Int
 ) {
     val rebuilt = try {
         rebuildTextSearchPreviewAfterSingleReplacement(
@@ -486,8 +493,15 @@ private fun EditorController.rebuildTextSearchPreviewAfterSingleReplacement(
                     )
                 )
             },
-            previousDisplayedCounts = previousDisplayedCounts,
-            replacedRuleIndex = replacedRuleIndex,
+            previousResults = previousResults,
+            previousRuleTotalCounts = previousRuleTotalCounts,
+            replacedId = replacedResult.id,
+            replacedSourceIndex = replacedResult.chapterIndex,
+            sourceStart = replacedResult.sourceStart,
+            sourceEnd = replacedResult.sourceEnd,
+            replacementDelta = replacementDelta,
+            replacedRuleIndex = replacedResult.ruleIndex,
+            shiftAllSources = kind == DocumentKind.Txt,
             caseSensitive = false,
             resolveLocation = ::textSearchResultLocation
         )

@@ -601,26 +601,47 @@ class TextSearchUtilsTest {
 
     @Test
     fun rebuildTextSearchPreviewAfterSingleReplacementKeepsDisplayedAndTotalCountsSeparate() {
-        val sources = listOf(
+        val beforeSources = listOf(
             SearchSource(0, "第一章", "a.xhtml", (1..99).joinToString(" ") { "foo" })
+        )
+        val afterSources = listOf(
+            SearchSource(0, "第一章", "a.xhtml", "bar " + (1..98).joinToString(" ") { "foo" })
         )
         val rule = TextReplaceRule(find = "foo", replacement = "", regex = false)
         val resolveLocation = { start: Int, end: Int, chapterIndex: Int, title: String ->
             TextSearchResultLocation(chapterIndex, "$title@$start-$end")
         }
+        val displayed = buildTextSearchResultsIncremental(
+            sources = beforeSources,
+            rule = rule,
+            caseSensitive = false,
+            ruleIndex = 0,
+            idPrefix = "rule-0",
+            cursor = null,
+            targetCount = 30,
+            resolveLocation = resolveLocation
+        ).results
 
         val preview = rebuildTextSearchPreviewAfterSingleReplacement(
             rules = listOf(rule),
-            sourceResolver = { _, _ -> sources },
-            previousDisplayedCounts = mapOf(0 to 30),
+            sourceResolver = { _, _ -> afterSources },
+            previousResults = displayed,
+            previousRuleTotalCounts = mapOf(0 to 99),
+            replacedId = displayed.first().id,
+            replacedSourceIndex = 0,
+            sourceStart = displayed.first().sourceStart,
+            sourceEnd = displayed.first().sourceEnd,
+            replacementDelta = 0,
             replacedRuleIndex = 0,
+            shiftAllSources = false,
             caseSensitive = false,
             resolveLocation = resolveLocation
         )
 
         assertEquals(29, preview.results.size)
-        assertEquals(mapOf(0 to 99), preview.ruleTotalCounts)
-        assertEquals(99, preview.totalCount)
+        assertEquals(displayed.drop(1).map { it.id }, preview.results.map { it.id })
+        assertEquals(mapOf(0 to 98), preview.ruleTotalCounts)
+        assertEquals(98, preview.totalCount)
         assertEquals(true, preview.cursors.containsKey(0))
     }
 }

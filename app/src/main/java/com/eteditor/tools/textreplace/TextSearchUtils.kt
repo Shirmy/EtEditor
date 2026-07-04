@@ -157,20 +157,94 @@ internal fun buildTextSearchResultsIncremental(
 internal fun rebuildTextSearchPreviewAfterSingleReplacement(
     rules: List<TextReplaceRule>,
     sourceResolver: (ruleIndex: Int, rule: TextReplaceRule) -> List<SearchSource>,
-    previousDisplayedCounts: Map<Int, Int>,
+    previousResults: List<TextSearchResult>,
+    previousRuleTotalCounts: Map<Int, Int>,
+    replacedId: String,
+    replacedSourceIndex: Int,
+    sourceStart: Int,
+    sourceEnd: Int,
+    replacementDelta: Int,
     replacedRuleIndex: Int,
+    shiftAllSources: Boolean,
     caseSensitive: Boolean,
     resolveLocation: (Int, Int, Int, String) -> TextSearchResultLocation
 ): TextSearchPreviewRebuild {
     var totalCount = 0
     val ruleTotalCounts = mutableMapOf<Int, Int>()
-    val cursors = mutableMapOf<Int, TextSearchIncrementalCursor>()
-    val rebuiltResults = mutableListOf<TextSearchResult>()
+    val sourcesByRule = mutableMapOf<Int, List<SearchSource>>()
     for ((ruleIndex, rule) in rules.withIndex()) {
         val sources = sourceResolver(ruleIndex, rule)
+        sourcesByRule[ruleIndex] = sources
         val ruleCount = countTextSearchMatches(sources, rule, caseSensitive)
         totalCount += ruleCount
         ruleTotalCounts[ruleIndex] = ruleCount
+    }
+    val expectedTotals = previousRuleTotalCounts.toMutableMap()
+    val previousReplacedRuleTotal = expectedTotals[replacedRuleIndex]
+    val canUseDisplayedResults = previousReplacedRuleTotal != null &&
+        previousRuleTotalCounts.keys.containsAll(rules.indices.toList()) &&
+        run {
+            expectedTotals[replacedRuleIndex] = (previousReplacedRuleTotal - 1).coerceAtLeast(0)
+            rules.indices.all { ruleIndex ->
+                ruleTotalCounts[ruleIndex] == expectedTotals[ruleIndex]
+            }
+        }
+    val rebuiltResults = if (canUseDisplayedResults) {
+        textSearchResultsAfterSingleReplacement(
+            results = previousResults,
+            sourcesByRule = sourcesByRule,
+            replacedId = replacedId,
+            replacedSourceIndex = replacedSourceIndex,
+            sourceStart = sourceStart,
+            sourceEnd = sourceEnd,
+            replacementDelta = replacementDelta,
+            shiftAllSources = shiftAllSources,
+            resolveLocation = resolveLocation
+        )
+    } else {
+        emptyList()
+    }
+    val results = if (canUseDisplayedResults && (rebuiltResults.isNotEmpty() || totalCount == 0)) {
+        rebuiltResults
+    } else {
+        rebuildDisplayedTextSearchResults(
+            rules = rules,
+            sourcesByRule = sourcesByRule,
+            ruleTotalCounts = ruleTotalCounts,
+            previousDisplayedCounts = previousResults.groupingBy { it.ruleIndex }.eachCount(),
+            replacedRuleIndex = replacedRuleIndex,
+            caseSensitive = caseSensitive,
+            resolveLocation = resolveLocation
+        )
+    }
+    val cursors = textSearchCursorsAfterDisplayedResults(
+        rules = rules,
+        sourcesByRule = sourcesByRule,
+        displayedCounts = results.groupingBy { it.ruleIndex }.eachCount(),
+        caseSensitive = caseSensitive,
+        resolveLocation = resolveLocation
+    )
+    return TextSearchPreviewRebuild(
+        results = results,
+        totalCount = totalCount,
+        ruleTotalCounts = ruleTotalCounts,
+        cursors = cursors
+    )
+}
+
+private fun rebuildDisplayedTextSearchResults(
+    rules: List<TextReplaceRule>,
+    sourcesByRule: Map<Int, List<SearchSource>>,
+    ruleTotalCounts: Map<Int, Int>,
+    previousDisplayedCounts: Map<Int, Int>,
+    replacedRuleIndex: Int,
+    caseSensitive: Boolean,
+    resolveLocation: (Int, Int, Int, String) -> TextSearchResultLocation
+): List<TextSearchResult> {
+    val rebuiltResults = mutableListOf<TextSearchResult>()
+    for ((ruleIndex, rule) in rules.withIndex()) {
+        val sources = sourcesByRule[ruleIndex].orEmpty()
+        val ruleCount = ruleTotalCounts[ruleIndex] ?: 0
         val previousDisplayed = previousDisplayedCounts[ruleIndex] ?: 0
         val desiredCount = if (ruleIndex == replacedRuleIndex) {
             (previousDisplayed - 1).coerceAtLeast(0)
@@ -192,16 +266,36 @@ internal fun rebuildTextSearchPreviewAfterSingleReplacement(
             resolveLocation = resolveLocation
         )
         rebuiltResults += batch.results
+    }
+    return rebuiltResults
+}
+
+private fun textSearchCursorsAfterDisplayedResults(
+    rules: List<TextReplaceRule>,
+    sourcesByRule: Map<Int, List<SearchSource>>,
+    displayedCounts: Map<Int, Int>,
+    caseSensitive: Boolean,
+    resolveLocation: (Int, Int, Int, String) -> TextSearchResultLocation
+): Map<Int, TextSearchIncrementalCursor> {
+    val cursors = mutableMapOf<Int, TextSearchIncrementalCursor>()
+    for ((ruleIndex, rule) in rules.withIndex()) {
+        val displayedCount = displayedCounts[ruleIndex] ?: 0
+        if (displayedCount <= 0) continue
+        val batch = buildTextSearchResultsIncremental(
+            sources = sourcesByRule[ruleIndex].orEmpty(),
+            rule = rule,
+            caseSensitive = caseSensitive,
+            ruleIndex = ruleIndex,
+            idPrefix = "rule-$ruleIndex",
+            cursor = null,
+            targetCount = displayedCount,
+            resolveLocation = resolveLocation
+        )
         if (batch.cursor != null) {
             cursors[ruleIndex] = batch.cursor
         }
     }
-    return TextSearchPreviewRebuild(
-        results = rebuiltResults,
-        totalCount = totalCount,
-        ruleTotalCounts = ruleTotalCounts,
-        cursors = cursors
-    )
+    return cursors
 }
 
 private fun compileTextReplaceSearchRegex(rule: TextReplaceRule, caseSensitive: Boolean): Regex? {
@@ -297,6 +391,73 @@ internal fun textSearchResultsAfterSingleReplacement(
                         chapterTitle = location.title,
                         context = context.text,
                         matchText = sourceText.substring(shiftedStart, shiftedEnd),
+                        contextMatchStart = context.matchStart,
+                        contextMatchEnd = context.matchEnd,
+                        sourceStart = shiftedStart,
+                        sourceEnd = shiftedEnd
+                    )
+                }
+            }
+        }
+    }
+}
+
+internal fun textSearchResultsAfterSingleReplacement(
+    results: List<TextSearchResult>,
+    sourcesByRule: Map<Int, List<SearchSource>>,
+    replacedId: String,
+    replacedSourceIndex: Int,
+    sourceStart: Int,
+    sourceEnd: Int,
+    replacementDelta: Int,
+    shiftAllSources: Boolean,
+    resolveLocation: (Int, Int, Int, String) -> TextSearchResultLocation
+): List<TextSearchResult> {
+    return results.mapNotNull { result ->
+        val sameSource = shiftAllSources || result.chapterIndex == replacedSourceIndex
+        when {
+            result.id == replacedId -> null
+            sameSource && result.sourceStart < sourceEnd && result.sourceEnd > sourceStart -> null
+            else -> {
+                val shiftedStart = if (sameSource && result.sourceStart >= sourceEnd) {
+                    result.sourceStart + replacementDelta
+                } else {
+                    result.sourceStart
+                }
+                val shiftedEnd = if (sameSource && result.sourceStart >= sourceEnd) {
+                    result.sourceEnd + replacementDelta
+                } else {
+                    result.sourceEnd
+                }
+                val source = sourcesByRule[result.ruleIndex]
+                    .orEmpty()
+                    .firstOrNull { source ->
+                        val sourceEndOffset = source.sourceOffset + source.text.length
+                        val inSourceRange = shiftedStart >= source.sourceOffset &&
+                            shiftedEnd <= sourceEndOffset &&
+                            shiftedEnd > shiftedStart
+                        inSourceRange && (shiftAllSources || source.chapterIndex == result.chapterIndex)
+                    }
+                if (source == null) {
+                    result.copy(
+                        sourceStart = shiftedStart,
+                        sourceEnd = shiftedEnd
+                    )
+                } else {
+                    val relativeStart = shiftedStart - source.sourceOffset
+                    val relativeEnd = shiftedEnd - source.sourceOffset
+                    val context = searchContext(source.text, relativeStart, relativeEnd)
+                    val location = resolveLocation(
+                        shiftedStart,
+                        shiftedEnd,
+                        source.chapterIndex,
+                        source.title
+                    )
+                    result.copy(
+                        chapterIndex = location.chapterIndex,
+                        chapterTitle = location.title,
+                        context = context.text,
+                        matchText = source.text.substring(relativeStart, relativeEnd),
                         contextMatchStart = context.matchStart,
                         contextMatchEnd = context.matchEnd,
                         sourceStart = shiftedStart,
