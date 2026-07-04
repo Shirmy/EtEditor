@@ -223,6 +223,22 @@ class FetchInfoPreviewFieldsTest {
         assertEquals(listOf(0, 1), moved)
     }
 
+    @Test
+    fun moveCatalogItemUsesVisibleRowsWhenDeletedItemsAreHidden() {
+        val rows = listOf(
+            row("Chapter0001.xhtml", "第1章 旧一", "新二", position = 1),
+            row("Chapter0002.xhtml", "第2章 旧二", "新三", position = 2)
+        )
+
+        // position=0 已删除且不可见；确认当前第一项仍应不动。
+        val unchanged = moveCatalogItem(null, currentPosition = 1, targetIndex = 0, movableRows = rows, defaultCount = 3)
+        assertEquals(listOf(0, 1, 2), unchanged)
+
+        // 把当前第二个可见项移到第一个可见位，隐藏的已删除项仍留在原处。
+        val moved = moveCatalogItem(null, currentPosition = 2, targetIndex = 0, movableRows = rows, defaultCount = 3)
+        assertEquals(listOf(0, 2, 1), moved)
+    }
+
     private fun row(
         fileName: String,
         originalTitle: String,

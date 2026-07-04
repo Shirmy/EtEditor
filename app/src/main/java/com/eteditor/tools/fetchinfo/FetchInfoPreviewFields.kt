@@ -1203,11 +1203,21 @@ internal fun moveCatalogItem(
     val workingOrder = base.toMutableList()
     val fromIndex = workingOrder.indexOf(currentPosition)
     if (fromIndex < 0) return workingOrder
-    workingOrder.removeAt(fromIndex)
-    // 移除后，把该项插到目标位次（targetIndex 是基于原 movableRows 的位次，移除自身后位次不变）
-    val insertAt = targetIndex.coerceIn(0, workingOrder.size)
-    workingOrder.add(insertAt, currentPosition)
-    return workingOrder
+    val visiblePositions = movableRows.map { it.chapterPosition }.filter { it >= 0 }.toSet()
+    val visibleOrder = workingOrder.filter { it in visiblePositions }
+    val visibleFromIndex = visibleOrder.indexOf(currentPosition)
+    if (visibleFromIndex < 0) return workingOrder
+    val movedVisibleOrder = visibleOrder.toMutableList()
+    movedVisibleOrder.removeAt(visibleFromIndex)
+    movedVisibleOrder.add(targetIndex.coerceIn(0, movedVisibleOrder.size), currentPosition)
+    var visibleCursor = 0
+    return workingOrder.map { position ->
+        if (position in visiblePositions) {
+            movedVisibleOrder[visibleCursor++]
+        } else {
+            position
+        }
+    }
 }
 
 @Composable
