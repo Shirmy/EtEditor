@@ -210,4 +210,29 @@ class TextReplacePreviewFieldsTest {
             )
         )
     }
+
+    @Test
+    fun replacementRuleApplySelectedCollapsesButOnlyDimsWhenRuleHasSelection() {
+        val withSelection = replacementRuleApplySelectedState(
+            ruleId = "rule-1",
+            ruleMatchIds = listOf("a", "b"),
+            selectedMatchIds = setOf("b"),
+            expandedRuleIds = setOf("rule-1"),
+            dimmedRuleIds = emptySet()
+        )
+
+        assertEquals(emptySet<String>(), withSelection.expandedRuleIds)
+        assertEquals(setOf("rule-1"), withSelection.dimmedRuleIds)
+
+        val withoutSelection = replacementRuleApplySelectedState(
+            ruleId = "rule-1",
+            ruleMatchIds = listOf("a", "b"),
+            selectedMatchIds = emptySet(),
+            expandedRuleIds = setOf("rule-1"),
+            dimmedRuleIds = emptySet()
+        )
+
+        assertEquals(emptySet<String>(), withoutSelection.expandedRuleIds)
+        assertEquals(emptySet<String>(), withoutSelection.dimmedRuleIds)
+    }
 }

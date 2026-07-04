@@ -61,6 +61,25 @@ internal enum class ReplacementPreviewSection {
     Zero
 }
 
+internal data class ReplacementRuleApplySelectedState(
+    val expandedRuleIds: Set<String>,
+    val dimmedRuleIds: Set<String>
+)
+
+internal fun replacementRuleApplySelectedState(
+    ruleId: String,
+    ruleMatchIds: List<String>,
+    selectedMatchIds: Set<String>,
+    expandedRuleIds: Set<String>,
+    dimmedRuleIds: Set<String>
+): ReplacementRuleApplySelectedState {
+    val hasSelection = ruleMatchIds.any { it in selectedMatchIds }
+    return ReplacementRuleApplySelectedState(
+        expandedRuleIds = expandedRuleIds - ruleId,
+        dimmedRuleIds = if (hasSelection) dimmedRuleIds + ruleId else dimmedRuleIds - ruleId
+    )
+}
+
 @Composable
 fun TextSearchResultsPane(
     controller: EditorController,
@@ -576,15 +595,17 @@ private fun ReplacementFilePreviewPane(
                                         selectedMatchIds = selectedMatchIds - rule.matches.map { it.id }.toSet()
                                     },
                                     onApplySelected = {
-                                        val matchIds = rule.matches
-                                            .map { it.id }
-                                            .filter { it in selectedMatchIds }
-                                            .toSet()
                                         // 仅标记为「待应用」：收缩 + 变淡，保留在列表，不立即写入；
                                         // 实际替换交给底部「执行替换」统一执行（没勾选则不替换任何项）
-                                        expandedRuleIds = expandedRuleIds - rule.id
-                                        dimmedRuleIds = dimmedRuleIds + rule.id
-                                        matchIds
+                                        val state = replacementRuleApplySelectedState(
+                                            ruleId = rule.id,
+                                            ruleMatchIds = rule.matches.map { it.id },
+                                            selectedMatchIds = selectedMatchIds,
+                                            expandedRuleIds = expandedRuleIds,
+                                            dimmedRuleIds = dimmedRuleIds
+                                        )
+                                        expandedRuleIds = state.expandedRuleIds
+                                        dimmedRuleIds = state.dimmedRuleIds
                                     },
                                     dimmed = rule.id in dimmedRuleIds,
                                     enabled = !executing
