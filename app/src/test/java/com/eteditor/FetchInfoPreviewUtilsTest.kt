@@ -467,6 +467,54 @@ class FetchInfoPreviewUtilsTest {
         )
     }
 
+    @Test
+    fun buildFetchInfoCatalogPreviewRowsKeepsMoveDeletePreviewAlignedWithWriteBack() {
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章 旧标题"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章 旧标题"),
+                chapter("c3", "OEBPS/Text/Chapter0003.xhtml", "第3章 旧标题")
+            )
+        )
+        val raw = FetchedInfo(
+            source = FETCH_INFO_SOURCE_JJWXC,
+            query = "Book",
+            resolvedUrl = "",
+            title = "Book",
+            author = "",
+            intro = "",
+            coverUrl = "",
+            catalog = listOf(
+                FetchedCatalogItem(index = 1, title = "新一", sequence = "1"),
+                FetchedCatalogItem(index = 2, title = "新二", sequence = "2"),
+                FetchedCatalogItem(index = 3, title = "新三", sequence = "3")
+            )
+        )
+        val preview = FetchInfoPreview(
+            toolId = "fetch",
+            parameters = fetchParameters(content = FETCH_INFO_CONTENT_CATALOG),
+            raw = raw,
+            filtered = raw,
+            filterIssues = emptyList()
+        )
+
+        val movedRows = buildFetchInfoCatalogPreviewRows(
+            book = book,
+            preview = preview,
+            filtered = true,
+            fallbackChapterIndex = 0,
+            catalogOrder = listOf(1, 2, 0)
+        )
+        val compactedRows = compactCatalogPreviewRows(movedRows, deletes = setOf(2))
+
+        assertEquals(3, compactedRows.size)
+        assertEquals(listOf("第1章 新二", "第2章 新一", ""), compactedRows.map { it.fetchedTitle })
+        assertEquals(listOf(1, 0, -1), compactedRows.map { it.chapterPosition })
+        assertEquals(listOf("Chapter0001.xhtml", "Chapter0002.xhtml", "Chapter0003.xhtml"), compactedRows.map { it.fileName })
+        assertTrue(compactedRows[2].missingFetch)
+        assertTrue(compactedRows.none { it.fetchedTitle.contains("新三") })
+    }
+
     private fun previewWithCatalog(nonVolumeCount: Int): FetchInfoPreview {
         val catalog = (1..nonVolumeCount).map { index -> FetchedCatalogItem(index, "第${index}章") } +
             FetchedCatalogItem(nonVolumeCount + 1, "第一卷", isVolume = true)
