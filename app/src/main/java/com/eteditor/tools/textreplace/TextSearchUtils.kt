@@ -204,7 +204,15 @@ internal fun rebuildTextSearchPreviewStateAfterSingleReplacement(
     } else {
         emptyList()
     }
-    val results = if (canUseDisplayedResults && (rebuiltResults.isNotEmpty() || totalCount == 0)) {
+    val canReuseRebuiltResults = canUseDisplayedResults &&
+        displayedResultsMatchCurrentScan(
+            displayedResults = rebuiltResults,
+            rules = rules,
+            sourcesByRule = sourcesByRule,
+            caseSensitive = caseSensitive,
+            resolveLocation = resolveLocation
+        )
+    val results = if (canReuseRebuiltResults && (rebuiltResults.isNotEmpty() || totalCount == 0)) {
         rebuiltResults
     } else {
         rebuildDisplayedTextSearchResults(
@@ -268,6 +276,42 @@ private fun rebuildDisplayedTextSearchResults(
         rebuiltResults += batch.results
     }
     return rebuiltResults
+}
+
+private fun displayedResultsMatchCurrentScan(
+    displayedResults: List<TextSearchResult>,
+    rules: List<TextReplaceRule>,
+    sourcesByRule: Map<Int, List<SearchSource>>,
+    caseSensitive: Boolean,
+    resolveLocation: (Int, Int, Int, String) -> TextSearchResultLocation
+): Boolean {
+    for ((ruleIndex, ruleResults) in displayedResults.groupBy { it.ruleIndex }) {
+        val rule = rules.getOrNull(ruleIndex) ?: return false
+        val fresh = buildTextSearchResultsIncremental(
+            sources = sourcesByRule[ruleIndex].orEmpty(),
+            rule = rule,
+            caseSensitive = caseSensitive,
+            ruleIndex = ruleIndex,
+            idPrefix = "rule-$ruleIndex",
+            cursor = null,
+            targetCount = ruleResults.size,
+            resolveLocation = resolveLocation
+        ).results
+        if (fresh.size != ruleResults.size) return false
+        for ((current, expected) in ruleResults.zip(fresh)) {
+            if (!current.matchesCurrentScanResult(expected)) return false
+        }
+    }
+    return true
+}
+
+private fun TextSearchResult.matchesCurrentScanResult(other: TextSearchResult): Boolean {
+    return ruleIndex == other.ruleIndex &&
+        chapterIndex == other.chapterIndex &&
+        chapterTitle == other.chapterTitle &&
+        matchText == other.matchText &&
+        sourceStart == other.sourceStart &&
+        sourceEnd == other.sourceEnd
 }
 
 private fun textSearchCursorsAfterDisplayedResults(

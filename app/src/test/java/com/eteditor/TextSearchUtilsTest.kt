@@ -644,4 +644,46 @@ class TextSearchUtilsTest {
         assertEquals(98, preview.totalCount)
         assertEquals(true, preview.cursors.containsKey(0))
     }
+
+    @Test
+    fun rebuildTextSearchPreviewAfterSingleReplacementRebuildsWhenAdjacentMatchesShift() {
+        val beforeSources = listOf(SearchSource(0, "Chapter", "a.xhtml", "aaaa"))
+        val afterSources = listOf(SearchSource(0, "Chapter", "a.xhtml", "aaa"))
+        val rule = TextReplaceRule(find = "aa", replacement = "a", regex = false)
+        val resolveLocation = { start: Int, end: Int, chapterIndex: Int, title: String ->
+            TextSearchResultLocation(chapterIndex, "$title@$start-$end")
+        }
+        val displayed = buildTextSearchResultsIncremental(
+            sources = beforeSources,
+            rule = rule,
+            caseSensitive = false,
+            ruleIndex = 0,
+            idPrefix = "rule-0",
+            cursor = null,
+            targetCount = 2,
+            resolveLocation = resolveLocation
+        ).results
+
+        val preview = rebuildTextSearchPreviewStateAfterSingleReplacement(
+            rules = listOf(rule),
+            sourceResolver = { _, _ -> afterSources },
+            previousResults = displayed,
+            previousRuleTotalCounts = mapOf(0 to 2),
+            replacedId = displayed.first().id,
+            replacedSourceIndex = 0,
+            sourceStart = displayed.first().sourceStart,
+            sourceEnd = displayed.first().sourceEnd,
+            replacementDelta = -1,
+            replacedRuleIndex = 0,
+            shiftAllSources = false,
+            caseSensitive = false,
+            resolveLocation = resolveLocation
+        )
+
+        assertEquals(1, preview.results.size)
+        assertEquals(0, preview.results.single().sourceStart)
+        assertEquals(2, preview.results.single().sourceEnd)
+        assertEquals("aa", preview.results.single().matchText)
+        assertEquals(1, preview.totalCount)
+    }
 }
