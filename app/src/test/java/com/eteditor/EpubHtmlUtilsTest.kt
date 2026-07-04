@@ -365,6 +365,32 @@ class EpubHtmlUtilsTest {
     }
 
     @Test
+    fun paragraphSelectionIncludesLastParagraphWithoutTrailingLineBreak() {
+        val body = "<p>第一段</p>\n<p>最后一段</p>"
+        val ranges = splitBodyIntoParagraphRanges(body)
+
+        assertEquals(listOf(0 to 11, 11 to body.length), ranges)
+        assertEquals(1, findParagraphIndexAtOffset(ranges, body.length))
+        assertEquals("<p>最后一段</p>", body.substring(ranges.last().first, ranges.last().second))
+    }
+
+    @Test
+    fun paragraphEditRoundTripReplacesOnlySelectedParagraph() {
+        val body = "<p>第一段</p>\n<p>第二段</p>\n<p>第三段</p>"
+        val ranges = splitBodyIntoParagraphRanges(body)
+        val paragraphRange = ranges[1]
+        val paragraphText = body.substring(paragraphRange.first, paragraphRange.second)
+        val editable = editableParagraphContent(paragraphText)
+        val editedBody = body.substring(0, paragraphRange.first) +
+            editable.withEditedText("<p>第二段改</p>") +
+            body.substring(paragraphRange.second)
+
+        assertEquals("<p>第二段</p>", editable.text)
+        assertEquals("\n", editable.trailingLineBreak)
+        assertEquals("<p>第一段</p>\n<p>第二段改</p>\n<p>第三段</p>", editedBody)
+    }
+
+    @Test
     fun paragraphEditRestoreOffsetKeepsTapInsideEditedParagraphAfterLengthChanges() {
         val paragraphRange = 6 to 16
 
