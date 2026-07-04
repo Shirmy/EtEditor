@@ -622,7 +622,7 @@ class TextSearchUtilsTest {
             resolveLocation = resolveLocation
         ).results
 
-        val preview = rebuildTextSearchPreviewAfterSingleReplacement(
+        val preview = rebuildTextSearchPreviewStateAfterSingleReplacement(
             rules = listOf(rule),
             sourceResolver = { _, _ -> afterSources },
             previousResults = displayed,

@@ -64,8 +64,6 @@ fun EditorController.applySelectedTextSearchResult(toolId: String): Boolean {
     textSearchToolId = toolId
     if (kind == DocumentKind.Txt) {
         applyDeferredTxtTextReplacementRefresh()
-    }
-    if (kind == DocumentKind.Txt) {
         rebuildTextSearchPreviewAfterSingleReplacement(
             activeRules = activeRules,
             parameters = parameters,
@@ -484,7 +482,7 @@ private fun EditorController.rebuildTextSearchPreviewAfterSingleReplacement(
     replacementDelta: Int
 ) {
     val rebuilt = try {
-        rebuildTextSearchPreviewAfterSingleReplacement(
+        rebuildTextSearchPreviewStateAfterSingleReplacement(
             rules = activeRules,
             sourceResolver = { _, rule ->
                 searchSources(

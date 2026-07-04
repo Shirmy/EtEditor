@@ -310,7 +310,7 @@ internal fun adjustPreviewDoubleTapY(
     return y.coerceIn(0f, maxY)
 }
 
-internal fun epubParagraphEditRestoreOffset(saved: Boolean, bodyOffset: Int): Int? {
+internal fun restoreOffsetIfSaved(saved: Boolean, bodyOffset: Int): Int? {
     return if (saved) bodyOffset.coerceAtLeast(0) else null
 }
 

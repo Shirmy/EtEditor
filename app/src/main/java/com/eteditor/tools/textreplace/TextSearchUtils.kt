@@ -154,7 +154,7 @@ internal fun buildTextSearchResultsIncremental(
     return TextSearchIncrementalBatch(results = results, cursor = null, reachedEnd = true)
 }
 
-internal fun rebuildTextSearchPreviewAfterSingleReplacement(
+internal fun rebuildTextSearchPreviewStateAfterSingleReplacement(
     rules: List<TextReplaceRule>,
     sourceResolver: (ruleIndex: Int, rule: TextReplaceRule) -> List<SearchSource>,
     previousResults: List<TextSearchResult>,

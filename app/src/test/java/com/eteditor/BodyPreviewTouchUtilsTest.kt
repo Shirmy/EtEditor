@@ -27,8 +27,8 @@ class BodyPreviewTouchUtilsTest {
     }
 
     @Test
-    fun epubParagraphEditRestoreOffsetOnlyWhenSaveSucceeds() {
-        assertEquals(128, epubParagraphEditRestoreOffset(saved = true, bodyOffset = 128))
-        assertEquals(null, epubParagraphEditRestoreOffset(saved = false, bodyOffset = 128))
+    fun restoreOffsetIfSavedOnlyWhenSaveSucceeds() {
+        assertEquals(128, restoreOffsetIfSaved(saved = true, bodyOffset = 128))
+        assertEquals(null, restoreOffsetIfSaved(saved = false, bodyOffset = 128))
     }
 }
