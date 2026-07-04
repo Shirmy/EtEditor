@@ -799,7 +799,11 @@ internal fun BodyPreview(
             onConfirm = { newBodyText ->
                 epubParagraphEditRequest = null
                 runBodyStructureOperation("EPUB 段落编辑") {
-                    controller.applyEpubParagraphEdit(chapterIndex, newBodyText)
+                    val saved = controller.applyEpubParagraphEdit(chapterIndex, newBodyText)
+                    epubParagraphEditRestoreOffset(saved, bodyOffset)?.let { restoreOffset ->
+                        controller.locateEpubPreviewAtBodyOffset(chapterIndex, restoreOffset)
+                    }
+                    saved
                 }
             }
         )

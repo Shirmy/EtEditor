@@ -310,6 +310,10 @@ internal fun adjustPreviewDoubleTapY(
     return y.coerceIn(0f, maxY)
 }
 
+internal fun epubParagraphEditRestoreOffset(saved: Boolean, bodyOffset: Int): Int? {
+    return if (saved) bodyOffset.coerceAtLeast(0) else null
+}
+
 private fun io.github.rosemoe.sora.widget.CodeEditor.configureTxtPreviewGestures(
     interactive: Boolean,
     onDoubleTap: ((Int) -> Unit)?,
