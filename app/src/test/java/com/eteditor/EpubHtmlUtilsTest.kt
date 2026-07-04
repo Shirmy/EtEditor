@@ -307,6 +307,37 @@ class EpubHtmlUtilsTest {
     }
 
     @Test
+    fun paragraphSelectionKeepsLineBreaksWithPreviousParagraph() {
+        val body = "alpha\nbeta\r\ngamma"
+        val ranges = splitBodyIntoParagraphRanges(body)
+
+        assertEquals(listOf(0 to 6, 6 to 12, 12 to 17), ranges)
+        assertEquals(0, findParagraphIndexAtOffset(ranges, 5))
+        assertEquals(1, findParagraphIndexAtOffset(ranges, 10))
+        assertEquals(1, findParagraphIndexAtOffset(ranges, 11))
+        assertEquals(2, findParagraphIndexAtOffset(ranges, 12))
+    }
+
+    @Test
+    fun paragraphSelectionHandlesEmptyCarriageReturnAndEndOffsets() {
+        val emptyRanges = splitBodyIntoParagraphRanges("")
+        assertEquals(emptyList<Pair<Int, Int>>(), emptyRanges)
+        assertEquals(0, findParagraphIndexAtOffset(emptyRanges, 0))
+        assertEquals(0, findParagraphIndexAtOffset(emptyRanges, 999))
+
+        val carriageReturnRanges = splitBodyIntoParagraphRanges("\r")
+        assertEquals(listOf(0 to 1), carriageReturnRanges)
+        assertEquals(0, findParagraphIndexAtOffset(carriageReturnRanges, 0))
+        assertEquals(0, findParagraphIndexAtOffset(carriageReturnRanges, 1))
+        assertEquals(0, findParagraphIndexAtOffset(carriageReturnRanges, 999))
+
+        val body = "alpha\nbeta"
+        val ranges = splitBodyIntoParagraphRanges(body)
+        assertEquals(1, findParagraphIndexAtOffset(ranges, body.length))
+        assertEquals(1, findParagraphIndexAtOffset(ranges, body.length + 20))
+    }
+
+    @Test
     fun findParagraphIndexAtOffsetLocatesCorrectParagraph() {
         val body = "<p>第一段</p>\n<p>第二段</p>\r\n第三段"
         val ranges = splitBodyIntoParagraphRanges(body)
