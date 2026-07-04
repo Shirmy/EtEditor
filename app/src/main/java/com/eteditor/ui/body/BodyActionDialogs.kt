@@ -17,12 +17,16 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -31,6 +35,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.delay
 
 @Composable
 internal fun EpubLongPressSplitChapterDialog(
@@ -148,6 +153,13 @@ internal fun EpubParagraphEditDialog(
     }
     val editableParagraph = remember(paragraphText) { editableParagraphContent(paragraphText) }
     var editValue by remember(editableParagraph) { mutableStateOf(editableParagraph.text) }
+    val focusRequester = remember { FocusRequester() }
+    val hostView = LocalView.current
+    LaunchedEffect(chapterIndex, bodyOffset, editableParagraph) {
+        delay(120)
+        runCatching { focusRequester.requestFocus() }
+        hostView.showSoftKeyboard()
+    }
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -176,6 +188,7 @@ internal fun EpubParagraphEditDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 120.dp, max = 360.dp)
+                        .focusRequester(focusRequester)
                         .verticalScroll(rememberScrollState()),
                     textStyle = MaterialTheme.typography.bodyMedium.copy(
                         fontFamily = FontFamily.Monospace,
