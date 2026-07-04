@@ -132,7 +132,8 @@ fun EditorController.fetchInfoCatalogSummary(preview: FetchInfoPreview): String 
 fun EditorController.fetchInfoCatalogPreviewRows(
     preview: FetchInfoPreview,
     filtered: Boolean,
-    renames: Map<Int, String> = emptyMap()
+    renames: Map<Int, String> = emptyMap(),
+    catalogOrder: List<Int>? = null
 ): List<FetchInfoCatalogPreviewRow> {
     val book = epub ?: return emptyList()
     return buildFetchInfoCatalogPreviewRows(
@@ -140,7 +141,8 @@ fun EditorController.fetchInfoCatalogPreviewRows(
         preview = preview,
         filtered = filtered,
         fallbackChapterIndex = previewChapterIndex,
-        renames = renames
+        renames = renames,
+        catalogOrder = catalogOrder
     )
 }
 
@@ -598,6 +600,7 @@ suspend fun EditorController.applyFetchInfoPreviewWithProgress(
     filterActive: Boolean = true,
     renames: Map<Int, String> = emptyMap(),
     deletes: Set<Int> = emptySet(),
+    catalogOrder: List<Int>? = null,
     onProgress: (phase: String, completed: Int, total: Int) -> Unit
 ): Boolean {
     val preview = fetchInfoPreview ?: run {
@@ -614,7 +617,7 @@ suspend fun EditorController.applyFetchInfoPreviewWithProgress(
     }
     statusMessage = "正在应用抓取信息..."
     return try {
-        val result = applyFetchedInfoToEpub(preview, filterActive, renames, deletes, onProgress)
+        val result = applyFetchedInfoToEpub(preview, filterActive, renames, deletes, catalogOrder, onProgress)
         val parts = buildList {
             if (preview.parameters.writeCatalog) add("标题 ${result.catalogChanged}")
             if (preview.parameters.writeIntro) add(if (result.introWritten) "简介 1" else "简介 0")
@@ -640,6 +643,7 @@ private suspend fun EditorController.applyFetchedInfoToEpub(
     filterActive: Boolean = true,
     renames: Map<Int, String> = emptyMap(),
     deletes: Set<Int> = emptySet(),
+    catalogOrder: List<Int>? = null,
     onProgress: (phase: String, completed: Int, total: Int) -> Unit = { _, _, _ -> }
 ): FetchInfoWriteResult {
     val sourceBook = epub ?: error("没有 EPUB 可应用")
@@ -670,6 +674,7 @@ private suspend fun EditorController.applyFetchedInfoToEpub(
             currentChapterIndex = previewChapterIndex,
             renames = renames,
             deletes = deletes,
+            catalogOrder = catalogOrder,
             onError = { message -> statusMessage = message }
         )
         catalogChanged = catalogResult.changed

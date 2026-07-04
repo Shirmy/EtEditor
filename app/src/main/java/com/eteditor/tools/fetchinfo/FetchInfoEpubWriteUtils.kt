@@ -21,6 +21,7 @@ internal fun applyFetchedCatalogToEpub(
     currentChapterIndex: Int,
     renames: Map<Int, String> = emptyMap(),
     deletes: Set<Int> = emptySet(),
+    catalogOrder: List<Int>? = null,
     onError: (String) -> Unit = {}
 ): FetchInfoCatalogWriteResult {
     val targetChapters = fetchInfoCatalogTargetChapters(book).map { it.second }
@@ -31,40 +32,18 @@ internal fun applyFetchedCatalogToEpub(
     var catalogItemIndex = 0
     var changed = 0
     var touchedCurrent = false
-    catalog.forEach { item ->
-        if (item.isVolume) {
-            // 目标章节已用尽后出现的卷不再写回，与预览一致。
-            if (targetCursor >= targetChapters.size) return@forEach
-            // 抓取来的卷标题保持原样，仅去首尾空白。
-            val title = item.title.trim()
-            if (title.isBlank()) return@forEach
-            val insertPosition = fetchInfoVolumeInsertPosition(book, targetChapters, targetCursor, currentChapterIndex)
-            val existingVolume = findFetchInfoAdjacentVolume(book, insertPosition, usedVolumePaths)
-            val volumeChapter = existingVolume
-                ?: insertEpubVolumeChapter(
-                    book,
-                    VOLUME_KIND_NORMAL,
-                    title,
-                    insertPosition,
-                    onError = onError
-                )?.second
-            if (volumeChapter != null) {
-                usedVolumePaths += volumeChapter.path
-                if (volumeChapter.title != title) {
-                    updateFetchedCatalogChapterTitle(book, volumeChapter, title)
-                    if (volumeChapter === currentChapter) touchedCurrent = true
-                }
-                changed += 1
-            }
-        } else {
-            val position = catalogItemIndex
-            catalogItemIndex += 1
+    // 移动只支持无卷情况：catalogOrder 非 null 时按它给定的原始 position 顺序遍历非卷项，
+    // position 取原始 position（稳定编号，deletes/renames 用它匹配），targetCursor 只用于配对 epub 章节。
+    val orderedNonVolumeItems: List<Pair<Int, FetchedCatalogItem>>? = catalogOrder?.mapNotNull { originalPosition ->
+        catalog.filter { !it.isVolume }.getOrNull(originalPosition)?.let { originalPosition to it }
+    }
+    if (orderedNonVolumeItems != null) {
+        orderedNonVolumeItems.forEach { (position, item) ->
             if (position in deletes) return@forEach
             val chapter = targetChapters.getOrNull(targetCursor) ?: return@forEach
             targetCursor += 1
             val renamed = renames[position]
             if (renamed != null) {
-                // 用户手动输入的重命名保持原样，仅去首尾空白。
                 val cleanRenamed = renamed.trim()
                 if (cleanRenamed.isBlank()) return@forEach
                 updateFetchedCatalogChapterTitle(book, chapter, cleanRenamed)
@@ -82,6 +61,60 @@ internal fun applyFetchedCatalogToEpub(
             }
             if (chapter === currentChapter) touchedCurrent = true
             changed += 1
+        }
+    } else {
+        catalog.forEach { item ->
+            if (item.isVolume) {
+                // 目标章节已用尽后出现的卷不再写回，与预览一致。
+                if (targetCursor >= targetChapters.size) return@forEach
+                // 抓取来的卷标题保持原样，仅去首尾空白。
+                val title = item.title.trim()
+                if (title.isBlank()) return@forEach
+                val insertPosition = fetchInfoVolumeInsertPosition(book, targetChapters, targetCursor, currentChapterIndex)
+                val existingVolume = findFetchInfoAdjacentVolume(book, insertPosition, usedVolumePaths)
+                val volumeChapter = existingVolume
+                    ?: insertEpubVolumeChapter(
+                        book,
+                        VOLUME_KIND_NORMAL,
+                        title,
+                        insertPosition,
+                        onError = onError
+                    )?.second
+                if (volumeChapter != null) {
+                    usedVolumePaths += volumeChapter.path
+                    if (volumeChapter.title != title) {
+                        updateFetchedCatalogChapterTitle(book, volumeChapter, title)
+                        if (volumeChapter === currentChapter) touchedCurrent = true
+                    }
+                    changed += 1
+                }
+            } else {
+                val position = catalogItemIndex
+                catalogItemIndex += 1
+                if (position in deletes) return@forEach
+                val chapter = targetChapters.getOrNull(targetCursor) ?: return@forEach
+                targetCursor += 1
+                val renamed = renames[position]
+                if (renamed != null) {
+                    // 用户手动输入的重命名保持原样，仅去首尾空白。
+                    val cleanRenamed = renamed.trim()
+                    if (cleanRenamed.isBlank()) return@forEach
+                    updateFetchedCatalogChapterTitle(book, chapter, cleanRenamed)
+                    if (chapter === currentChapter) touchedCurrent = true
+                    changed += 1
+                    return@forEach
+                }
+                val rendered = fetchInfoCatalogWriteBackRenderedTitle(chapter.title, item, autoStyle)
+                val title = rendered.plainTitle
+                if (title.isBlank()) return@forEach
+                if (autoStyle != null && fetchInfoChapterNumberPrefix(chapter.title).isNotBlank()) {
+                    updateFetchedCatalogChapterFormattedTitle(book, chapter, rendered)
+                } else {
+                    updateFetchedCatalogChapterTitle(book, chapter, title)
+                }
+                if (chapter === currentChapter) touchedCurrent = true
+                changed += 1
+            }
         }
     }
     resequenceEpubVolumeFileNames(book, VOLUME_KIND_NORMAL)

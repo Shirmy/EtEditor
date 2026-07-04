@@ -153,6 +153,9 @@ fun FetchInfoPreviewPane(
     val renames = remember(toolId) { mutableStateMapOf<Int, String>() }
     val deletes = remember(toolId) { mutableStateListOf<Int>() }
     var renameTarget by remember(toolId) { mutableStateOf<Int?>(null) }
+    var moveTarget by remember(toolId) { mutableStateOf<Int?>(null) }
+    // 抓取项的当前排列（原始 position 列表）；初始为 null 表示按原始顺序，首次移动后建立。
+    var catalogOrder by remember(toolId) { mutableStateOf<List<Int>?>(null) }
     val automationStep = controller.automationConfirmationRequest
         ?.takeIf { it.stepId == toolId }
         ?.let(controller::automationConfirmationStep)
@@ -179,6 +182,7 @@ fun FetchInfoPreviewPane(
                 filterActive = filterActive,
                 renames = renames.toMap(),
                 deletes = deletes.toSet(),
+                catalogOrder = catalogOrder,
                 onProgress = ::updateWritingProgress
             )
             if (applied) {
@@ -192,11 +196,13 @@ fun FetchInfoPreviewPane(
     // 避免每次重组（滚动、按钮高亮等）都重新遍历整本书生成行。
     val renameSnapshot = renames.toMap()
     val deleteSnapshot = deletes.toSet()
-    val displayCatalogRows = remember(preview, filterActive, renameSnapshot) {
+    val orderSnapshot = catalogOrder
+    val displayCatalogRows = remember(preview, filterActive, renameSnapshot, orderSnapshot) {
         controller.fetchInfoCatalogPreviewRows(
             preview,
             filtered = filterActive,
-            renames = renameSnapshot
+            renames = renameSnapshot,
+            catalogOrder = orderSnapshot
         )
     }
     val hasVolumeRows = displayCatalogRows.any { it.isVolume || it.willCreateVolume }
@@ -380,6 +386,8 @@ fun FetchInfoPreviewPane(
                     onToggleDelete = { position ->
                         if (deletes.contains(position)) deletes.remove(position) else deletes.add(position)
                     },
+                    onMove = { position -> moveTarget = position },
+                    canMove = !hasVolumeRows,
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
@@ -452,6 +460,7 @@ fun FetchInfoPreviewPane(
                                     filterActive = filterActive,
                                     renames = renames.toMap(),
                                     deletes = deletes.toSet(),
+                                    catalogOrder = catalogOrder,
                                     onProgress = ::updateWritingProgress
                                 )
                                 writing = false
@@ -507,6 +516,20 @@ fun FetchInfoPreviewPane(
             onConfirm = { value ->
                 renames[position] = value
                 renameTarget = null
+            }
+        )
+    }
+
+    moveTarget?.let { position ->
+        val movableRows = visibleCatalogRows.filter { it.chapterPosition >= 0 }
+        FetchCatalogMoveDialog(
+            currentPosition = position,
+            movableRows = movableRows,
+            onDismiss = { moveTarget = null },
+            onConfirm = { targetIndex ->
+                val nonVolumeCount = displayCatalogRows.count { !it.isVolume && !it.willCreateVolume }
+                catalogOrder = moveCatalogItem(catalogOrder, position, targetIndex, movableRows, nonVolumeCount)
+                moveTarget = null
             }
         )
     }
@@ -652,6 +675,8 @@ private fun FetchCatalogComparePane(
     orderReversed: Boolean = false,
     onRename: (Int) -> Unit = {},
     onToggleDelete: (Int) -> Unit = {},
+    onMove: (Int) -> Unit = {},
+    canMove: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
@@ -694,7 +719,8 @@ private fun FetchCatalogComparePane(
                             row = row,
                             interactive = true,
                             onRename = onRename,
-                            onToggleDelete = onToggleDelete
+                            onToggleDelete = onToggleDelete,
+                            onMove = if (canMove) onMove else { _ -> }
                         )
                         if (index < rows.lastIndex || filterIssues.isNotEmpty()) {
                             HorizontalDivider(
@@ -762,7 +788,8 @@ private fun FetchCatalogCompareRow(
     row: FetchInfoCatalogPreviewRow,
     interactive: Boolean = false,
     onRename: (Int) -> Unit = {},
-    onToggleDelete: (Int) -> Unit = {}
+    onToggleDelete: (Int) -> Unit = {},
+    onMove: (Int) -> Unit = {}
 ) {
     val hasActions = interactive && !row.isVolume && !row.skipped && row.chapterPosition >= 0
 
@@ -820,6 +847,13 @@ private fun FetchCatalogCompareRow(
                         onClick = {
                             menuExpanded = false
                             onRename(row.chapterPosition)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("移动") },
+                        onClick = {
+                            menuExpanded = false
+                            onMove(row.chapterPosition)
                         }
                     )
                     DropdownMenuItem(
@@ -1154,4 +1188,102 @@ internal fun effectiveSkippedCatalogRows(
         .filter { it >= 0 }
         .toSet()
     return rows.filter { it.skipped && it.chapterPosition !in visiblePositions }
+}
+
+// 把抓取项从当前位置挪到目标位次（移动后该项位于 movableRows 的第 targetIndex 位），立即重排 catalogOrder。
+// catalogOrder 为 null 时按原始顺序 0..defaultCount-1 建立；移动后返回新的排列。
+internal fun moveCatalogItem(
+    catalogOrder: List<Int>?,
+    currentPosition: Int,
+    targetIndex: Int,
+    movableRows: List<FetchInfoCatalogPreviewRow>,
+    defaultCount: Int
+): List<Int> {
+    val base = catalogOrder ?: (0 until defaultCount).toList()
+    val workingOrder = base.toMutableList()
+    val fromIndex = workingOrder.indexOf(currentPosition)
+    if (fromIndex < 0) return workingOrder
+    workingOrder.removeAt(fromIndex)
+    // 移除后，把该项插到目标位次（targetIndex 是基于原 movableRows 的位次，移除自身后位次不变）
+    val insertAt = targetIndex.coerceIn(0, workingOrder.size)
+    workingOrder.add(insertAt, currentPosition)
+    return workingOrder
+}
+
+@Composable
+private fun FetchCatalogMoveDialog(
+    currentPosition: Int,
+    movableRows: List<FetchInfoCatalogPreviewRow>,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit
+) {
+    var selectedIndex by remember { mutableStateOf(movableRows.indexOfFirst { it.chapterPosition == currentPosition }.coerceAtLeast(0)) }
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            shape = PreviewShape,
+            color = MaterialTheme.colorScheme.surface,
+            border = DialogBorder,
+            shadowElevation = 8.dp,
+            modifier = Modifier.fixedDialogWidth(fraction = 0.88f, maxWidth = 360.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                RuleCreateDialogHeader(title = "移动抓取标题", onDismiss = onDismiss)
+                Text(
+                    text = "选择目标位置",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    itemsIndexed(movableRows, key = { index, row -> "${index}-${row.chapterPosition}" }) { index, row ->
+                        val selected = index == selectedIndex
+                        Surface(
+                            onClick = { selectedIndex = index },
+                            shape = ControlShape,
+                            color = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(
+                                1.dp,
+                                if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = "${index + 1}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.width(24.dp)
+                                )
+                                Text(
+                                    text = row.fetchedTitle.ifBlank { row.originalTitle },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                }
+                RuleCreateDialogActions(
+                    onDismiss = onDismiss,
+                    onConfirm = { onConfirm(selectedIndex) },
+                    confirmEnabled = movableRows.isNotEmpty()
+                )
+            }
+        }
+    }
 }
