@@ -144,9 +144,9 @@ internal data class ParagraphEditDialogLayoutMetrics(
 
 internal fun paragraphEditDialogLayoutMetrics(): ParagraphEditDialogLayoutMetrics {
     return ParagraphEditDialogLayoutMetrics(
-        maxDialogHeightDp = 560,
+        maxDialogHeightDp = 430,
         minEditorHeightDp = 180,
-        maxEditorHeightDp = 400,
+        maxEditorHeightDp = 260,
         editorPaddingDp = 10
     )
 }
