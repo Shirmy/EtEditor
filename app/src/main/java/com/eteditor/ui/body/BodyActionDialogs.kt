@@ -1,13 +1,20 @@
 package com.eteditor
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -31,7 +38,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -129,6 +135,22 @@ internal fun EpubLongPressSplitChapterDialog(
     )
 }
 
+internal data class ParagraphEditDialogLayoutMetrics(
+    val maxDialogHeightDp: Int,
+    val minEditorHeightDp: Int,
+    val maxEditorHeightDp: Int,
+    val editorPaddingDp: Int
+)
+
+internal fun paragraphEditDialogLayoutMetrics(): ParagraphEditDialogLayoutMetrics {
+    return ParagraphEditDialogLayoutMetrics(
+        maxDialogHeightDp = 560,
+        minEditorHeightDp = 180,
+        maxEditorHeightDp = 400,
+        editorPaddingDp = 10
+    )
+}
+
 @Composable
 internal fun EpubParagraphEditDialog(
     controller: EditorController,
@@ -153,6 +175,7 @@ internal fun EpubParagraphEditDialog(
     }
     val editableParagraph = remember(paragraphText) { editableParagraphContent(paragraphText) }
     var editValue by remember(editableParagraph) { mutableStateOf(editableParagraph.text) }
+    val layoutMetrics = remember { paragraphEditDialogLayoutMetrics() }
     val focusRequester = remember { FocusRequester() }
     val hostView = LocalView.current
     LaunchedEffect(chapterIndex, bodyOffset, editableParagraph) {
@@ -171,10 +194,13 @@ internal fun EpubParagraphEditDialog(
             shadowElevation = 8.dp,
             modifier = Modifier
                 .adaptiveDialogWidth(AdaptiveDialogWidth.Preview)
-                .heightIn(max = 520.dp)
+                .heightIn(max = layoutMetrics.maxDialogHeightDp.dp)
+                .imePadding()
         ) {
             Column(
-                modifier = Modifier.padding(14.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
@@ -182,20 +208,38 @@ internal fun EpubParagraphEditDialog(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-                BasicTextField(
-                    value = editValue,
-                    onValueChange = { editValue = it },
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 120.dp, max = 360.dp)
-                        .focusRequester(focusRequester)
-                        .verticalScroll(rememberScrollState()),
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(
-                        fontFamily = FontFamily.Monospace,
-                        color = MaterialTheme.colorScheme.onSurface
-                    ),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary)
-                )
+                        .heightIn(
+                            min = layoutMetrics.minEditorHeightDp.dp,
+                            max = layoutMetrics.maxEditorHeightDp.dp
+                        )
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.18f),
+                            ControlShape
+                        )
+                        .border(
+                            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                            ControlShape
+                        )
+                        .padding(layoutMetrics.editorPaddingDp.dp)
+                ) {
+                    BasicTextField(
+                        value = editValue,
+                        onValueChange = { editValue = it },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .focusRequester(focusRequester)
+                            .verticalScroll(rememberScrollState()),
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(
+                            fontFamily = FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Default),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary)
+                    )
+                }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
