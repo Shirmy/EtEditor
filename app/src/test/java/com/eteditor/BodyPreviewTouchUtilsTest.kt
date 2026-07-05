@@ -1,6 +1,8 @@
 package com.eteditor
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BodyPreviewTouchUtilsTest {
@@ -30,5 +32,27 @@ class BodyPreviewTouchUtilsTest {
     fun restoreOffsetIfSavedOnlyWhenSaveSucceeds() {
         assertEquals(128, restoreOffsetIfSaved(saved = true, bodyOffset = 128))
         assertEquals(null, restoreOffsetIfSaved(saved = false, bodyOffset = 128))
+    }
+
+    @Test
+    fun previewTouchConsumesDoubleTapSuppressionOnlyWhileInteractive() {
+        assertTrue(
+            shouldConsumePreviewTouchEvent(
+                interactive = true,
+                suppressingDoubleTap = true
+            )
+        )
+        assertFalse(
+            shouldConsumePreviewTouchEvent(
+                interactive = true,
+                suppressingDoubleTap = false
+            )
+        )
+        assertFalse(
+            shouldConsumePreviewTouchEvent(
+                interactive = false,
+                suppressingDoubleTap = true
+            )
+        )
     }
 }

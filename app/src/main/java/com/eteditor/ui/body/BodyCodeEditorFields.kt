@@ -314,12 +314,20 @@ internal fun restoreOffsetIfSaved(saved: Boolean, bodyOffset: Int): Int? {
     return if (saved) bodyOffset.coerceAtLeast(0) else null
 }
 
+internal fun shouldConsumePreviewTouchEvent(
+    interactive: Boolean,
+    suppressingDoubleTap: Boolean
+): Boolean {
+    return interactive && suppressingDoubleTap
+}
+
 private fun io.github.rosemoe.sora.widget.CodeEditor.configureTxtPreviewGestures(
     interactive: Boolean,
     onDoubleTap: ((Int) -> Unit)?,
     onLongPressLine: ((Int) -> Unit)?
 ) {
     val editor = this
+    var suppressDoubleTapTouch = false
     val gestureDetector = android.view.GestureDetector(
         context,
         object : android.view.GestureDetector.SimpleOnGestureListener() {
@@ -341,6 +349,8 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.configureTxtPreviewGestures
                         .coerceIn(0, content.getColumnCount(line))
                     content.getCharIndex(line, column).coerceIn(0, content.length)
                 }.getOrDefault(0)
+                suppressDoubleTapTouch = true
+                editor.clearReadOnlySelectionAndActionWindow(visibleOffset)
                 callback(visibleOffset)
                 return true
             }
@@ -355,10 +365,36 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.configureTxtPreviewGestures
         }
     )
     setOnTouchListener { _, event ->
-        if (!interactive) return@setOnTouchListener false
+        if (!interactive) {
+            suppressDoubleTapTouch = false
+            return@setOnTouchListener false
+        }
         gestureDetector.onTouchEvent(event)
-        false
+        val consume = shouldConsumePreviewTouchEvent(
+            interactive = interactive,
+            suppressingDoubleTap = suppressDoubleTapTouch
+        )
+        if (
+            event.actionMasked == android.view.MotionEvent.ACTION_UP ||
+            event.actionMasked == android.view.MotionEvent.ACTION_CANCEL
+        ) {
+            suppressDoubleTapTouch = false
+        }
+        consume
     }
+}
+
+private fun io.github.rosemoe.sora.widget.CodeEditor.clearReadOnlySelectionAndActionWindow(index: Int) {
+    runCatching {
+        val content = getText()
+        if (content.length <= 0) {
+            setSelection(0, 0, false)
+        } else {
+            val position = content.getIndexer().getCharPosition(index.coerceIn(0, content.length))
+            setSelection(position.getLine(), position.getColumn(), false)
+        }
+    }
+    getComponent(EditorTextActionWindow::class.java)?.dismiss()
 }
 
 private fun CodeEditor.configureReadOnlySelectionActions(
