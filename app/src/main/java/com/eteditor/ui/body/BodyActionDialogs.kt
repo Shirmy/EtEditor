@@ -8,9 +8,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -33,6 +36,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -41,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
 @Composable
@@ -136,19 +142,30 @@ internal fun EpubLongPressSplitChapterDialog(
 }
 
 internal data class ParagraphEditDialogLayoutMetrics(
+    val minDialogHeightDp: Int,
     val maxDialogHeightDp: Int,
     val minEditorHeightDp: Int,
-    val maxEditorHeightDp: Int,
-    val editorPaddingDp: Int
+    val editorPaddingDp: Int,
+    val verticalMarginDp: Int
 )
 
 internal fun paragraphEditDialogLayoutMetrics(): ParagraphEditDialogLayoutMetrics {
     return ParagraphEditDialogLayoutMetrics(
+        minDialogHeightDp = 260,
         maxDialogHeightDp = 430,
-        minEditorHeightDp = 180,
-        maxEditorHeightDp = 260,
-        editorPaddingDp = 10
+        minEditorHeightDp = 120,
+        editorPaddingDp = 10,
+        verticalMarginDp = 32
     )
+}
+
+internal fun paragraphEditDialogHeightDp(
+    screenHeightDp: Int,
+    imeBottomDp: Int,
+    metrics: ParagraphEditDialogLayoutMetrics = paragraphEditDialogLayoutMetrics()
+): Int {
+    val availableHeight = screenHeightDp - imeBottomDp.coerceAtLeast(0) - metrics.verticalMarginDp
+    return availableHeight.coerceIn(metrics.minDialogHeightDp, metrics.maxDialogHeightDp)
 }
 
 @Composable
@@ -176,6 +193,16 @@ internal fun EpubParagraphEditDialog(
     val editableParagraph = remember(paragraphText) { editableParagraphContent(paragraphText) }
     var editValue by remember(editableParagraph) { mutableStateOf(editableParagraph.text) }
     val layoutMetrics = remember { paragraphEditDialogLayoutMetrics() }
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val imeBottomDp = with(density) {
+        WindowInsets.ime.getBottom(this).toDp().value.roundToInt()
+    }
+    val dialogHeightDp = paragraphEditDialogHeightDp(
+        screenHeightDp = configuration.screenHeightDp,
+        imeBottomDp = imeBottomDp,
+        metrics = layoutMetrics
+    )
     val focusRequester = remember { FocusRequester() }
     val hostView = LocalView.current
     LaunchedEffect(chapterIndex, bodyOffset, editableParagraph) {
@@ -194,12 +221,12 @@ internal fun EpubParagraphEditDialog(
             shadowElevation = 8.dp,
             modifier = Modifier
                 .adaptiveDialogWidth(AdaptiveDialogWidth.Preview)
-                .heightIn(max = layoutMetrics.maxDialogHeightDp.dp)
+                .height(dialogHeightDp.dp)
                 .imePadding()
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .fillMaxSize()
                     .padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -211,10 +238,8 @@ internal fun EpubParagraphEditDialog(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(
-                            min = layoutMetrics.minEditorHeightDp.dp,
-                            max = layoutMetrics.maxEditorHeightDp.dp
-                        )
+                        .weight(1f)
+                        .heightIn(min = layoutMetrics.minEditorHeightDp.dp)
                         .background(
                             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.18f),
                             ControlShape
