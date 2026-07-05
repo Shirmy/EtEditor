@@ -13,6 +13,7 @@ class BodyActionDialogUiUtilsTest {
         assertTrue(metrics.maxDialogHeightDp <= 430)
         assertTrue(metrics.maxDialogHeightDp >= metrics.minDialogHeightDp + 120)
         assertTrue(metrics.minEditorHeightDp >= 120)
+        assertTrue(metrics.headerActionSizeDp in 32..40)
         assertTrue(metrics.editorPaddingDp >= 8)
     }
 

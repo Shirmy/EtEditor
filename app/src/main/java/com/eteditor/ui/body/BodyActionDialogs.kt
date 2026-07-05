@@ -16,12 +16,19 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -32,6 +39,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -145,6 +153,7 @@ internal data class ParagraphEditDialogLayoutMetrics(
     val minDialogHeightDp: Int,
     val maxDialogHeightDp: Int,
     val minEditorHeightDp: Int,
+    val headerActionSizeDp: Int,
     val editorPaddingDp: Int,
     val verticalMarginDp: Int
 )
@@ -154,6 +163,7 @@ internal fun paragraphEditDialogLayoutMetrics(): ParagraphEditDialogLayoutMetric
         minDialogHeightDp = 260,
         maxDialogHeightDp = 430,
         minEditorHeightDp = 120,
+        headerActionSizeDp = 34,
         editorPaddingDp = 10,
         verticalMarginDp = 32
     )
@@ -203,8 +213,23 @@ internal fun EpubParagraphEditDialog(
         imeBottomDp = imeBottomDp,
         metrics = layoutMetrics
     )
+    val canSave = editValue != editableParagraph.text
     val focusRequester = remember { FocusRequester() }
     val hostView = LocalView.current
+    fun confirmEdit() {
+        val start = paragraphRange.first.coerceIn(0, bodyText.length)
+        val end = paragraphRange.second.coerceIn(0, bodyText.length)
+        val editedParagraphText = editableParagraph.withEditedText(editValue)
+        val newBody = bodyText.substring(0, start) +
+            editedParagraphText +
+            bodyText.substring(end)
+        val restoreOffset = paragraphEditRestoreOffset(
+            paragraphRange = start to end,
+            bodyOffset = bodyOffset,
+            editedTextLength = editValue.length
+        )
+        onConfirm(newBody, restoreOffset)
+    }
     LaunchedEffect(chapterIndex, bodyOffset, editableParagraph) {
         delay(120)
         runCatching { focusRequester.requestFocus() }
@@ -230,11 +255,43 @@ internal fun EpubParagraphEditDialog(
                     .padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text(
-                    text = "编辑段落",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "编辑段落",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(
+                        onClick = onDismiss,
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        modifier = Modifier.size(layoutMetrics.headerActionSizeDp.dp)
+                    ) {
+                        Icon(Icons.Outlined.Close, contentDescription = "取消", modifier = Modifier.size(18.dp))
+                    }
+                    IconButton(
+                        onClick = { confirmEdit() },
+                        enabled = canSave,
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.primary,
+                            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                        ),
+                        modifier = Modifier.size(layoutMetrics.headerActionSizeDp.dp)
+                    ) {
+                        Icon(Icons.Outlined.Save, contentDescription = "保存", modifier = Modifier.size(18.dp))
+                    }
+                }
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -264,40 +321,6 @@ internal fun EpubParagraphEditDialog(
                         keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Default),
                         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary)
                     )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Spacer(Modifier.weight(1f))
-                    TextButton(
-                        onClick = onDismiss,
-                        shape = ControlShape,
-                        contentPadding = CompactButtonPadding
-                    ) {
-                        Text("取消", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Button(
-                        onClick = {
-                            val start = paragraphRange.first.coerceIn(0, bodyText.length)
-                            val end = paragraphRange.second.coerceIn(0, bodyText.length)
-                            val editedParagraphText = editableParagraph.withEditedText(editValue)
-                            val newBody = bodyText.substring(0, start) +
-                                editedParagraphText +
-                                bodyText.substring(end)
-                            val restoreOffset = paragraphEditRestoreOffset(
-                                paragraphRange = start to end,
-                                bodyOffset = bodyOffset,
-                                editedTextLength = editValue.length
-                            )
-                            onConfirm(newBody, restoreOffset)
-                        },
-                        enabled = editValue != editableParagraph.text,
-                        shape = ControlShape,
-                        contentPadding = CompactButtonPadding
-                    ) {
-                        Text("保存")
-                    }
                 }
             }
         }
