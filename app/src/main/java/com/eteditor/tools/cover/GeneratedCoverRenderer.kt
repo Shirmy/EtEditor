@@ -34,7 +34,7 @@ private const val GENERATED_COVER_TWO_COL_START_FONT = 160f
 private const val GENERATED_COVER_TWO_COL_GAP_RATIO = 0.2f
 private const val GENERATED_COVER_TWO_COL_LEFT_MARGIN = 45f
 
-// 横排：字号固定，一行约 4-5 个汉字宽
+// 横排：默认字号固定，一行约 4-5 个汉字宽；超宽词放不下时缩小
 private const val GENERATED_COVER_H_SIDE_MARGIN = 50f
 private const val GENERATED_COVER_H_TOP_MARGIN = 90f
 private const val GENERATED_COVER_H_FONT_SIZE = 150f
@@ -232,18 +232,38 @@ private fun generatedCoverIsLetters(word: String): Boolean {
     return GENERATED_COVER_LETTERS.matches(word)
 }
 
-// 横排：固定字号，按词折行（连续字母串整体不断行），整体靠上、水平居中
+internal fun fitGeneratedCoverHorizontalFontSize(
+    initialFontSize: Float,
+    minFontSize: Float,
+    availableWidth: Float,
+    widestWordWidth: Float
+): Float {
+    if (availableWidth <= 0f || widestWordWidth <= availableWidth) return initialFontSize
+    return (initialFontSize * availableWidth / widestWordWidth)
+        .coerceIn(minFontSize, initialFontSize)
+}
+
+// 横排：默认固定字号，按词折行（连续字母串整体不断行），整体靠上、水平居中
 private fun drawGeneratedCoverHorizontal(canvas: Canvas, title: String, paint: Paint) {
     paint.textSize = GENERATED_COVER_H_FONT_SIZE
     val words = GENERATED_COVER_WORD.findAll(title).map { it.value }.toList()
     val availableW = GENERATED_COVER_WIDTH - 2 * GENERATED_COVER_H_SIDE_MARGIN
-    val space = GENERATED_COVER_H_FONT_SIZE * GENERATED_COVER_H_SPACE_RATIO
 
     fun wordWidth(word: String): Float {
         val b = Rect()
         paint.getTextBounds(word, 0, word.length, b)
         return b.right.toFloat()
     }
+
+    paint.textSize = fitGeneratedCoverHorizontalFontSize(
+        initialFontSize = GENERATED_COVER_H_FONT_SIZE,
+        minFontSize = GENERATED_COVER_MIN_FONT,
+        availableWidth = availableW,
+        widestWordWidth = words.maxOfOrNull { word -> wordWidth(word) } ?: 0f
+    )
+    val fontSize = paint.textSize
+    val space = fontSize * GENERATED_COVER_H_SPACE_RATIO
+
     // 词间缝：仅当相邻两词有一方是字母串时才留缝，汉字之间贴排
     fun gapBefore(prev: String?, cur: String): Float {
         if (prev == null) return 0f
@@ -279,7 +299,7 @@ private fun drawGeneratedCoverHorizontal(canvas: Canvas, title: String, paint: P
         return total
     }
 
-    val lineStep = GENERATED_COVER_H_FONT_SIZE * GENERATED_COVER_H_LINE_RATIO
+    val lineStep = fontSize * GENERATED_COVER_H_LINE_RATIO
     val titleChars = titleCharacters(title)
     val bounds = generatedCoverCharacterBounds(titleChars, paint)
     val minTop = bounds.minOf { it.top }
