@@ -14,13 +14,6 @@ data class GeneratedCoverPreview(
     val convertedFromMediaType: String? = null
 )
 
-internal data class CoverTitleLayout(
-    val left: Float,
-    val y: Float,
-    val fontSize: Float,
-    val step: Float
-)
-
 internal data class PreparedCoverImage(
     val bytes: ByteArray,
     val mediaType: String,

@@ -12,11 +12,43 @@ import android.graphics.Typeface
 
 private const val GENERATED_COVER_WIDTH = 900
 private const val GENERATED_COVER_HEIGHT = 1200
-internal const val GENERATED_COVER_MAX_CHARS = 9
+
+// 标题总字数上限（每个汉字、每个散字母各算一个字，超过则不生成）
+internal const val GENERATED_COVER_MAX_CHARS = 16
+// 竖排时不超过该字数走单列，超过则走双列
+private const val GENERATED_COVER_SINGLE_COLUMN_MAX = 9
+
 private const val GENERATED_COVER_TITLE_RIGHT = 855f
-private const val GENERATED_COVER_TITLE_BOTTOM = 1186f
+private const val GENERATED_COVER_TOP_MARGIN = 50f
+private const val GENERATED_COVER_BOTTOM_LIMIT = 1150f
+private const val GENERATED_COVER_STEP_RATIO = 1.15f
+private const val GENERATED_COVER_MIN_FONT = 20f
+
+// 单列字号：字数越多字号越小，1 字最大、9 字最小，中间平滑过渡
+private const val GENERATED_COVER_SINGLE_MAX_FONT = 300f
+private const val GENERATED_COVER_SINGLE_MIN_FONT = 140f
+
+// 双列：最右列先填满该字数，溢出进左列
+private const val GENERATED_COVER_FIRST_COL_MAX = 8
+private const val GENERATED_COVER_TWO_COL_START_FONT = 160f
+private const val GENERATED_COVER_TWO_COL_GAP_RATIO = 0.2f
+private const val GENERATED_COVER_TWO_COL_LEFT_MARGIN = 45f
+
+// 横排：字号固定，一行约 4-5 个汉字宽
+private const val GENERATED_COVER_H_SIDE_MARGIN = 50f
+private const val GENERATED_COVER_H_TOP_MARGIN = 90f
+private const val GENERATED_COVER_H_FONT_SIZE = 150f
+private const val GENERATED_COVER_H_LINE_RATIO = 1.25f
+private const val GENERATED_COVER_H_SPACE_RATIO = 0.15f
+
 private const val GENERATED_COVER_FONT_ASSET = "cover_generator/SourceHanSerifCN-Heavy-4.otf"
 private const val GENERATED_COVER_BACKGROUND_ASSET = "cover_generator/cover_background.jpg"
+
+// 连续两个及以上的字母/数字算一串"单词"，出现即整个标题走横排
+private val GENERATED_COVER_LETTER_RUN = Regex("[A-Za-z0-9]{2,}")
+// 分词：连续字母/数字为一词，其余每个字符各自成词
+private val GENERATED_COVER_WORD = Regex("[A-Za-z0-9]+|[^A-Za-z0-9]")
+private val GENERATED_COVER_LETTERS = Regex("[A-Za-z0-9]+")
 
 internal fun generatedCoverTargetMediaType(): String {
     return "image/jpeg"
@@ -49,17 +81,18 @@ internal fun buildGeneratedCover(
             error("封面标题最多 ${GENERATED_COVER_MAX_CHARS} 字")
         }
         val font = Typeface.createFromAsset(assets, GENERATED_COVER_FONT_ASSET)
-        val fontSize = generatedCoverTitleFontSize(chars.size)
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
-            color = Color.rgb(0, 43, 92)
-            typeface = font
-            textSize = fontSize
-            textAlign = Paint.Align.LEFT
-        }
-        val layout = generatedCoverTitleLayout(chars, paint)
-        paint.textSize = layout.fontSize
-        chars.forEachIndexed { index, char ->
-            canvas.drawText(char, layout.left, layout.y + index * layout.step, paint)
+        val paint = generatedCoverPaint(font)
+
+        when {
+            // 含连续字母串：整个标题横排
+            GENERATED_COVER_LETTER_RUN.containsMatchIn(title) ->
+                drawGeneratedCoverHorizontal(canvas, title, paint)
+            // 竖排：超过单列容量走双列
+            chars.size > GENERATED_COVER_SINGLE_COLUMN_MAX ->
+                drawGeneratedCoverTwoColumn(canvas, chars, paint)
+            // 竖排单列
+            else ->
+                drawGeneratedCoverSingleColumn(canvas, chars, paint)
         }
 
         val bytes = compressGeneratedCover(bitmap)
@@ -73,6 +106,14 @@ internal fun buildGeneratedCover(
     } finally {
         background.recycle()
         bitmap.recycle()
+    }
+}
+
+private fun generatedCoverPaint(font: Typeface): Paint {
+    return Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
+        color = Color.rgb(0, 43, 92)
+        typeface = font
+        textAlign = Paint.Align.LEFT
     }
 }
 
@@ -90,108 +131,172 @@ private fun drawGeneratedCoverBackground(canvas: Canvas, background: Bitmap) {
     canvas.drawBitmap(background, null, dest, paint)
 }
 
-private fun generatedCoverTitleFontSize(charCount: Int): Float {
-    val length = charCount.coerceAtLeast(1)
-    return when (length) {
-        1 -> 304f
-        2 -> 286f
-        3 -> 262f
-        4 -> 236f
-        5 -> 212f
-        6 -> 190f
-        7 -> 174f
-        8 -> 156f
-        else -> 144f
-    }
-}
-
-private fun generatedCoverTitleLayout(
-    chars: List<String>,
-    paint: Paint
-): CoverTitleLayout {
-    val length = chars.size.coerceAtLeast(1)
-    val fontSize = generatedCoverTitleFontSize(length)
-    paint.textSize = fontSize
-    val bounds = generatedCoverCharacterBounds(chars, paint)
-    val maxRight = bounds.maxOfOrNull { it.right }?.toFloat() ?: fontSize
-    val minTop = bounds.minOfOrNull { it.top }?.toFloat() ?: paint.fontMetrics.ascent
-    val maxBottom = bounds.maxOfOrNull { it.bottom }?.toFloat() ?: paint.fontMetrics.descent
-    val glyphHeight = maxBottom - minTop
-    val top = generatedCoverTitleTop(length)
-    val bottom = generatedCoverTitleBottom(length, top, glyphHeight)
-    val naturalStep = if (length <= 1) {
-        0f
-    } else {
-        (bottom - top - glyphHeight) / (length - 1)
-    }
-    val step = if (length <= 1) {
-        0f
-    } else {
-        naturalStep.coerceIn(
-            generatedCoverTitleMinStep(length, fontSize),
-            generatedCoverTitleMaxStep(length, fontSize)
-        )
-    }
-    return CoverTitleLayout(
-        left = GENERATED_COVER_TITLE_RIGHT - maxRight,
-        y = top - minTop,
-        fontSize = fontSize,
-        step = step
-    )
-}
-
-private fun generatedCoverTitleMinStep(length: Int, fontSize: Float): Float {
-    return when (length) {
-        2 -> fontSize * 1.08f
-        8 -> fontSize * 0.82f
-        9 -> fontSize * 0.8f
-        else -> fontSize * 0.68f
-    }
-}
-
-private fun generatedCoverTitleMaxStep(length: Int, fontSize: Float): Float {
-    return when (length) {
-        2 -> fontSize * 1.45f
-        8, 9 -> fontSize * 1.28f
-        else -> fontSize * 1.22f
-    }
+// 单列字号：n 字时在 300→140 之间线性取值
+private fun generatedCoverSingleColumnFontSize(charCount: Int): Float {
+    val n = charCount.coerceIn(1, GENERATED_COVER_SINGLE_COLUMN_MAX)
+    if (GENERATED_COVER_SINGLE_COLUMN_MAX <= 1) return GENERATED_COVER_SINGLE_MAX_FONT
+    val t = (n - 1).toFloat() / (GENERATED_COVER_SINGLE_COLUMN_MAX - 1)
+    return GENERATED_COVER_SINGLE_MAX_FONT -
+        (GENERATED_COVER_SINGLE_MAX_FONT - GENERATED_COVER_SINGLE_MIN_FONT) * t
 }
 
 private fun generatedCoverCharacterBounds(chars: List<String>, paint: Paint): List<Rect> {
     return chars.map { char ->
-        Rect().also { rect ->
-            paint.getTextBounds(char, 0, char.length, rect)
+        Rect().also { rect -> paint.getTextBounds(char, 0, char.length, rect) }
+    }
+}
+
+// 竖排单列：字号随字数平滑收敛，整列压在同一条中轴线上，靠右侧
+private fun drawGeneratedCoverSingleColumn(canvas: Canvas, chars: List<String>, paint: Paint) {
+    val n = chars.size
+    val available = GENERATED_COVER_BOTTOM_LIMIT - GENERATED_COVER_TOP_MARGIN
+
+    var fs = generatedCoverSingleColumnFontSize(n)
+    var bounds: List<Rect>
+    var minTop: Int
+    var step: Float
+    while (true) {
+        paint.textSize = fs
+        bounds = generatedCoverCharacterBounds(chars, paint)
+        minTop = bounds.minOf { it.top }
+        val maxBottom = bounds.maxOf { it.bottom }
+        val glyphHeight = (maxBottom - minTop).toFloat()
+        step = if (n <= 1) 0f else fs * GENERATED_COVER_STEP_RATIO
+        val columnHeight = glyphHeight + (n - 1) * step
+        if (columnHeight <= available || fs <= GENERATED_COVER_MIN_FONT) break
+        fs -= 2f
+    }
+
+    val maxRight = bounds.maxOf { it.right }.toFloat()
+    val centerX = GENERATED_COVER_TITLE_RIGHT - maxRight / 2f
+    val y = GENERATED_COVER_TOP_MARGIN - minTop
+    chars.forEachIndexed { index, char ->
+        val b = bounds[index]
+        val mid = (b.left + b.right) / 2f
+        canvas.drawText(char, centerX - mid, y + index * step, paint)
+    }
+}
+
+// 竖排双列：最右列先填满 8 个，溢出进左列；两列各按列宽中轴线对齐，都靠右侧
+private fun drawGeneratedCoverTwoColumn(canvas: Canvas, chars: List<String>, paint: Paint) {
+    val n = chars.size
+    val rightCount = minOf(n, GENERATED_COVER_FIRST_COL_MAX)
+    val rightChars = chars.subList(0, rightCount)
+    val leftChars = chars.subList(rightCount, n)
+    val tall = maxOf(rightCount, leftChars.size)
+
+    val availableH = GENERATED_COVER_BOTTOM_LIMIT - GENERATED_COVER_TOP_MARGIN
+    val availableW = GENERATED_COVER_TITLE_RIGHT - GENERATED_COVER_TWO_COL_LEFT_MARGIN
+
+    var fs = GENERATED_COVER_TWO_COL_START_FONT
+    var minTop = 0
+    var glyphWidth = 0f
+    var step = 0f
+    var gap = 0f
+    while (true) {
+        paint.textSize = fs
+        val bounds = generatedCoverCharacterBounds(chars, paint)
+        minTop = bounds.minOf { it.top }
+        val maxBottom = bounds.maxOf { it.bottom }
+        val glyphHeight = (maxBottom - minTop).toFloat()
+        glyphWidth = bounds.maxOf { it.right }.toFloat()
+        step = fs * GENERATED_COVER_STEP_RATIO
+        gap = glyphWidth * GENERATED_COVER_TWO_COL_GAP_RATIO
+        val columnHeight = glyphHeight + (tall - 1) * step
+        val totalWidth = (if (leftChars.isNotEmpty()) 2f else 1f) * glyphWidth +
+            (if (leftChars.isNotEmpty()) gap else 0f)
+        if ((columnHeight <= availableH && totalWidth <= availableW) ||
+            fs <= GENERATED_COVER_MIN_FONT
+        ) {
+            break
+        }
+        fs -= 2f
+    }
+
+    paint.textSize = fs
+    val y0 = GENERATED_COVER_TOP_MARGIN - minTop
+    val rightColumnCenter = GENERATED_COVER_TITLE_RIGHT - glyphWidth / 2f
+    val leftColumnCenter = GENERATED_COVER_TITLE_RIGHT - glyphWidth - gap - glyphWidth / 2f
+
+    rightChars.forEachIndexed { index, char ->
+        val b = Rect().also { paint.getTextBounds(char, 0, char.length, it) }
+        canvas.drawText(char, rightColumnCenter - b.right / 2f, y0 + index * step, paint)
+    }
+    leftChars.forEachIndexed { index, char ->
+        val b = Rect().also { paint.getTextBounds(char, 0, char.length, it) }
+        canvas.drawText(char, leftColumnCenter - b.right / 2f, y0 + index * step, paint)
+    }
+}
+
+private fun generatedCoverIsLetters(word: String): Boolean {
+    return GENERATED_COVER_LETTERS.matches(word)
+}
+
+// 横排：固定字号，按词折行（连续字母串整体不断行），整体靠上、水平居中
+private fun drawGeneratedCoverHorizontal(canvas: Canvas, title: String, paint: Paint) {
+    paint.textSize = GENERATED_COVER_H_FONT_SIZE
+    val words = GENERATED_COVER_WORD.findAll(title).map { it.value }.toList()
+    val availableW = GENERATED_COVER_WIDTH - 2 * GENERATED_COVER_H_SIDE_MARGIN
+    val space = GENERATED_COVER_H_FONT_SIZE * GENERATED_COVER_H_SPACE_RATIO
+
+    fun wordWidth(word: String): Float {
+        val b = Rect()
+        paint.getTextBounds(word, 0, word.length, b)
+        return b.right.toFloat()
+    }
+    // 词间缝：仅当相邻两词有一方是字母串时才留缝，汉字之间贴排
+    fun gapBefore(prev: String?, cur: String): Float {
+        if (prev == null) return 0f
+        return if (generatedCoverIsLetters(prev) || generatedCoverIsLetters(cur)) space else 0f
+    }
+
+    val lines = mutableListOf<MutableList<String>>()
+    var current = mutableListOf<String>()
+    var currentWidth = 0f
+    var prev: String? = null
+    for (word in words) {
+        val ww = wordWidth(word)
+        val add = ww + (if (current.isNotEmpty()) gapBefore(prev, word) else 0f)
+        if (current.isNotEmpty() && currentWidth + add > availableW) {
+            lines.add(current)
+            current = mutableListOf(word)
+            currentWidth = ww
+        } else {
+            current.add(word)
+            currentWidth += add
+        }
+        prev = word
+    }
+    if (current.isNotEmpty()) lines.add(current)
+
+    fun lineWidth(lineWords: List<String>): Float {
+        var total = 0f
+        var p: String? = null
+        for (word in lineWords) {
+            total += gapBefore(p, word) + wordWidth(word)
+            p = word
+        }
+        return total
+    }
+
+    val lineStep = GENERATED_COVER_H_FONT_SIZE * GENERATED_COVER_H_LINE_RATIO
+    val titleChars = titleCharacters(title)
+    val bounds = generatedCoverCharacterBounds(titleChars, paint)
+    val minTop = bounds.minOf { it.top }
+    val y0 = GENERATED_COVER_H_TOP_MARGIN - minTop
+
+    lines.forEachIndexed { lineIndex, lineWords ->
+        val lw = lineWidth(lineWords)
+        var x = (GENERATED_COVER_WIDTH - lw) / 2f
+        val y = y0 + lineIndex * lineStep
+        var p: String? = null
+        for (word in lineWords) {
+            x += gapBefore(p, word)
+            canvas.drawText(word, x, y, paint)
+            x += wordWidth(word)
+            p = word
         }
     }
-}
-
-private fun generatedCoverTitleTop(length: Int): Float {
-    return when (length) {
-        1 -> 54f
-        2 -> 44f
-        3 -> 18f
-        4 -> 8f
-        5 -> 6f
-        6 -> 8f
-        7 -> 10f
-        8 -> 7f
-        else -> 4f
-    }
-}
-
-private fun generatedCoverTitleBottom(length: Int, top: Float, glyphHeight: Float): Float {
-    val preferred = when (length) {
-        1 -> top + glyphHeight
-        2 -> 620f
-        3 -> 780f
-        4 -> 950f
-        5 -> 1010f
-        6 -> 1100f
-        7 -> 1130f
-        8 -> 1180f
-        else -> GENERATED_COVER_TITLE_BOTTOM
-    }
-    return preferred.coerceAtMost(GENERATED_COVER_TITLE_BOTTOM)
 }
 
 private fun titleCharacters(title: String): List<String> {

@@ -569,17 +569,17 @@ class ToolParameterOverrideUtilsTest {
                 toolId = "generate_cover",
                 values = mapOf(
                     COVER_PARAM_MODE to COVER_MODE_GENERATE,
-                    COVER_PARAM_TITLE to "一二三四五六七八九"
+                    COVER_PARAM_TITLE to "一二三四五六七八九十一二三四五六"
                 )
             )
         )
         assertEquals(
-            "封面标题最大 9 字",
+            "封面标题最大 16 字",
             toolParameterSaveError(
                 toolId = "generate_cover",
                 values = mapOf(
                     COVER_PARAM_MODE to COVER_MODE_GENERATE,
-                    COVER_PARAM_TITLE to "一二三四五六七八九十"
+                    COVER_PARAM_TITLE to "一二三四五六七八九十一二三四五六七"
                 )
             )
         )
