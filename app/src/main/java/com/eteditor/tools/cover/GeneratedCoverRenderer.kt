@@ -207,9 +207,10 @@ private fun drawGeneratedCoverTwoColumn(canvas: Canvas, chars: List<String>, pai
     var glyphWidth = 0f
     var step = 0f
     var gap = 0f
+    var bounds: List<Rect> = emptyList()
     while (true) {
         paint.textSize = fs
-        val bounds = generatedCoverCharacterBounds(chars, paint)
+        bounds = generatedCoverCharacterBounds(chars, paint)
         minTop = bounds.minOf { it.top }
         val maxBottom = bounds.maxOf { it.bottom }
         val glyphHeight = (maxBottom - minTop).toFloat()
@@ -233,17 +234,13 @@ private fun drawGeneratedCoverTwoColumn(canvas: Canvas, chars: List<String>, pai
     val leftColumnCenter = GENERATED_COVER_TITLE_RIGHT - glyphWidth - gap - glyphWidth / 2f
 
     rightChars.forEachIndexed { index, char ->
-        val b = Rect().also { paint.getTextBounds(char, 0, char.length, it) }
+        val b = bounds[index]
         canvas.drawText(char, rightColumnCenter - b.right / 2f, y0 + index * step, paint)
     }
     leftChars.forEachIndexed { index, char ->
-        val b = Rect().also { paint.getTextBounds(char, 0, char.length, it) }
+        val b = bounds[rightCount + index]
         canvas.drawText(char, leftColumnCenter - b.right / 2f, y0 + index * step, paint)
     }
-}
-
-private fun generatedCoverIsLetters(word: String): Boolean {
-    return GENERATED_COVER_LETTERS.matches(word)
 }
 
 internal fun fitGeneratedCoverHorizontalFontSize(
@@ -281,7 +278,13 @@ private fun drawGeneratedCoverHorizontal(canvas: Canvas, title: String, paint: P
     // 词间缝：仅当相邻两词有一方是字母串时才留缝，汉字之间贴排
     fun gapBefore(prev: String?, cur: String): Float {
         if (prev == null) return 0f
-        return if (generatedCoverIsLetters(prev) || generatedCoverIsLetters(cur)) space else 0f
+        return if (GENERATED_COVER_LETTERS.matches(prev) ||
+            GENERATED_COVER_LETTERS.matches(cur)
+        ) {
+            space
+        } else {
+            0f
+        }
     }
 
     val lines = mutableListOf<MutableList<String>>()
