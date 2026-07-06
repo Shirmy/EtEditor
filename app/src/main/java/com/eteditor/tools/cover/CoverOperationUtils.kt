@@ -103,7 +103,7 @@ internal fun buildGeneratedCoverPreviewForTitle(
     if (coverTitleLength(cleanTitle) > GENERATED_COVER_MAX_CHARS) {
         return CoverToolPreviewResult(
             success = false,
-            message = "封面标题超过 $GENERATED_COVER_MAX_CHARS 字，已跳过生成封面"
+            message = "封面标题最多 $GENERATED_COVER_MAX_CHARS 字"
         )
     }
     return CoverToolPreviewResult(

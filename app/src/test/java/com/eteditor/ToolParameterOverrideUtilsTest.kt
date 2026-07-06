@@ -574,7 +574,7 @@ class ToolParameterOverrideUtilsTest {
             )
         )
         assertEquals(
-            "封面标题最大 16 字",
+            "封面标题最多 16 字",
             toolParameterSaveError(
                 toolId = "generate_cover",
                 values = mapOf(

@@ -25,7 +25,7 @@ internal fun toolParameterSaveError(
             title.isNotBlank() &&
             coverTitleLength(title) > GENERATED_COVER_MAX_CHARS
         ) {
-            return "封面标题最大 ${GENERATED_COVER_MAX_CHARS} 字"
+            return "封面标题最多 ${GENERATED_COVER_MAX_CHARS} 字"
         }
     }
     return null
