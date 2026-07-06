@@ -50,12 +50,29 @@ private val GENERATED_COVER_LETTER_RUN = Regex("[A-Za-z0-9]{2,}")
 private val GENERATED_COVER_WORD = Regex("[A-Za-z0-9]+|[^A-Za-z0-9]")
 private val GENERATED_COVER_LETTERS = Regex("[A-Za-z0-9]+")
 
+internal enum class GeneratedCoverTitleLayoutMode {
+    SingleColumn,
+    TwoColumn,
+    Horizontal
+}
+
 internal fun generatedCoverTargetMediaType(): String {
     return "image/jpeg"
 }
 
 internal fun coverTitleLength(title: String): Int {
     return title.codePointCount(0, title.length)
+}
+
+internal fun generatedCoverTitleLayoutMode(title: String): GeneratedCoverTitleLayoutMode {
+    return when {
+        GENERATED_COVER_LETTER_RUN.containsMatchIn(title) ->
+            GeneratedCoverTitleLayoutMode.Horizontal
+        coverTitleLength(title) > GENERATED_COVER_SINGLE_COLUMN_MAX ->
+            GeneratedCoverTitleLayoutMode.TwoColumn
+        else ->
+            GeneratedCoverTitleLayoutMode.SingleColumn
+    }
 }
 
 internal fun buildGeneratedCover(
@@ -83,15 +100,12 @@ internal fun buildGeneratedCover(
         val font = Typeface.createFromAsset(assets, GENERATED_COVER_FONT_ASSET)
         val paint = generatedCoverPaint(font)
 
-        when {
-            // 含连续字母串：整个标题横排
-            GENERATED_COVER_LETTER_RUN.containsMatchIn(title) ->
+        when (generatedCoverTitleLayoutMode(title)) {
+            GeneratedCoverTitleLayoutMode.Horizontal ->
                 drawGeneratedCoverHorizontal(canvas, title, paint)
-            // 竖排：超过单列容量走双列
-            chars.size > GENERATED_COVER_SINGLE_COLUMN_MAX ->
+            GeneratedCoverTitleLayoutMode.TwoColumn ->
                 drawGeneratedCoverTwoColumn(canvas, chars, paint)
-            // 竖排单列
-            else ->
+            GeneratedCoverTitleLayoutMode.SingleColumn ->
                 drawGeneratedCoverSingleColumn(canvas, chars, paint)
         }
 
@@ -132,7 +146,7 @@ private fun drawGeneratedCoverBackground(canvas: Canvas, background: Bitmap) {
 }
 
 // 单列字号：n 字时在 300→140 之间线性取值
-private fun generatedCoverSingleColumnFontSize(charCount: Int): Float {
+internal fun generatedCoverSingleColumnFontSize(charCount: Int): Float {
     val n = charCount.coerceIn(1, GENERATED_COVER_SINGLE_COLUMN_MAX)
     if (GENERATED_COVER_SINGLE_COLUMN_MAX <= 1) return GENERATED_COVER_SINGLE_MAX_FONT
     val t = (n - 1).toFloat() / (GENERATED_COVER_SINGLE_COLUMN_MAX - 1)
