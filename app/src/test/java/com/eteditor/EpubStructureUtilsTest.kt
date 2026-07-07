@@ -215,6 +215,37 @@ class EpubStructureUtilsTest {
     }
 
     @Test
+    fun moveEpubChapterAfterInBookDropsDigitPaddingFromDisplayTitles() {
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第001章"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第002章"),
+                chapter("c12", "OEBPS/Text/Chapter0012.xhtml", "第012章")
+            )
+        )
+
+        val result = moveEpubChapterAfterInBook(
+            book = book,
+            sourceIndex = 2,
+            targetIndex = -1,
+            bookStartTarget = MOVE_TARGET_BOOK_START,
+            bookEndTarget = MOVE_TARGET_BOOK_END
+        )
+
+        assertTrue(result.success)
+        assertEquals(listOf("c12", "c1", "c2"), book.chapters.map { it.id })
+        assertEquals(listOf("第1章", "第2章", "第3章"), book.chapters.map { it.title })
+        assertEquals(
+            listOf(
+                "OEBPS/Text/Chapter0012.xhtml",
+                "OEBPS/Text/Chapter0001.xhtml",
+                "OEBPS/Text/Chapter0002.xhtml"
+            ),
+            book.chapters.map { it.path }
+        )
+    }
+
+    @Test
     fun moveEpubChapterAfterInBookKeepsTitleLineBreakStyle() {
         val book = sampleBook(
             listOf(
@@ -391,6 +422,24 @@ class EpubStructureUtilsTest {
         assertTrue(book.entries.containsKey("OEBPS/Text/Chapter0002.xhtml"))
         assertFalse(book.entries.containsKey("OEBPS/Text/Chapter0003.xhtml"))
         assertTrue(String(book.entries.getValue("OEBPS/Text/Chapter0002.xhtml"), StandardCharsets.UTF_8).contains("第2章"))
+    }
+
+    @Test
+    fun deleteEpubChapterFromBookDropsDigitPaddingFromDisplayTitles() {
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第001章"),
+                chapter("c12", "OEBPS/Text/Chapter0002.xhtml", "第012章"),
+                chapter("c3", "OEBPS/Text/Chapter0003.xhtml", "第003章")
+            )
+        )
+
+        val result = deleteEpubChapterFromBook(book, chapterIndex = 1)
+
+        assertTrue(result.success)
+        assertEquals(listOf("c1", "c3"), book.chapters.map { it.id })
+        assertEquals(listOf("第1章", "第2章"), book.chapters.map { it.title })
+        assertEquals(listOf("OEBPS/Text/Chapter0001.xhtml", "OEBPS/Text/Chapter0002.xhtml"), book.chapters.map { it.path })
     }
 
     @Test

@@ -804,11 +804,11 @@ private fun renderEpubTitleNumber(number: Int, sample: String): String {
     }.joinToString("")
     val asciiDigits = normalized.all { it in '0'..'9' }
     if (asciiDigits) {
-        val padded = number.toString().padStart(normalized.length, '0')
+        val rendered = number.toString()
         return if (sample.all { it in '０'..'９' }) {
-            padded.map { char -> ('０'.code + (char.code - '0'.code)).toChar() }.joinToString("")
+            rendered.map { char -> ('０'.code + (char.code - '0'.code)).toChar() }.joinToString("")
         } else {
-            padded
+            rendered
         }
     }
     return number.toChineseChapterNumber()
