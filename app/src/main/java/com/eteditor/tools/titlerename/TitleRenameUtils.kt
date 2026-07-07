@@ -44,6 +44,20 @@ internal fun titleRenameScopeLabel(
 private val titleRenameExistingNumberPrefixRegex = Regex(
     """^(?:第\s*[零〇一二两三四五六七八九十百千万亿壹贰叁肆伍陆柒捌玖拾佰仟0-9０-９]{1,12}\s*[章节回卷部集]|[0-9]{1,5}\s*[、.．])\s*(.*)${'$'}"""
 )
+private val titleRenameHtmlTitleTagRegex =
+    Regex("""<title[^>]*>.*?</title>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+private val titleRenameHtmlHeadingRegex =
+    Regex("""<((?:h1|h2|h3))([^>]*)>(.*?)</\1>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+private val titleRenameHtmlBreakTagRegex = Regex("""<br\b[^>]*>""", RegexOption.IGNORE_CASE)
+private val titleRenameChapterPrefixRegex = Regex(
+    """^(第\s*[零〇一二两三四五六七八九十百千万亿壹贰叁肆伍陆柒捌玖拾佰仟0-9０-９]{1,12}\s*(?:章|节|節|回|卷|部|集|篇|话|話))\s*([\s\S]*)${'$'}"""
+)
+private val titleRenameWhitespaceRegex = Regex("""\s+""")
+
+private data class TitleRenameHeadingBreakLayout(
+    val segments: List<String>,
+    val breaks: List<String>
+)
 
 internal fun buildTitleRenamePlanItems(
     parameters: TitleRenameParameters,
@@ -246,12 +260,81 @@ internal suspend fun applyRenamedTitlesToEpubWithProgress(
 private fun applyRenamedTitleToEpubChapter(book: EpubBook, index: Int, title: String): Boolean {
     val chapter = book.chapters.getOrNull(index) ?: return false
     chapter.title = title
-    chapter.html = ChapterDetector.updateHtmlTitle(chapter.html, title)
+    chapter.html = updateRenamedEpubHtmlTitle(chapter.html, title)
     chapter.wordCount = ChapterDetector.countHtmlChars(chapter.html)
     // 标题改写后必须同步回 book.entries：否则后续读取 entries 的步骤（如执行链里的文本替换/批量替换）
     // 会用旧标题的原始字节重写章节，把这里写入的标题清空。
     updateEpubChapterHtmlEntry(book, chapter)
     return true
+}
+
+private fun updateRenamedEpubHtmlTitle(html: String, title: String): String {
+    val headingMatch = titleRenameHtmlHeadingRegex.find(html)
+    val preservedHeadingHtml = headingMatch
+        ?.groupValues
+        ?.getOrNull(3)
+        ?.let { existingHeadingHtml -> renamedHeadingHtmlPreservingBreaks(existingHeadingHtml, title) }
+        ?: return ChapterDetector.updateHtmlTitle(html, title)
+
+    val escapedTitle = ChapterDetector.escapeHtml(ChapterDetector.cleanTitle(title))
+    val updatedTitle = if (titleRenameHtmlTitleTagRegex.containsMatchIn(html)) {
+        html.replace(titleRenameHtmlTitleTagRegex, "<title>$escapedTitle</title>")
+    } else {
+        html
+    }
+    val updatedHeadingMatch = titleRenameHtmlHeadingRegex.find(updatedTitle)
+        ?: return ChapterDetector.updateHtmlTitle(updatedTitle, title)
+    return updatedTitle.replaceRange(
+        updatedHeadingMatch.range,
+        "<${updatedHeadingMatch.groupValues[1]}${updatedHeadingMatch.groupValues[2]}>$preservedHeadingHtml</${updatedHeadingMatch.groupValues[1]}>"
+    )
+}
+
+private fun renamedHeadingHtmlPreservingBreaks(existingHeadingHtml: String, title: String): String? {
+    val layout = titleRenameHeadingBreakLayout(existingHeadingHtml) ?: return null
+    val segments = titleRenameSplitTitleForHeadingSegments(title, layout.segments.size)
+    return buildString {
+        segments.forEachIndexed { index, segment ->
+            append(ChapterDetector.escapeHtml(segment))
+            layout.breaks.getOrNull(index)?.let(::append)
+        }
+    }
+}
+
+private fun titleRenameHeadingBreakLayout(html: String): TitleRenameHeadingBreakLayout? {
+    val breaks = titleRenameHtmlBreakTagRegex.findAll(html).toList()
+    if (breaks.isEmpty()) return null
+    val segments = mutableListOf<String>()
+    val breakTags = mutableListOf<String>()
+    var start = 0
+    breaks.forEach { match ->
+        segments += html.substring(start, match.range.first)
+        breakTags += match.value
+        start = match.range.last + 1
+    }
+    segments += html.substring(start)
+    return TitleRenameHeadingBreakLayout(segments = segments, breaks = breakTags)
+}
+
+private fun titleRenameSplitTitleForHeadingSegments(title: String, segmentCount: Int): List<String> {
+    val cleanTitle = ChapterDetector.cleanTitle(title)
+    if (segmentCount <= 1) return listOf(cleanTitle)
+    val prefixMatch = titleRenameChapterPrefixRegex.find(cleanTitle)
+    if (prefixMatch != null) {
+        val prefix = ChapterDetector.cleanTitle(prefixMatch.groupValues[1])
+        val suffix = ChapterDetector.cleanTitle(prefixMatch.groupValues[2])
+        return listOf(prefix) + titleRenameSplitTextIntoSegments(suffix, segmentCount - 1)
+    }
+    return titleRenameSplitTextIntoSegments(cleanTitle, segmentCount)
+}
+
+private fun titleRenameSplitTextIntoSegments(text: String, segmentCount: Int): List<String> {
+    if (segmentCount <= 0) return emptyList()
+    val cleanText = ChapterDetector.cleanTitle(text)
+    if (segmentCount == 1) return listOf(cleanText)
+    if (cleanText.isBlank()) return List(segmentCount) { "" }
+    val segments = cleanText.split(titleRenameWhitespaceRegex, limit = segmentCount)
+    return segments + List((segmentCount - segments.size).coerceAtLeast(0)) { "" }
 }
 
 internal suspend fun applyRenamedTitlesToTxtWithProgress(
