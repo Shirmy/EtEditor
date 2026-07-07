@@ -246,6 +246,37 @@ class EpubStructureUtilsTest {
     }
 
     @Test
+    fun moveEpubChapterAfterInBookDropsFullwidthDigitPaddingFromDisplayTitles() {
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第００１章"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第００２章"),
+                chapter("c12", "OEBPS/Text/Chapter0012.xhtml", "第０１２章")
+            )
+        )
+
+        val result = moveEpubChapterAfterInBook(
+            book = book,
+            sourceIndex = 2,
+            targetIndex = -1,
+            bookStartTarget = MOVE_TARGET_BOOK_START,
+            bookEndTarget = MOVE_TARGET_BOOK_END
+        )
+
+        assertTrue(result.success)
+        assertEquals(listOf("c12", "c1", "c2"), book.chapters.map { it.id })
+        assertEquals(listOf("第１章", "第２章", "第３章"), book.chapters.map { it.title })
+        assertEquals(
+            listOf(
+                "OEBPS/Text/Chapter0012.xhtml",
+                "OEBPS/Text/Chapter0001.xhtml",
+                "OEBPS/Text/Chapter0002.xhtml"
+            ),
+            book.chapters.map { it.path }
+        )
+    }
+
+    @Test
     fun moveEpubChapterAfterInBookKeepsTitleLineBreakStyle() {
         val book = sampleBook(
             listOf(

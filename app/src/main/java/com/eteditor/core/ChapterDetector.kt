@@ -622,8 +622,8 @@ object ChapterDetector {
         return statuses
     }
 
-    private val titleRegex = Regex("""<title[^>]*>(.*?)</title>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
-    private val headingRegex = Regex("""<((?:h1|h2|h3))([^>]*)>(.*?)</\1>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+    internal val titleRegex = Regex("""<title[^>]*>(.*?)</title>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+    internal val headingRegex = Regex("""<((?:h1|h2|h3))([^>]*)>(.*?)</\1>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
     private val bodyRegex = Regex("""<body\b[^>]*>(.*?)</body>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
     private val bodyOpenRegex = Regex("""<body\b[^>]*>""", RegexOption.IGNORE_CASE)
     private val bodyCloseRegex = Regex("""</body>""", RegexOption.IGNORE_CASE)

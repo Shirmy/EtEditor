@@ -44,10 +44,7 @@ internal fun titleRenameScopeLabel(
 private val titleRenameExistingNumberPrefixRegex = Regex(
     """^(?:第\s*[零〇一二两三四五六七八九十百千万亿壹贰叁肆伍陆柒捌玖拾佰仟0-9０-９]{1,12}\s*[章节回卷部集]|[0-9]{1,5}\s*[、.．])\s*(.*)${'$'}"""
 )
-private val titleRenameHtmlTitleTagRegex =
-    Regex("""<title[^>]*>.*?</title>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
-private val titleRenameHtmlHeadingRegex =
-    Regex("""<((?:h1|h2|h3))([^>]*)>(.*?)</\1>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+
 private val titleRenameHtmlBreakTagRegex = Regex("""<br\b[^>]*>""", RegexOption.IGNORE_CASE)
 private val titleRenameChapterPrefixRegex = Regex(
     """^(第\s*[零〇一二两三四五六七八九十百千万亿壹贰叁肆伍陆柒捌玖拾佰仟0-9０-９]{1,12}\s*(?:章|节|節|回|卷|部|集|篇|话|話))\s*([\s\S]*)${'$'}"""
@@ -269,7 +266,7 @@ private fun applyRenamedTitleToEpubChapter(book: EpubBook, index: Int, title: St
 }
 
 private fun updateRenamedEpubHtmlTitle(html: String, title: String): String {
-    val headingMatch = titleRenameHtmlHeadingRegex.find(html)
+    val headingMatch = ChapterDetector.headingRegex.find(html)
     val preservedHeadingHtml = headingMatch
         ?.groupValues
         ?.getOrNull(3)
@@ -277,12 +274,12 @@ private fun updateRenamedEpubHtmlTitle(html: String, title: String): String {
         ?: return ChapterDetector.updateHtmlTitle(html, title)
 
     val escapedTitle = ChapterDetector.escapeHtml(ChapterDetector.cleanTitle(title))
-    val updatedTitle = if (titleRenameHtmlTitleTagRegex.containsMatchIn(html)) {
-        html.replace(titleRenameHtmlTitleTagRegex, "<title>$escapedTitle</title>")
+    val updatedTitle = if (ChapterDetector.titleRegex.containsMatchIn(html)) {
+        html.replace(ChapterDetector.titleRegex, "<title>$escapedTitle</title>")
     } else {
         html
     }
-    val updatedHeadingMatch = titleRenameHtmlHeadingRegex.find(updatedTitle)
+    val updatedHeadingMatch = ChapterDetector.headingRegex.find(updatedTitle)
         ?: return ChapterDetector.updateHtmlTitle(updatedTitle, title)
     return updatedTitle.replaceRange(
         updatedHeadingMatch.range,
