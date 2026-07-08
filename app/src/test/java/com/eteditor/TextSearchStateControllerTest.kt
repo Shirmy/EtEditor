@@ -39,6 +39,32 @@ class TextSearchStateControllerTest {
     }
 
     @Test
+    fun replacementPreviewVisibleSectionsOnlyIncludeNonEmptyGroups() {
+        val allGroups = replacementPreview(
+            toolId = "tool-1",
+            multiRules = listOf(previewRule("multi", lineNo = 30)),
+            singleRules = listOf(previewRule("single", lineNo = 10)),
+            zeroRules = listOf(previewRule("zero", lineNo = 20))
+        )
+        val remainingGroups = replacementPreview(
+            toolId = "tool-1",
+            singleRules = listOf(previewRule("single", lineNo = 10)),
+            zeroRules = listOf(previewRule("zero", lineNo = 20))
+        )
+
+        assertEquals(
+            listOf(ReplacementPreviewSection.Multi, ReplacementPreviewSection.Single, ReplacementPreviewSection.Zero),
+            replacementPreviewVisibleSections(allGroups)
+        )
+        assertEquals(6, replacementPreviewListItemCount(allGroups))
+        assertEquals(
+            listOf(ReplacementPreviewSection.Single, ReplacementPreviewSection.Zero),
+            replacementPreviewVisibleSections(remainingGroups)
+        )
+        assertEquals(4, replacementPreviewListItemCount(remainingGroups))
+    }
+
+    @Test
     fun textSearchPreviewAfterBodyTextChangeKeepsToolIdWhenRebuilt() {
         val calls = mutableListOf<String>()
 

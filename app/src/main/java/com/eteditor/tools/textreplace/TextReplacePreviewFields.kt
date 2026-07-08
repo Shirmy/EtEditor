@@ -61,6 +61,22 @@ internal enum class ReplacementPreviewSection {
     Zero
 }
 
+internal fun replacementPreviewVisibleSections(preview: ReplacementFilePreview): List<ReplacementPreviewSection> {
+    return buildList {
+        if (preview.multiRules.isNotEmpty()) add(ReplacementPreviewSection.Multi)
+        if (preview.singleRules.isNotEmpty()) add(ReplacementPreviewSection.Single)
+        if (preview.zeroRules.isNotEmpty()) add(ReplacementPreviewSection.Zero)
+    }
+}
+
+internal fun replacementPreviewListItemCount(preview: ReplacementFilePreview): Int {
+    val count =
+        (if (preview.multiRules.isNotEmpty()) preview.multiRules.size + 1 else 0) +
+            (if (preview.singleRules.isNotEmpty()) preview.singleRules.size + 1 else 0) +
+            (if (preview.zeroRules.isNotEmpty()) preview.zeroRules.size + 1 else 0)
+    return count.coerceAtLeast(1)
+}
+
 internal data class ReplacementRuleApplySelectedState(
     val expandedRuleIds: Set<String>,
     val dimmedRuleIds: Set<String>
@@ -461,22 +477,10 @@ private fun ReplacementFilePreviewPane(
             controller.setAutomationRunStepProgress(step, executionProgress, executionLabel)
         }
     }
-    var selectedSection by remember(preview) {
-        mutableStateOf(
-            when {
-                preview.multiRules.isNotEmpty() -> ReplacementPreviewSection.Multi
-                preview.singleRules.isNotEmpty() -> ReplacementPreviewSection.Single
-                else -> ReplacementPreviewSection.Zero
-            }
-        )
-    }
-    val previewListItemCount = when (selectedSection) {
-        ReplacementPreviewSection.Multi -> preview.multiRules.size + 1
-        ReplacementPreviewSection.Single -> preview.singleRules.size + 1
-        ReplacementPreviewSection.Zero -> preview.zeroRules.size + 1
-    }
+    val visibleSections = remember(preview) { replacementPreviewVisibleSections(preview) }
+    val previewListItemCount = remember(preview) { replacementPreviewListItemCount(preview) }
     var invalidRulesMessage by remember(preview) { mutableStateOf<String?>(null) }
-    LaunchedEffect(selectedSection) {
+    LaunchedEffect(preview) {
         listState.scrollToItem(0)
     }
 
@@ -544,9 +548,7 @@ private fun ReplacementFilePreviewPane(
                 }
             }
             ReplacementPreviewStats(
-                preview = preview,
-                selectedSection = selectedSection,
-                onSelectSection = { section -> if (!executing) selectedSection = section }
+                preview = preview
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             if (executing) {
@@ -567,79 +569,77 @@ private fun ReplacementFilePreviewPane(
                         .padding(end = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    when (selectedSection) {
-                        ReplacementPreviewSection.Multi -> {
-                            item("multi-header") {
-                                ReplacementSectionHeader("多处匹配", preview.multiRules.size)
-                            }
-                            items(preview.multiRules, key = { it.id }) { rule ->
-                                ReplacementMultiRuleRow(
-                                    controller = controller,
-                                    rule = rule,
-                                    expanded = rule.id in expandedRuleIds,
-                                    selectedMatchIds = selectedMatchIds,
-                                    onToggleExpanded = {
-                                        expandedRuleIds = if (rule.id in expandedRuleIds) {
-                                            expandedRuleIds - rule.id
-                                        } else {
-                                            expandedRuleIds + rule.id
-                                        }
-                                    },
-                                    onToggleMatch = { matchId, checked ->
-                                        selectedMatchIds = if (checked) selectedMatchIds + matchId else selectedMatchIds - matchId
-                                    },
-                                    onSelectAll = {
-                                        selectedMatchIds = selectedMatchIds + rule.matches.map { it.id }
-                                    },
-                                    onClearAll = {
-                                        selectedMatchIds = selectedMatchIds - rule.matches.map { it.id }.toSet()
-                                    },
-                                    onApplySelected = {
-                                        // 仅标记为「待应用」：收缩 + 变淡，保留在列表，不立即写入；
-                                        // 实际替换交给底部「执行替换」统一执行（没勾选则不替换任何项）
-                                        val state = replacementRuleApplySelectedState(
-                                            ruleId = rule.id,
-                                            ruleMatchIds = rule.matches.map { it.id },
-                                            selectedMatchIds = selectedMatchIds,
-                                            expandedRuleIds = expandedRuleIds,
-                                            dimmedRuleIds = dimmedRuleIds
-                                        )
-                                        expandedRuleIds = state.expandedRuleIds
-                                        dimmedRuleIds = state.dimmedRuleIds
-                                    },
-                                    dimmed = rule.id in dimmedRuleIds,
-                                    enabled = !executing
-                                )
-                            }
+                    if (ReplacementPreviewSection.Multi in visibleSections) {
+                        item("multi-header") {
+                            ReplacementSectionHeader("多处匹配", preview.multiRules.size)
                         }
-                        ReplacementPreviewSection.Single -> {
-                            item("single-header") {
-                                ReplacementSectionHeader("单处匹配", preview.singleRules.size)
-                            }
-                            items(preview.singleRules, key = { it.id }) { rule ->
-                                ReplacementSingleRuleRow(
-                                    controller = controller,
-                                    rule = rule,
-                                    selectedMatchIds = selectedMatchIds,
-                                    onToggleMatch = { matchId, checked ->
-                                        selectedMatchIds = if (checked) selectedMatchIds + matchId else selectedMatchIds - matchId
+                        items(preview.multiRules, key = { "multi-${it.id}" }) { rule ->
+                            ReplacementMultiRuleRow(
+                                controller = controller,
+                                rule = rule,
+                                expanded = rule.id in expandedRuleIds,
+                                selectedMatchIds = selectedMatchIds,
+                                onToggleExpanded = {
+                                    expandedRuleIds = if (rule.id in expandedRuleIds) {
+                                        expandedRuleIds - rule.id
+                                    } else {
+                                        expandedRuleIds + rule.id
                                     }
-                                )
-                            }
-                        }
-                        ReplacementPreviewSection.Zero -> {
-                            item("zero-header") {
-                                ReplacementSectionHeader("无匹配", preview.zeroRules.size)
-                            }
-                            items(preview.zeroRules, key = { it.id }) { rule ->
-                                ReplacementZeroRuleRow(rule)
-                            }
+                                },
+                                onToggleMatch = { matchId, checked ->
+                                    selectedMatchIds = if (checked) selectedMatchIds + matchId else selectedMatchIds - matchId
+                                },
+                                onSelectAll = {
+                                    selectedMatchIds = selectedMatchIds + rule.matches.map { it.id }
+                                },
+                                onClearAll = {
+                                    selectedMatchIds = selectedMatchIds - rule.matches.map { it.id }.toSet()
+                                },
+                                onApplySelected = {
+                                    // 仅标记为「待应用」：收缩 + 变淡，保留在列表，不立即写入；
+                                    // 实际替换交给底部「执行替换」统一执行（没勾选则不替换任何项）
+                                    val state = replacementRuleApplySelectedState(
+                                        ruleId = rule.id,
+                                        ruleMatchIds = rule.matches.map { it.id },
+                                        selectedMatchIds = selectedMatchIds,
+                                        expandedRuleIds = expandedRuleIds,
+                                        dimmedRuleIds = dimmedRuleIds
+                                    )
+                                    expandedRuleIds = state.expandedRuleIds
+                                    dimmedRuleIds = state.dimmedRuleIds
+                                },
+                                dimmed = rule.id in dimmedRuleIds,
+                                enabled = !executing
+                            )
                         }
                     }
-                    if (previewListItemCount <= 1) {
+                    if (ReplacementPreviewSection.Single in visibleSections) {
+                        item("single-header") {
+                            ReplacementSectionHeader("单处匹配", preview.singleRules.size)
+                        }
+                        items(preview.singleRules, key = { "single-${it.id}" }) { rule ->
+                            ReplacementSingleRuleRow(
+                                controller = controller,
+                                rule = rule,
+                                selectedMatchIds = selectedMatchIds,
+                                onToggleMatch = { matchId, checked ->
+                                    selectedMatchIds = if (checked) selectedMatchIds + matchId else selectedMatchIds - matchId
+                                }
+                            )
+                        }
+                    }
+                    if (ReplacementPreviewSection.Zero in visibleSections) {
+                        item("zero-header") {
+                            ReplacementSectionHeader("无匹配", preview.zeroRules.size)
+                        }
+                        items(preview.zeroRules, key = { "zero-${it.id}" }) { rule ->
+                            ReplacementZeroRuleRow(rule)
+                        }
+                    }
+                    if (visibleSections.isEmpty()) {
                         item("empty-section") {
                             Text(
-                                text = "当前分类没有规则",
+                                text = "当前没有规则",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)

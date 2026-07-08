@@ -35,36 +35,28 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 internal fun ReplacementPreviewStats(
-    preview: ReplacementFilePreview,
-    selectedSection: ReplacementPreviewSection,
-    onSelectSection: (ReplacementPreviewSection) -> Unit
+    preview: ReplacementFilePreview
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
         if (preview.multiRules.isNotEmpty()) {
             ReplacementStatChip(
                 "多处",
                 preview.multiRules.size.toString(),
-                Modifier.weight(1f),
-                selected = selectedSection == ReplacementPreviewSection.Multi,
-                onClick = { onSelectSection(ReplacementPreviewSection.Multi) }
+                Modifier.weight(1f)
             )
         }
         if (preview.singleRules.isNotEmpty()) {
             ReplacementStatChip(
                 "单处",
                 preview.singleRules.size.toString(),
-                Modifier.weight(1f),
-                selected = selectedSection == ReplacementPreviewSection.Single,
-                onClick = { onSelectSection(ReplacementPreviewSection.Single) }
+                Modifier.weight(1f)
             )
         }
         if (preview.zeroRules.isNotEmpty()) {
             ReplacementStatChip(
                 "无匹配",
                 preview.zeroRules.size.toString(),
-                Modifier.weight(1f),
-                selected = selectedSection == ReplacementPreviewSection.Zero,
-                onClick = { onSelectSection(ReplacementPreviewSection.Zero) }
+                Modifier.weight(1f)
             )
         }
     }
