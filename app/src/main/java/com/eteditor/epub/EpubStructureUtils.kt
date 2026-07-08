@@ -298,19 +298,16 @@ internal fun moveEpubChapterAfterInBook(
         book.spineIds.addAll(book.chapters.map { it.id })
     }
     applyVolumeTocLevels(book)
-    // 移动仅重排标题编号, 不重命名文件: 移动只改顺序, 保持文件名/内部链接稳定; 删除与拆分改变章节数量才重连号文件名
-    val titleChanges = resequenceEpubNumberedTitles(
+    val resequence = resequenceEpubBodyChaptersAfterStructureChange(
         book = book,
-        targetIndices = epubBodyChapterIndices(book),
         preferredTitleSource = source.title,
-        forceNumberedIndex = null,
-        preserveTitleLineBreakStyle = true
+        forceNumberedIndex = null
     )
     return EpubChapterMoveResult(
         success = true,
         movedDisplayTitle = movedDisplayTitle,
         nextPreviewIndex = insertIndex,
-        resequence = EpubStructureResequenceResult(renamedFiles = 0, renamedTitles = titleChanges)
+        resequence = resequence
     )
 }
 
@@ -410,19 +407,16 @@ internal fun moveEpubChaptersAfterInBook(
         book.spineIds.addAll(book.chapters.map { it.id })
     }
     applyVolumeTocLevels(book)
-    // 移动仅重排标题编号, 不重命名文件: 移动只改顺序, 保持文件名/内部链接稳定; 删除与拆分改变章节数量才重连号文件名
-    val titleChanges = resequenceEpubNumberedTitles(
+    val resequence = resequenceEpubBodyChaptersAfterStructureChange(
         book = book,
-        targetIndices = epubBodyChapterIndices(book),
         preferredTitleSource = movingChapters.firstOrNull()?.title.orEmpty(),
-        forceNumberedIndex = null,
-        preserveTitleLineBreakStyle = true
+        forceNumberedIndex = null
     )
     return EpubChapterMoveResult(
         success = true,
         movedDisplayTitle = "${movingChapters.size} 章",
         nextPreviewIndex = insertIndex,
-        resequence = EpubStructureResequenceResult(renamedFiles = 0, renamedTitles = titleChanges)
+        resequence = resequence
     )
 }
 

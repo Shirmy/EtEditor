@@ -209,9 +209,46 @@ class EpubStructureUtilsTest {
         )
 
         assertTrue(result.success)
-        assertEquals(EpubStructureResequenceResult(renamedFiles = 0, renamedTitles = 3), result.resequence)
+        assertEquals(EpubStructureResequenceResult(renamedFiles = 3, renamedTitles = 3), result.resequence)
         assertEquals(listOf("c3", "c1", "c2"), book.chapters.map { it.id })
         assertEquals(listOf("第1章", "第2章", "第3章"), book.chapters.map { it.title })
+    }
+
+    @Test
+    fun moveEpubChapterAfterInBookResequencesBodyFilesAndEntries() {
+        val book = sampleBook(
+            listOf(
+                chapter("c0", "OEBPS/Text/Chapter0000.xhtml", "第0章"),
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章")
+            )
+        )
+
+        val result = moveEpubChapterAfterInBook(
+            book = book,
+            sourceIndex = 2,
+            targetIndex = MOVE_TARGET_BOOK_START,
+            bookStartTarget = MOVE_TARGET_BOOK_START,
+            bookEndTarget = MOVE_TARGET_BOOK_END
+        )
+
+        assertTrue(result.success)
+        assertEquals(EpubStructureResequenceResult(renamedFiles = 3, renamedTitles = 3), result.resequence)
+        assertEquals(listOf("c2", "c0", "c1"), book.chapters.map { it.id })
+        assertEquals(
+            listOf(
+                "OEBPS/Text/Chapter0000.xhtml",
+                "OEBPS/Text/Chapter0001.xhtml",
+                "OEBPS/Text/Chapter0002.xhtml"
+            ),
+            book.chapters.map { it.path }
+        )
+        assertEquals("OEBPS/Text/Chapter0000.xhtml", book.manifest.getValue("c2").path)
+        assertTrue(book.entries.containsKey("OEBPS/Text/Chapter0000.xhtml"))
+        assertTrue(book.entries.containsKey("OEBPS/Text/Chapter0001.xhtml"))
+        assertTrue(book.entries.containsKey("OEBPS/Text/Chapter0002.xhtml"))
+        assertEquals(listOf("第0章", "第1章", "第2章"), book.chapters.map { it.title })
+        assertTrue(String(book.entries.getValue("OEBPS/Text/Chapter0000.xhtml"), StandardCharsets.UTF_8).contains("第0章"))
     }
 
     @Test
@@ -237,9 +274,9 @@ class EpubStructureUtilsTest {
         assertEquals(listOf("第1章", "第2章", "第3章"), book.chapters.map { it.title })
         assertEquals(
             listOf(
-                "OEBPS/Text/Chapter0012.xhtml",
                 "OEBPS/Text/Chapter0001.xhtml",
-                "OEBPS/Text/Chapter0002.xhtml"
+                "OEBPS/Text/Chapter0002.xhtml",
+                "OEBPS/Text/Chapter0003.xhtml"
             ),
             book.chapters.map { it.path }
         )
@@ -268,9 +305,9 @@ class EpubStructureUtilsTest {
         assertEquals(listOf("第１章", "第２章", "第３章"), book.chapters.map { it.title })
         assertEquals(
             listOf(
-                "OEBPS/Text/Chapter0012.xhtml",
                 "OEBPS/Text/Chapter0001.xhtml",
-                "OEBPS/Text/Chapter0002.xhtml"
+                "OEBPS/Text/Chapter0002.xhtml",
+                "OEBPS/Text/Chapter0003.xhtml"
             ),
             book.chapters.map { it.path }
         )
@@ -302,7 +339,7 @@ class EpubStructureUtilsTest {
         assertTrue(result.success)
         assertEquals("第1章 标题三", book.chapters[0].title)
         assertTrue(book.chapters[0].html.contains("""<h1 class="chapter-title_01">第1章<br/>标题三</h1>"""))
-        val entryHtml = String(book.entries.getValue("OEBPS/Text/Chapter0003.xhtml"), StandardCharsets.UTF_8)
+        val entryHtml = String(book.entries.getValue("OEBPS/Text/Chapter0001.xhtml"), StandardCharsets.UTF_8)
         assertTrue(entryHtml.contains("""<h1 class="chapter-title_01">第1章<br/>标题三</h1>"""))
     }
 
@@ -348,10 +385,45 @@ class EpubStructureUtilsTest {
         )
 
         assertTrue(result.success)
-        assertEquals(EpubStructureResequenceResult(renamedFiles = 0, renamedTitles = 2), result.resequence)
+        assertEquals(EpubStructureResequenceResult(renamedFiles = 2, renamedTitles = 2), result.resequence)
         assertEquals(listOf("c1", "c2", "c4", "c3"), book.chapters.map { it.id })
         assertEquals(listOf("c1", "c2", "c4", "c3"), book.spineIds)
         assertEquals(listOf("第1章", "第2章", "第3章", "第4章"), book.chapters.map { it.title })
+    }
+
+    @Test
+    fun moveEpubChaptersAfterInBookResequencesBodyFilesAndEntries() {
+        val book = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章"),
+                chapter("c3", "OEBPS/Text/Chapter0003.xhtml", "第3章"),
+                chapter("c4", "OEBPS/Text/Chapter0004.xhtml", "第4章")
+            )
+        )
+
+        val result = moveEpubChaptersAfterInBook(
+            book = book,
+            sourceIndices = setOf(1, 3),
+            targetIndex = 0,
+            bookStartTarget = MOVE_TARGET_BOOK_START,
+            bookEndTarget = MOVE_TARGET_BOOK_END
+        )
+
+        assertTrue(result.success)
+        assertEquals(EpubStructureResequenceResult(renamedFiles = 2, renamedTitles = 2), result.resequence)
+        assertEquals(listOf("c1", "c2", "c4", "c3"), book.chapters.map { it.id })
+        assertEquals(
+            listOf(
+                "OEBPS/Text/Chapter0001.xhtml",
+                "OEBPS/Text/Chapter0002.xhtml",
+                "OEBPS/Text/Chapter0003.xhtml",
+                "OEBPS/Text/Chapter0004.xhtml"
+            ),
+            book.chapters.map { it.path }
+        )
+        assertEquals("OEBPS/Text/Chapter0003.xhtml", book.manifest.getValue("c4").path)
+        assertTrue(String(book.entries.getValue("OEBPS/Text/Chapter0003.xhtml"), StandardCharsets.UTF_8).contains("第3章"))
     }
 
     @Test
