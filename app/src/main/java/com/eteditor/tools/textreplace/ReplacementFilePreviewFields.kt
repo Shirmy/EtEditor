@@ -66,13 +66,9 @@ internal fun ReplacementPreviewStats(
 private fun ReplacementStatChip(
     label: String,
     value: String,
-    modifier: Modifier = Modifier,
-    selected: Boolean = false,
-    onClick: (() -> Unit)? = null
+    modifier: Modifier = Modifier
 ) {
     val chipContent: @Composable () -> Unit = {
-        val labelColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-        val valueColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
         Row(
             modifier = Modifier
                 .fillMaxSize()
@@ -83,7 +79,7 @@ private fun ReplacementStatChip(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = labelColor,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
@@ -92,39 +88,21 @@ private fun ReplacementStatChip(
                 text = value,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = valueColor,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1
             )
         }
     }
-    if (onClick == null) {
-        Surface(
-            shape = RowShape,
-            color = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.54f)
-                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),
-            border = BorderStroke(
-                1.dp,
-                if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.56f)
-                else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
-            ),
-            modifier = modifier.height(32.dp),
-            content = chipContent
-        )
-    } else {
-        Surface(
-            onClick = onClick,
-            shape = RowShape,
-            color = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.64f)
-                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.48f),
-            border = BorderStroke(
-                1.dp,
-                if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.68f)
-                else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
-            ),
-            modifier = modifier.height(32.dp),
-            content = chipContent
-        )
-    }
+    Surface(
+        shape = RowShape,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),
+        border = BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
+        ),
+        modifier = modifier.height(32.dp),
+        content = chipContent
+    )
 }
 
 @Composable
