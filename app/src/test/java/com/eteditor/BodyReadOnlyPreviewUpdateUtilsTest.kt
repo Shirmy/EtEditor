@@ -11,7 +11,8 @@ class BodyReadOnlyPreviewUpdateUtilsTest {
             configChanged = false,
             contentApplied = true,
             layoutChanged = false,
-            positionChanged = false
+            positionChanged = false,
+            interactive = true
         )
 
         assertEquals(ReadOnlyPreviewUpdateAction.ApplyStableContent, action)
@@ -24,7 +25,8 @@ class BodyReadOnlyPreviewUpdateUtilsTest {
             configChanged = true,
             contentApplied = true,
             layoutChanged = false,
-            positionChanged = false
+            positionChanged = false,
+            interactive = true
         )
 
         assertEquals(ReadOnlyPreviewUpdateAction.ApplyStableContent, action)
@@ -37,7 +39,8 @@ class BodyReadOnlyPreviewUpdateUtilsTest {
             configChanged = false,
             contentApplied = false,
             layoutChanged = false,
-            positionChanged = true
+            positionChanged = true,
+            interactive = true
         )
 
         assertEquals(ReadOnlyPreviewUpdateAction.ApplyStableContent, action)
@@ -50,7 +53,8 @@ class BodyReadOnlyPreviewUpdateUtilsTest {
             configChanged = false,
             contentApplied = true,
             layoutChanged = true,
-            positionChanged = false
+            positionChanged = false,
+            interactive = true
         )
 
         assertEquals(ReadOnlyPreviewUpdateAction.ApplyStableContent, action)
@@ -63,10 +67,25 @@ class BodyReadOnlyPreviewUpdateUtilsTest {
             configChanged = false,
             contentApplied = true,
             layoutChanged = false,
-            positionChanged = true
+            positionChanged = true,
+            interactive = true
         )
 
         assertEquals(ReadOnlyPreviewUpdateAction.ApplyPositionOnly, action)
+    }
+
+    @Test
+    fun readOnlyPreviewUpdateDefersPositionOnlyWhileNotInteractive() {
+        val action = readOnlyPreviewUpdateAction(
+            contentChanged = false,
+            configChanged = false,
+            contentApplied = true,
+            layoutChanged = false,
+            positionChanged = true,
+            interactive = false
+        )
+
+        assertEquals(ReadOnlyPreviewUpdateAction.None, action)
     }
 
     @Test
@@ -76,7 +95,8 @@ class BodyReadOnlyPreviewUpdateUtilsTest {
             configChanged = false,
             contentApplied = true,
             layoutChanged = false,
-            positionChanged = false
+            positionChanged = false,
+            interactive = true
         )
 
         assertEquals(ReadOnlyPreviewUpdateAction.None, action)

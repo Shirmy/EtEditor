@@ -74,13 +74,14 @@ internal fun readOnlyPreviewUpdateAction(
     configChanged: Boolean,
     contentApplied: Boolean,
     layoutChanged: Boolean,
-    positionChanged: Boolean
+    positionChanged: Boolean,
+    interactive: Boolean
 ): ReadOnlyPreviewUpdateAction {
     return when {
         contentChanged || configChanged -> ReadOnlyPreviewUpdateAction.ApplyStableContent
         !contentApplied && positionChanged -> ReadOnlyPreviewUpdateAction.ApplyStableContent
         layoutChanged -> ReadOnlyPreviewUpdateAction.ApplyStableContent
-        contentApplied && positionChanged -> ReadOnlyPreviewUpdateAction.ApplyPositionOnly
+        contentApplied && positionChanged && interactive -> ReadOnlyPreviewUpdateAction.ApplyPositionOnly
         else -> ReadOnlyPreviewUpdateAction.None
     }
 }
@@ -755,7 +756,8 @@ internal fun LargeBodyReadOnlyPreview(
                 configChanged = configChanged,
                 contentApplied = contentAppliedNow,
                 layoutChanged = layoutChanged,
-                positionChanged = positionChanged
+                positionChanged = positionChanged,
+                interactive = interactive
             )
             if (updateAction != ReadOnlyPreviewUpdateAction.None) {
                 editor.tag = PreviewCodeEditorTag(contentKey, configKey, positionKey)
