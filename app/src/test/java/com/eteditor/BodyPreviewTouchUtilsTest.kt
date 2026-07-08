@@ -7,14 +7,25 @@ import org.junit.Test
 
 class BodyPreviewTouchUtilsTest {
     @Test
-    fun adjustPreviewDoubleTapYMovesBottomEdgeTapInsideTextArea() {
+    fun adjustPreviewDoubleTapYMovesOnlyBottomEdgeTapInsideLastRow() {
+        val adjusted = adjustPreviewDoubleTapY(
+            y = 499f,
+            editorHeight = 500,
+            rowHeight = 24
+        )
+
+        assertEquals(488f, adjusted, 0.01f)
+    }
+
+    @Test
+    fun adjustPreviewDoubleTapYKeepsLastVisibleLineTapUnchanged() {
         val adjusted = adjustPreviewDoubleTapY(
             y = 488f,
             editorHeight = 500,
             rowHeight = 24
         )
 
-        assertEquals(464f, adjusted, 0.01f)
+        assertEquals(488f, adjusted, 0.01f)
     }
 
     @Test

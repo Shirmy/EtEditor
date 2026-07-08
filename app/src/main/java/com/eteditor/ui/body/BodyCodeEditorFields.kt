@@ -305,7 +305,7 @@ internal fun adjustPreviewDoubleTapY(
     rowHeight: Int
 ): Float {
     if (editorHeight <= 0 || rowHeight <= 0) return y.coerceAtLeast(0f)
-    val bottomGuard = (rowHeight * 1.5f).coerceAtLeast(24f)
+    val bottomGuard = (rowHeight * 0.5f).coerceAtLeast(8f)
     val maxY = (editorHeight - bottomGuard).coerceAtLeast(0f)
     return y.coerceIn(0f, maxY)
 }
