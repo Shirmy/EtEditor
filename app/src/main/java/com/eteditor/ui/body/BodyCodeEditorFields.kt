@@ -59,8 +59,31 @@ private const val TXT_FULL_EDIT_WINDOW_EDGE_TRIGGER_PX = 1800
 private const val STABLE_LAYOUT_VISIBLE_FALLBACK_MS = 1000L
 private data class PreviewCodeEditorTag(
     val contentKey: Any,
-    val configKey: Any
+    val configKey: Any,
+    val positionKey: Any? = null
 )
+
+internal enum class ReadOnlyPreviewUpdateAction {
+    None,
+    ApplyStableContent,
+    ApplyPositionOnly
+}
+
+internal fun readOnlyPreviewUpdateAction(
+    contentChanged: Boolean,
+    configChanged: Boolean,
+    contentApplied: Boolean,
+    layoutChanged: Boolean,
+    positionChanged: Boolean
+): ReadOnlyPreviewUpdateAction {
+    return when {
+        contentChanged || configChanged -> ReadOnlyPreviewUpdateAction.ApplyStableContent
+        !contentApplied && positionChanged -> ReadOnlyPreviewUpdateAction.ApplyStableContent
+        layoutChanged -> ReadOnlyPreviewUpdateAction.ApplyStableContent
+        contentApplied && positionChanged -> ReadOnlyPreviewUpdateAction.ApplyPositionOnly
+        else -> ReadOnlyPreviewUpdateAction.None
+    }
+}
 
 internal data class BodyReadOnlySelectionAction(
     val title: String,
@@ -85,6 +108,19 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.previewContentKey(): Any? {
 
 private fun io.github.rosemoe.sora.widget.CodeEditor.previewConfigKey(): Any? {
     return (tag as? PreviewCodeEditorTag)?.configKey
+}
+
+private fun io.github.rosemoe.sora.widget.CodeEditor.previewPositionKey(): Any? {
+    return (tag as? PreviewCodeEditorTag)?.positionKey
+}
+
+private fun readOnlyPreviewStableApplyKey(contentKey: Any, positionKey: Any?): Any {
+    return contentKey to positionKey
+}
+
+private fun io.github.rosemoe.sora.widget.CodeEditor.previewStableApplyKey(): Any? {
+    val tag = tag as? PreviewCodeEditorTag ?: return null
+    return readOnlyPreviewStableApplyKey(tag.contentKey, tag.positionKey)
 }
 
 @Composable
@@ -659,7 +695,7 @@ internal fun LargeBodyReadOnlyPreview(
         AndroidView(
         factory = { context ->
             io.github.rosemoe.sora.widget.CodeEditor(context).apply {
-                tag = PreviewCodeEditorTag(contentKey, configKey)
+                tag = PreviewCodeEditorTag(contentKey, configKey, positionKey)
                 isEnabled = interactive
                 setText("")
                 setSelection(0, 0, false)
@@ -680,7 +716,14 @@ internal fun LargeBodyReadOnlyPreview(
                     actions = if (latestInteractive) latestSelectionActions else emptyList(),
                     selectionMenuEnabled = latestInteractive && latestOnLongPressLine == null
                 )
-                setPreviewTextAfterStableLayout(text, contentKey, highlightRange, scrollTargetOffset, scrollTargetLineIndex) {
+                setPreviewTextAfterStableLayout(
+                    text,
+                    contentKey,
+                    readOnlyPreviewStableApplyKey(contentKey, positionKey),
+                    highlightRange,
+                    scrollTargetOffset,
+                    scrollTargetLineIndex
+                ) {
                     appliedContentKey = contentKey
                     appliedPositionKey = positionKey
                     appliedLayoutSizeKey = latestLayoutSizeKey
@@ -692,8 +735,30 @@ internal fun LargeBodyReadOnlyPreview(
         update = { editor ->
             val contentChanged = editor.previewContentKey() != contentKey
             val configChanged = editor.previewConfigKey() != configKey
-            if (contentChanged || configChanged) {
-                editor.tag = PreviewCodeEditorTag(contentKey, configKey)
+            val contentAppliedNow = appliedContentKey == contentKey
+            val positionChanged = if (contentAppliedNow) {
+                appliedPositionKey != positionKey
+            } else {
+                editor.previewPositionKey() != positionKey
+            }
+            val layoutChanged = interactive &&
+                showLoading &&
+                contentAppliedNow &&
+                layoutSizeKey.first > 0 &&
+                layoutSizeKey.second > 0 &&
+                (
+                    appliedLayoutSizeKey != layoutSizeKey ||
+                        appliedExpectedLayoutSizeKey != expectedLayoutSizeKey
+                )
+            val updateAction = readOnlyPreviewUpdateAction(
+                contentChanged = contentChanged,
+                configChanged = configChanged,
+                contentApplied = contentAppliedNow,
+                layoutChanged = layoutChanged,
+                positionChanged = positionChanged
+            )
+            if (updateAction != ReadOnlyPreviewUpdateAction.None) {
+                editor.tag = PreviewCodeEditorTag(contentKey, configKey, positionKey)
             }
             editor.isEnabled = interactive
             if (configChanged) {
@@ -714,32 +779,29 @@ internal fun LargeBodyReadOnlyPreview(
                 actions = if (latestInteractive) latestSelectionActions else emptyList(),
                 selectionMenuEnabled = latestInteractive && latestOnLongPressLine == null
             )
-            if (contentChanged || configChanged) {
-                editor.setPreviewTextAfterStableLayout(text, contentKey, highlightRange, scrollTargetOffset, scrollTargetLineIndex) {
-                    appliedContentKey = contentKey
-                    appliedPositionKey = positionKey
-                    appliedLayoutSizeKey = latestLayoutSizeKey
-                    appliedExpectedLayoutSizeKey = latestExpectedLayoutSizeKey
+            when (updateAction) {
+                ReadOnlyPreviewUpdateAction.ApplyStableContent -> {
+                    editor.setPreviewTextAfterStableLayout(
+                        text,
+                        contentKey,
+                        readOnlyPreviewStableApplyKey(contentKey, positionKey),
+                        highlightRange,
+                        scrollTargetOffset,
+                        scrollTargetLineIndex
+                    ) {
+                        appliedContentKey = contentKey
+                        appliedPositionKey = positionKey
+                        appliedLayoutSizeKey = latestLayoutSizeKey
+                        appliedExpectedLayoutSizeKey = latestExpectedLayoutSizeKey
+                    }
                 }
-            } else if (
-                interactive &&
-                showLoading &&
-                appliedContentKey == contentKey &&
-                layoutSizeKey.first > 0 &&
-                layoutSizeKey.second > 0 &&
-                (
-                    appliedLayoutSizeKey != layoutSizeKey ||
-                        appliedExpectedLayoutSizeKey != expectedLayoutSizeKey
-                )
-            ) {
-                editor.setPreviewTextAfterStableLayout(text, contentKey, highlightRange, scrollTargetOffset, scrollTargetLineIndex) {
+                ReadOnlyPreviewUpdateAction.ApplyPositionOnly -> {
+                    if (interactive) {
+                        editor.applyPreviewHighlightOrScroll(highlightRange, scrollTargetOffset, scrollTargetLineIndex)
+                    }
                     appliedPositionKey = positionKey
-                    appliedLayoutSizeKey = latestLayoutSizeKey
-                    appliedExpectedLayoutSizeKey = latestExpectedLayoutSizeKey
                 }
-            } else if (interactive && appliedContentKey == contentKey && appliedPositionKey != positionKey) {
-                editor.applyPreviewHighlightOrScroll(highlightRange, scrollTargetOffset, scrollTargetLineIndex)
-                appliedPositionKey = positionKey
+                ReadOnlyPreviewUpdateAction.None -> Unit
             }
             onEditorReady?.invoke(editor)
         },
@@ -782,6 +844,7 @@ internal fun LargeBodyReadOnlyPreview(
 private fun io.github.rosemoe.sora.widget.CodeEditor.setPreviewTextAfterStableLayout(
     text: String,
     contentKey: Any,
+    applyKey: Any,
     highlightRange: Pair<Int, Int>?,
     scrollTargetOffset: Int?,
     scrollTargetLineIndex: Int?,
@@ -800,7 +863,7 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.setPreviewTextAfterStableLa
     // 保底防线：与可编辑器同理，分帧链中途断开时到点兜底，补设内容并强制恢复可见，
     // 确保只读预览不会卡在全透明、看不见正文的状态。
     postDelayed({
-        if (previewContentKey() == contentKey && !applied) {
+        if (previewStableApplyKey() == applyKey && !applied) {
             setText(text)
             rebuildPlainTextSoftWrap()
             setSelection(0, 0, false)
@@ -808,20 +871,20 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.setPreviewTextAfterStableLa
             applyOnce()
         }
     }, STABLE_LAYOUT_VISIBLE_FALLBACK_MS)
-    postWhenPreviewMeasured(contentKey) {
+    postWhenPreviewStableApplyMeasured(applyKey) {
         requestLayout()
-        postPreviewFrames(contentKey, 1) {
+        postPreviewStableApplyFrames(applyKey, 1) {
             setText(text)
             rebuildPlainTextSoftWrap()
             setSelection(0, 0, false)
             requestLayout()
             invalidate()
-            postPreviewFrames(contentKey, 6) {
+            postPreviewStableApplyFrames(applyKey, 6) {
                 rebuildPlainTextSoftWrap()
                 requestLayout()
                 invalidate()
                 applyPreviewHighlightOrScroll(highlightRange, scrollTargetOffset, scrollTargetLineIndex)
-                postPreviewFrames(contentKey, 2) {
+                postPreviewStableApplyFrames(applyKey, 2) {
                     applyOnce()
                 }
             }
@@ -844,6 +907,21 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.postWhenPreviewMeasured(
     }
 }
 
+private fun io.github.rosemoe.sora.widget.CodeEditor.postWhenPreviewStableApplyMeasured(
+    applyKey: Any,
+    attemptsLeft: Int = 8,
+    block: () -> Unit
+) {
+    postOnAnimation {
+        if (previewStableApplyKey() != applyKey) return@postOnAnimation
+        if ((width <= 0 || height <= 0) && attemptsLeft > 0) {
+            postWhenPreviewStableApplyMeasured(applyKey, attemptsLeft - 1, block)
+            return@postOnAnimation
+        }
+        block()
+    }
+}
+
 private fun io.github.rosemoe.sora.widget.CodeEditor.postPreviewFrames(
     contentKey: Any,
     frames: Int,
@@ -856,6 +934,21 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.postPreviewFrames(
     postOnAnimation {
         if (previewContentKey() != contentKey) return@postOnAnimation
         postPreviewFrames(contentKey, frames - 1, block)
+    }
+}
+
+private fun io.github.rosemoe.sora.widget.CodeEditor.postPreviewStableApplyFrames(
+    applyKey: Any,
+    frames: Int,
+    block: () -> Unit
+) {
+    if (frames <= 0) {
+        if (previewStableApplyKey() == applyKey) block()
+        return
+    }
+    postOnAnimation {
+        if (previewStableApplyKey() != applyKey) return@postOnAnimation
+        postPreviewStableApplyFrames(applyKey, frames - 1, block)
     }
 }
 
@@ -991,8 +1084,8 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.applyPreviewHighlight(range
     setSelection(endPosition.getLine(), endPosition.getColumn(), false)
     getComponent(EditorTextActionWindow::class.java)?.dismiss()
     scrollPreviewPositionCentered(endPosition.getLine(), endPosition.getColumn())
-    previewContentKey()?.let { contentKey ->
-        postPreviewFrames(contentKey, 2) {
+    previewStableApplyKey()?.let { applyKey ->
+        postPreviewStableApplyFrames(applyKey, 2) {
             scrollPreviewPositionCentered(endPosition.getLine(), endPosition.getColumn())
             getComponent(EditorTextActionWindow::class.java)?.dismiss()
         }
