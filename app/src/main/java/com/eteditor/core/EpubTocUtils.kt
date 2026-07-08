@@ -236,11 +236,19 @@ internal fun updateNavLinks(
             changed = true
         }
 
-        val chaptersByPath = linkedMapOf<String, EpubChapter>()
+        val chaptersByCurrentPath = linkedMapOf<String, EpubChapter>()
         chapters.forEach { chapter ->
-            chaptersByPath[chapter.path] = chapter
-            chaptersByPath[chapter.originalPath] = chapter
-            chapter.pathAliases.forEach { path -> chaptersByPath[path] = chapter }
+            chaptersByCurrentPath[chapter.path] = chapter
+        }
+        val chaptersByHistoricalPath = linkedMapOf<String, EpubChapter>()
+        fun addHistoricalPath(path: String, chapter: EpubChapter) {
+            if (path !in chaptersByCurrentPath && path !in chaptersByHistoricalPath) {
+                chaptersByHistoricalPath[path] = chapter
+            }
+        }
+        chapters.forEach { chapter ->
+            addHistoricalPath(chapter.originalPath, chapter)
+            chapter.pathAliases.forEach { path -> addHistoricalPath(path, chapter) }
         }
         doc.elements("a").forEach { anchor ->
             val hrefAttr = anchor.attr("href")
@@ -249,7 +257,11 @@ internal fun updateNavLinks(
             val fragment = hrefAttr.substringAfter('#', missingDelimiterValue = "")
             val rawPath = normalizePath(navDir + href)
             val decodedPath = normalizePath(navDir + href.decodeUrl())
-            val chapter = chaptersByPath[rawPath] ?: chaptersByPath[decodedPath] ?: return@forEach
+            val chapter = chaptersByCurrentPath[rawPath]
+                ?: chaptersByCurrentPath[decodedPath]
+                ?: chaptersByHistoricalPath[rawPath]
+                ?: chaptersByHistoricalPath[decodedPath]
+                ?: return@forEach
             val updatedHref = relativeHref(navDir, chapter.path).let {
                 if (fragment.isBlank()) it else "$it#$fragment"
             }

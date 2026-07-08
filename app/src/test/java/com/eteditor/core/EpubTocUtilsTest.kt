@@ -331,6 +331,42 @@ class EpubTocUtilsTest {
     }
 
     @Test
+    fun updateNavLinksPrefersCurrentChapterPathsWhenAliasesOverlapAfterMove() {
+        val nav = """
+            <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+                <body>
+                    <nav epub:type="toc">
+                        <ol><li><a href="Text/Chapter0001.xhtml">旧标题</a></li></ol>
+                    </nav>
+                </body>
+            </html>
+        """.trimIndent()
+        val chapters = listOf(
+            chapter("c3", "OEBPS/Text/Chapter0001.xhtml", "第三章")
+                .copy(originalPath = "OEBPS/Text/Chapter0003.xhtml", pathAliases = mutableSetOf("OEBPS/Text/Chapter0003.xhtml", "OEBPS/Text/Chapter0001.xhtml")),
+            chapter("c1", "OEBPS/Text/Chapter0002.xhtml", "第一章")
+                .copy(originalPath = "OEBPS/Text/Chapter0001.xhtml", pathAliases = mutableSetOf("OEBPS/Text/Chapter0001.xhtml", "OEBPS/Text/Chapter0002.xhtml")),
+            chapter("c2", "OEBPS/Text/Chapter0003.xhtml", "第二章")
+                .copy(originalPath = "OEBPS/Text/Chapter0002.xhtml", pathAliases = mutableSetOf("OEBPS/Text/Chapter0002.xhtml", "OEBPS/Text/Chapter0003.xhtml"))
+        )
+
+        val updated = updateNavLinks(
+            bytes = nav.bytes(),
+            navPath = "OEBPS/nav.xhtml",
+            chapters = chapters,
+            options = EpubExportOptions()
+        )
+        val entries = parseNavEntries(
+            entries = mapOf("OEBPS/nav.xhtml" to updated),
+            manifest = mapOf("nav" to manifest("nav", "OEBPS/nav.xhtml", "application/xhtml+xml", properties = "nav"))
+        )
+
+        assertEquals(TocEntry("第三章", 0), entries["OEBPS/Text/Chapter0001.xhtml"])
+        assertEquals(TocEntry("第一章", 0), entries["OEBPS/Text/Chapter0002.xhtml"])
+        assertEquals(TocEntry("第二章", 0), entries["OEBPS/Text/Chapter0003.xhtml"])
+    }
+
+    @Test
     fun updateNavLinksRewritesAliasLinksEvenWithoutTocNav() {
         val nav = """
             <html xmlns="http://www.w3.org/1999/xhtml">
