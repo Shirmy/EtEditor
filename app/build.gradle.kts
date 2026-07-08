@@ -68,9 +68,9 @@ android {
         applicationId = "com.eteditor"
         minSdk = 26
         targetSdk = 36
-        versionCode = 81
+        versionCode = 82
 
-        versionName = "5.4.1"
+        versionName = "5.4.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
