@@ -364,6 +364,42 @@ class TxtCatalogWorkflowUtilsTest {
         assertEquals(1, restored.second)
     }
 
+    @Test
+    fun restoreSupplementedCatalogLinesPreservesMixedLineEndings() {
+        val text = "第1章 A\r\n第2章 B 补\n正文\r第3章 C"
+
+        val restored = restoreTxtSupplementedCatalogLinesInText(
+            text = text,
+            records = listOf(
+                TxtSupplementedCatalogLine(
+                    lineIndex = 1,
+                    originalLine = "第2章 B",
+                    supplementedLine = "第2章 B 补"
+                )
+            )
+        )
+
+        assertEquals("第1章 A\r\n第2章 B\n正文\r第3章 C", restored.first)
+        assertEquals(1, restored.second)
+    }
+
+    @Test
+    fun remapAndRestoreSupplementedCatalogLinesHandleCrOnlyText() {
+        val text = "第1章 A\r第2章 B 补\r正文"
+        val record = TxtSupplementedCatalogLine(
+            lineIndex = 9,
+            originalLine = "第2章 B",
+            supplementedLine = "第2章 B 补"
+        )
+
+        val remapped = remapTxtSupplementedCatalogLines(text, listOf(record))
+        val restored = restoreTxtSupplementedCatalogLinesInText(text, remapped)
+
+        assertEquals(listOf(record.copy(lineIndex = 1)), remapped)
+        assertEquals("第1章 A\r第2章 B\r正文", restored.first)
+        assertEquals(1, restored.second)
+    }
+
     private fun chapterConfig(
         hiddenLineIndices: Set<Int> = emptySet()
     ): TxtChapterDetectionConfig {

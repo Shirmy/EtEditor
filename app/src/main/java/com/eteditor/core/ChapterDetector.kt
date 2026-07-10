@@ -223,22 +223,23 @@ object ChapterDetector {
     }
 
     fun updateTxtTitle(text: String, lineIndex: Int, newTitle: String): String {
-        val lines = text.split('\n').map { it.removeSuffix("\r") }.toMutableList()
-        if (lineIndex in lines.indices) {
-            lines[lineIndex] = newTitle
-        }
-        return lines.joinToString("\n")
+        val line = iterTextLines(text).getOrNull(lineIndex) ?: return text
+        return text.replaceRange(line.startIndex, line.endIndex, newTitle)
     }
 
     fun updateTxtTitles(text: String, titlesByLineIndex: Map<Int, String>): String {
         if (titlesByLineIndex.isEmpty()) return text
-        val lines = text.split('\n').map { it.removeSuffix("\r") }.toMutableList()
-        titlesByLineIndex.forEach { (lineIndex, title) ->
-            if (lineIndex in lines.indices && title.isNotBlank()) {
-                lines[lineIndex] = title
-            }
+        val replacements = iterTextLines(text).mapNotNull { line ->
+            val title = titlesByLineIndex[line.lineIndex]
+                ?.takeIf { it.isNotBlank() }
+                ?: return@mapNotNull null
+            line to title
         }
-        return lines.joinToString("\n")
+        var updated = text
+        replacements.asReversed().forEach { (line, title) ->
+            updated = updated.replaceRange(line.startIndex, line.endIndex, title)
+        }
+        return updated
     }
 
     fun cleanTitle(raw: String): String {

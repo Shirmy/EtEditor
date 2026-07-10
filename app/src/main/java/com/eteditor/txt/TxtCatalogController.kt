@@ -1,5 +1,6 @@
 package com.eteditor
 
+import com.eteditor.core.ChapterDetector
 import com.eteditor.core.DocumentKind
 import com.eteditor.core.TxtDocument
 import kotlinx.coroutines.CancellationException
@@ -460,26 +461,27 @@ fun EditorController.deleteTxtChapterBlocks(indices: Set<Int>): Boolean {
 
 fun EditorController.txtLineText(lineIndex: Int): String {
     val document = txt ?: return ""
-    val lines = document.text.split('\n').map { it.removeSuffix("\r") }
-    return lines.getOrNull(lineIndex).orEmpty()
+    val position = txtLinePositions(document.text).getOrNull(lineIndex) ?: return ""
+    return txtLineText(document.text, position.startIndex)
 }
 
 fun EditorController.suggestTxtSupplementChapterNumber(lineIndex: Int): String {
     val document = txt ?: return ""
-    val lines = document.text.split('\n').map { it.removeSuffix("\r") }
-    val line = lines.getOrNull(lineIndex)?.trim().orEmpty()
+    val position = txtLinePositions(document.text).getOrNull(lineIndex) ?: return ""
+    val line = txtLineText(document.text, position.startIndex).trim()
     return suggestTxtSupplementChapterNumberForLine(lineIndex, line, document.chapters)
 }
 
 fun EditorController.supplementTxtChapterLine(lineIndex: Int, chapterNumber: String): Boolean {
     if (warnTxtMoveChapterSyncPending("补章节")) return false
     val document = txt ?: return false
-    val lines = document.text.split('\n').map { it.removeSuffix("\r") }.toMutableList()
-    if (lineIndex !in lines.indices) {
+    val position = txtLinePositions(document.text).getOrNull(lineIndex)
+    if (position == null) {
         statusMessage = "行号无效"
         return false
     }
-    val line = lines.getOrNull(lineIndex)?.trim().orEmpty()
+    val originalLine = txtLineText(document.text, position.startIndex)
+    val line = originalLine.trim()
     if (line.isBlank()) {
         statusMessage = "当前行为空，不能补章节"
         return false
@@ -495,8 +497,6 @@ fun EditorController.supplementTxtChapterLine(lineIndex: Int, chapterNumber: Str
     val alreadyChapter = hasManualChapterPrefix(line)
     val supplementedLine = buildTxtSupplementedChapterLine(number, line)
     if (!alreadyChapter) {
-        val originalLine = lines[lineIndex]
-        lines[lineIndex] = supplementedLine
         txtSupplementedCatalogLines = txtSupplementedCatalogLines
             .filterNot { it.lineIndex == lineIndex }
             .plus(
@@ -506,7 +506,7 @@ fun EditorController.supplementTxtChapterLine(lineIndex: Int, chapterNumber: Str
                     supplementedLine = supplementedLine
                 )
             )
-        document.text = lines.joinToString("\n")
+        document.text = ChapterDetector.updateTxtTitle(document.text, lineIndex, supplementedLine)
         markDocumentChanged()
         clearTextSearchState()
     } else {
@@ -515,8 +515,8 @@ fun EditorController.supplementTxtChapterLine(lineIndex: Int, chapterNumber: Str
             .plus(
                 TxtSupplementedCatalogLine(
                     lineIndex = lineIndex,
-                    originalLine = lines[lineIndex],
-                    supplementedLine = lines[lineIndex]
+                    originalLine = originalLine,
+                    supplementedLine = originalLine
                 )
             )
     }

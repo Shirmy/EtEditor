@@ -8,7 +8,7 @@ internal fun txtHiddenCatalogMarkers(
     hiddenLineIndices: Set<Int>
 ): List<TxtHiddenCatalogMarker> {
     if (hiddenLineIndices.isEmpty()) return emptyList()
-    val lines = document.text.split('\n').map { it.removeSuffix("\r") }
+    val lines = txtCatalogMarkerLines(document.text)
     return hiddenLineIndices
         .sorted()
         .mapNotNull { lineIndex ->
@@ -24,7 +24,7 @@ internal fun remapTxtSupplementedCatalogLines(
     records: List<TxtSupplementedCatalogLine>
 ): List<TxtSupplementedCatalogLine> {
     if (records.isEmpty()) return emptyList()
-    val lines = text.split('\n').map { it.removeSuffix("\r") }
+    val lines = txtCatalogMarkerLines(text)
     val used = mutableSetOf<Int>()
     var searchFrom = 0
     return records.mapNotNull { record ->
@@ -56,7 +56,8 @@ internal fun restoreTxtSupplementedCatalogLinesInText(
     records: List<TxtSupplementedCatalogLine>
 ): Pair<String, Int> {
     if (records.isEmpty()) return text to 0
-    val lines = text.split('\n').map { it.removeSuffix("\r") }.toMutableList()
+    val lines = txtCatalogMarkerLines(text).toMutableList()
+    val restoredTitles = mutableMapOf<Int, String>()
     var restored = 0
     records.forEach { record ->
         val directIndex = record.lineIndex.takeIf { it in lines.indices && lines[it] == record.supplementedLine }
@@ -65,10 +66,11 @@ internal fun restoreTxtSupplementedCatalogLinesInText(
             .singleOrNull()
         if (targetIndex != null) {
             lines[targetIndex] = record.originalLine
+            restoredTitles[targetIndex] = record.originalLine
             restored += 1
         }
     }
-    return lines.joinToString("\n") to restored
+    return ChapterDetector.updateTxtTitles(text, restoredTitles) to restored
 }
 
 internal fun remapTxtHiddenCatalogLineIndices(
@@ -76,7 +78,7 @@ internal fun remapTxtHiddenCatalogLineIndices(
     markers: List<TxtHiddenCatalogMarker>
 ): Set<Int> {
     if (markers.isEmpty()) return emptySet()
-    val lines = text.split('\n').map { it.removeSuffix("\r") }
+    val lines = txtCatalogMarkerLines(text)
     val used = mutableSetOf<Int>()
     var searchFrom = 0
     return markers
@@ -90,6 +92,12 @@ internal fun remapTxtHiddenCatalogLineIndices(
             target
         }
         .toSet()
+}
+
+private fun txtCatalogMarkerLines(text: String): List<String> {
+    return txtLinePositions(text).map { position ->
+        txtLineText(text, position.startIndex)
+    }
 }
 
 private fun findTxtCatalogMarkerLine(

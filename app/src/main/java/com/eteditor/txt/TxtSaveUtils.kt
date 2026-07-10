@@ -18,7 +18,7 @@ internal fun prepareTxtDocumentSave(
         renumberTitles = renumberTitles,
         numberStartAtOne = numberStartAtOne
     )
-    val saveText = mapping.text.toCrlfLineEndings()
+    val saveText = mapping.text
     val encoded = TextCodec.encode(saveText, document.encoding)
     return TxtSavePrepareResult(
         mapping = mapping.copy(text = saveText),

@@ -15,6 +15,23 @@ class ChapterDetectorTest {
     }
 
     @Test
+    fun updateTxtTitlesPreserveMixedLineEndings() {
+        val text = "第1章 旧\r\n正文\n第2章 旧\r尾声"
+
+        assertEquals(
+            "第1章 新\r\n正文\n第2章 旧\r尾声",
+            ChapterDetector.updateTxtTitle(text, lineIndex = 0, newTitle = "第1章 新")
+        )
+        assertEquals(
+            "第1章 新\r\n正文\n第2章 新\r尾声",
+            ChapterDetector.updateTxtTitles(
+                text,
+                mapOf(0 to "第1章 新", 2 to "第2章 新")
+            )
+        )
+    }
+
+    @Test
     fun detectTxtChaptersFlagsDuplicateShortAndMissingNumbers() {
         val chapters = ChapterDetector.detectTxtChapters(
             text = """
