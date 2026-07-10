@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import io.github.rosemoe.sora.event.BuildEditorInfoEvent
+import io.github.rosemoe.sora.event.LayoutStateChangeEvent
 import io.github.rosemoe.sora.lang.styling.HighlightTextContainer
 import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.component.EditorTextActionWindow
@@ -60,12 +61,14 @@ private const val STABLE_LAYOUT_VISIBLE_FALLBACK_MS = 1000L
 private data class PreviewCodeEditorTag(
     val contentKey: Any,
     val configKey: Any,
-    val positionKey: Any? = null
+    val positionKey: Any? = null,
+    var layoutBusy: Boolean = false
 )
 
 internal enum class ReadOnlyPreviewUpdateAction {
     None,
     ApplyStableContent,
+    ApplyPositionAfterLayout,
     ApplyPositionOnly
 }
 
@@ -75,12 +78,15 @@ internal fun readOnlyPreviewUpdateAction(
     contentApplied: Boolean,
     layoutChanged: Boolean,
     positionChanged: Boolean,
+    layoutBusy: Boolean,
     interactive: Boolean
 ): ReadOnlyPreviewUpdateAction {
     return when {
         contentChanged || configChanged -> ReadOnlyPreviewUpdateAction.ApplyStableContent
         !contentApplied && positionChanged -> ReadOnlyPreviewUpdateAction.ApplyStableContent
         layoutChanged -> ReadOnlyPreviewUpdateAction.ApplyStableContent
+        contentApplied && positionChanged && interactive && layoutBusy ->
+            ReadOnlyPreviewUpdateAction.ApplyPositionAfterLayout
         contentApplied && positionChanged && interactive -> ReadOnlyPreviewUpdateAction.ApplyPositionOnly
         else -> ReadOnlyPreviewUpdateAction.None
     }
@@ -113,6 +119,29 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.previewConfigKey(): Any? {
 
 private fun io.github.rosemoe.sora.widget.CodeEditor.previewPositionKey(): Any? {
     return (tag as? PreviewCodeEditorTag)?.positionKey
+}
+
+private fun io.github.rosemoe.sora.widget.CodeEditor.previewLayoutBusy(): Boolean {
+    return (tag as? PreviewCodeEditorTag)?.layoutBusy == true
+}
+
+private fun io.github.rosemoe.sora.widget.CodeEditor.updatePreviewTag(
+    contentKey: Any,
+    configKey: Any,
+    positionKey: Any?
+) {
+    tag = PreviewCodeEditorTag(
+        contentKey = contentKey,
+        configKey = configKey,
+        positionKey = positionKey,
+        layoutBusy = previewLayoutBusy()
+    )
+}
+
+private fun io.github.rosemoe.sora.widget.CodeEditor.trackPreviewLayoutState() {
+    subscribeEvent(LayoutStateChangeEvent::class.java) { event, _ ->
+        (tag as? PreviewCodeEditorTag)?.layoutBusy = event.isLayoutBusy
+    }
 }
 
 private fun readOnlyPreviewStableApplyKey(contentKey: Any, positionKey: Any?): Any {
@@ -697,6 +726,7 @@ internal fun LargeBodyReadOnlyPreview(
         factory = { context ->
             io.github.rosemoe.sora.widget.CodeEditor(context).apply {
                 tag = PreviewCodeEditorTag(contentKey, configKey, positionKey)
+                trackPreviewLayoutState()
                 isEnabled = interactive
                 setText("")
                 setSelection(0, 0, false)
@@ -757,10 +787,11 @@ internal fun LargeBodyReadOnlyPreview(
                 contentApplied = contentAppliedNow,
                 layoutChanged = layoutChanged,
                 positionChanged = positionChanged,
+                layoutBusy = editor.previewLayoutBusy(),
                 interactive = interactive
             )
             if (updateAction != ReadOnlyPreviewUpdateAction.None) {
-                editor.tag = PreviewCodeEditorTag(contentKey, configKey, positionKey)
+                editor.updatePreviewTag(contentKey, configKey, positionKey)
             }
             editor.isEnabled = interactive
             if (configChanged) {
@@ -800,6 +831,17 @@ internal fun LargeBodyReadOnlyPreview(
                 ReadOnlyPreviewUpdateAction.ApplyPositionOnly -> {
                     if (interactive) {
                         editor.applyPreviewHighlightOrScroll(highlightRange, scrollTargetOffset, scrollTargetLineIndex)
+                    }
+                    appliedPositionKey = positionKey
+                }
+                ReadOnlyPreviewUpdateAction.ApplyPositionAfterLayout -> {
+                    if (interactive) {
+                        editor.applyPreviewHighlightOrScrollAfterLayout(
+                            applyKey = readOnlyPreviewStableApplyKey(contentKey, positionKey),
+                            range = highlightRange,
+                            scrollTargetOffset = scrollTargetOffset,
+                            scrollTargetLineIndex = scrollTargetLineIndex
+                        )
                     }
                     appliedPositionKey = positionKey
                 }
@@ -855,6 +897,8 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.setPreviewTextAfterStableLa
     alpha = 0f
     requestLayout()
     var applied = false
+    var contentSet = false
+    var positionScheduled = false
     val applyOnce = {
         if (!applied) {
             applied = true
@@ -862,34 +906,41 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.setPreviewTextAfterStableLa
             onApplied()
         }
     }
-    // 保底防线：与可编辑器同理，分帧链中途断开时到点兜底，补设内容并强制恢复可见，
-    // 确保只读预览不会卡在全透明、看不见正文的状态。
-    postDelayed({
-        if (previewStableApplyKey() == applyKey && !applied) {
+    val setContent = {
+        if (!contentSet && previewStableApplyKey() == applyKey) {
+            contentSet = true
             setText(text)
             rebuildPlainTextSoftWrap()
             setSelection(0, 0, false)
-            applyPreviewHighlightOrScroll(highlightRange, scrollTargetOffset, scrollTargetLineIndex)
+            requestLayout()
+            invalidate()
+        }
+    }
+    val schedulePosition = {
+        if (!positionScheduled && previewStableApplyKey() == applyKey) {
+            positionScheduled = true
+            applyPreviewHighlightOrScrollAfterLayout(
+                applyKey = applyKey,
+                range = highlightRange,
+                scrollTargetOffset = scrollTargetOffset,
+                scrollTargetLineIndex = scrollTargetLineIndex,
+                onApplied = applyOnce
+            )
+        }
+    }
+    // 超时保底只负责恢复正文可见；定位仍由排版完成通知触发。
+    postDelayed({
+        if (previewStableApplyKey() == applyKey && !applied) {
+            setContent()
+            schedulePosition()
             applyOnce()
         }
     }, STABLE_LAYOUT_VISIBLE_FALLBACK_MS)
     postWhenPreviewStableApplyMeasured(applyKey) {
         requestLayout()
         postPreviewStableApplyFrames(applyKey, 1) {
-            setText(text)
-            rebuildPlainTextSoftWrap()
-            setSelection(0, 0, false)
-            requestLayout()
-            invalidate()
-            postPreviewStableApplyFrames(applyKey, 6) {
-                rebuildPlainTextSoftWrap()
-                requestLayout()
-                invalidate()
-                applyPreviewHighlightOrScroll(highlightRange, scrollTargetOffset, scrollTargetLineIndex)
-                postPreviewStableApplyFrames(applyKey, 2) {
-                    applyOnce()
-                }
-            }
+            setContent()
+            schedulePosition()
         }
     }
 }
@@ -1117,6 +1168,47 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.applyPreviewHighlightOrScro
     }
     val position = content.getIndexer().getCharPosition(target)
     scrollPreviewPositionCentered(position.getLine(), 0)
+}
+
+private fun io.github.rosemoe.sora.widget.CodeEditor.applyPreviewHighlightOrScrollAfterLayout(
+    applyKey: Any,
+    range: Pair<Int, Int>?,
+    scrollTargetOffset: Int?,
+    scrollTargetLineIndex: Int?,
+    onApplied: () -> Unit = {}
+) {
+    // 自动换行完成前的纵向位置不可靠，必须使用最终排版结果定位。
+    if (previewStableApplyKey() != applyKey) return
+    if (!previewLayoutBusy()) {
+        applyPreviewHighlightOrScroll(range, scrollTargetOffset, scrollTargetLineIndex)
+        onApplied()
+        return
+    }
+    var applied = false
+    val receipt = subscribeEvent(LayoutStateChangeEvent::class.java) { event, unsubscribe ->
+        if (previewStableApplyKey() != applyKey) {
+            unsubscribe.unsubscribe()
+            return@subscribeEvent
+        }
+        if (!event.isLayoutBusy && !applied) {
+            applied = true
+            unsubscribe.unsubscribe()
+            applyPreviewHighlightOrScroll(range, scrollTargetOffset, scrollTargetLineIndex)
+            onApplied()
+        }
+    }
+    post {
+        if (previewStableApplyKey() != applyKey) {
+            receipt.unsubscribe()
+            return@post
+        }
+        if (!previewLayoutBusy() && !applied) {
+            applied = true
+            receipt.unsubscribe()
+            applyPreviewHighlightOrScroll(range, scrollTargetOffset, scrollTargetLineIndex)
+            onApplied()
+        }
+    }
 }
 
 private fun io.github.rosemoe.sora.widget.CodeEditor.scrollPreviewPositionNearTop(

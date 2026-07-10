@@ -12,6 +12,7 @@ class BodyReadOnlyPreviewUpdateUtilsTest {
             contentApplied = true,
             layoutChanged = false,
             positionChanged = false,
+            layoutBusy = false,
             interactive = true
         )
 
@@ -26,6 +27,7 @@ class BodyReadOnlyPreviewUpdateUtilsTest {
             contentApplied = true,
             layoutChanged = false,
             positionChanged = false,
+            layoutBusy = false,
             interactive = true
         )
 
@@ -40,6 +42,7 @@ class BodyReadOnlyPreviewUpdateUtilsTest {
             contentApplied = false,
             layoutChanged = false,
             positionChanged = true,
+            layoutBusy = false,
             interactive = true
         )
 
@@ -54,6 +57,7 @@ class BodyReadOnlyPreviewUpdateUtilsTest {
             contentApplied = true,
             layoutChanged = true,
             positionChanged = false,
+            layoutBusy = false,
             interactive = true
         )
 
@@ -68,10 +72,26 @@ class BodyReadOnlyPreviewUpdateUtilsTest {
             contentApplied = true,
             layoutChanged = false,
             positionChanged = true,
+            layoutBusy = false,
             interactive = true
         )
 
         assertEquals(ReadOnlyPreviewUpdateAction.ApplyPositionOnly, action)
+    }
+
+    @Test
+    fun readOnlyPreviewUpdateWaitsForLayoutBeforeApplyingPosition() {
+        val action = readOnlyPreviewUpdateAction(
+            contentChanged = false,
+            configChanged = false,
+            contentApplied = true,
+            layoutChanged = false,
+            positionChanged = true,
+            layoutBusy = true,
+            interactive = true
+        )
+
+        assertEquals(ReadOnlyPreviewUpdateAction.ApplyPositionAfterLayout, action)
     }
 
     @Test
@@ -82,6 +102,7 @@ class BodyReadOnlyPreviewUpdateUtilsTest {
             contentApplied = true,
             layoutChanged = false,
             positionChanged = true,
+            layoutBusy = false,
             interactive = false
         )
 
@@ -96,6 +117,7 @@ class BodyReadOnlyPreviewUpdateUtilsTest {
             contentApplied = true,
             layoutChanged = false,
             positionChanged = false,
+            layoutBusy = false,
             interactive = true
         )
 
