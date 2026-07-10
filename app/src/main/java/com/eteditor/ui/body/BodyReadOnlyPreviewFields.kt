@@ -138,6 +138,7 @@ private fun TxtFullReadOnlyPreviewContent(
                             bodySelectionSourceLineIndex(
                                 text = fullPreviewSourceText,
                                 selectionStart = selectionStart,
+                                selectionEnd = selectionEnd,
                                 baseLineIndex = fullPreviewStartLineIndex
                             )
                         )
@@ -297,7 +298,12 @@ private fun BodyPlainReadOnlyPreviewContent(
                                     sourceStart.coerceAtLeast(sourceEnd)
                                 )
                                 BodyReadOnlyActionKind.Split -> onOpenEpubSplitDialog(
-                                    bodySelectionSourceLineIndex(previewText, selectionStart, startLineIndex)
+                                    bodySelectionSourceLineIndex(
+                                        previewText,
+                                        selectionStart,
+                                        selectionEnd,
+                                        startLineIndex
+                                    )
                                 )
                                 BodyReadOnlyActionKind.Wrap -> onWrapEpubSelection(
                                     sourceStart.coerceAtMost(sourceEnd),
@@ -324,7 +330,12 @@ private fun BodyPlainReadOnlyPreviewContent(
                                     )
                                 }
                                 BodyReadOnlyActionKind.Split -> onOpenSupplementChapterDialog(
-                                    bodySelectionSourceLineIndex(previewText, selectionStart, startLineIndex)
+                                    bodySelectionSourceLineIndex(
+                                        previewText,
+                                        selectionStart,
+                                        selectionEnd,
+                                        startLineIndex
+                                    )
                                 )
                                 else -> Unit
                             }
@@ -371,7 +382,6 @@ private fun BodyPlainReadOnlyPreviewContent(
             interactive = hasPreview,
             showLoading = true,
             onDoubleTap = onDoubleTap,
-            onLongPressLine = null,
             selectionActions = selectionActions,
             modifier = Modifier.fillMaxSize()
         )

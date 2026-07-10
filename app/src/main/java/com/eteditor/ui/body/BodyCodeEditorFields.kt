@@ -392,8 +392,7 @@ internal fun shouldConsumePreviewTouchEvent(
 
 private fun io.github.rosemoe.sora.widget.CodeEditor.configureTxtPreviewGestures(
     interactive: Boolean,
-    onDoubleTap: ((Int) -> Unit)?,
-    onLongPressLine: ((Int) -> Unit)?
+    onDoubleTap: ((Int) -> Unit)?
 ) {
     val editor = this
     var suppressDoubleTapTouch = false
@@ -422,14 +421,6 @@ private fun io.github.rosemoe.sora.widget.CodeEditor.configureTxtPreviewGestures
                 editor.clearReadOnlySelectionAndActionWindow(visibleOffset)
                 callback(visibleOffset)
                 return true
-            }
-
-            override fun onLongPress(event: android.view.MotionEvent) {
-                if (!interactive) return
-                val callback = onLongPressLine ?: return
-                val packed = editor.getPointPositionOnScreen(event.x, event.y)
-                val line = io.github.rosemoe.sora.util.IntPair.getFirst(packed)
-                callback(line.coerceAtLeast(0))
             }
         }
     )
@@ -694,7 +685,6 @@ internal fun LargeBodyReadOnlyPreview(
     interactive: Boolean = true,
     showLoading: Boolean = true,
     onDoubleTap: ((Int) -> Unit)?,
-    onLongPressLine: ((Int) -> Unit)?,
     selectionActions: List<BodyReadOnlySelectionAction> = emptyList(),
     onEditorReady: ((io.github.rosemoe.sora.widget.CodeEditor) -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -705,7 +695,6 @@ internal fun LargeBodyReadOnlyPreview(
     val padding = with(LocalDensity.current) { 8.dp.roundToPx() }
     val configKey = listOf(textColor, backgroundColor, textSizeSp, padding)
     val latestOnDoubleTap by rememberUpdatedState(onDoubleTap)
-    val latestOnLongPressLine by rememberUpdatedState(onLongPressLine)
     val latestSelectionActions by rememberUpdatedState(selectionActions)
     val latestInteractive by rememberUpdatedState(interactive)
     BoxWithConstraints(
@@ -760,12 +749,11 @@ internal fun LargeBodyReadOnlyPreview(
                 )
                 configureTxtPreviewGestures(
                     interactive = latestInteractive,
-                    onDoubleTap = latestOnDoubleTap,
-                    onLongPressLine = latestOnLongPressLine
+                    onDoubleTap = latestOnDoubleTap
                 )
                 configureReadOnlySelectionActions(
                     actions = if (latestInteractive) latestSelectionActions else emptyList(),
-                    selectionMenuEnabled = latestInteractive && latestOnLongPressLine == null
+                    selectionMenuEnabled = latestInteractive
                 )
                 setPreviewTextAfterStableLayout(
                     text,
@@ -825,12 +813,11 @@ internal fun LargeBodyReadOnlyPreview(
             }
             editor.configureTxtPreviewGestures(
                 interactive = latestInteractive,
-                onDoubleTap = latestOnDoubleTap,
-                onLongPressLine = latestOnLongPressLine
+                onDoubleTap = latestOnDoubleTap
             )
             editor.configureReadOnlySelectionActions(
                 actions = if (latestInteractive) latestSelectionActions else emptyList(),
-                selectionMenuEnabled = latestInteractive && latestOnLongPressLine == null
+                selectionMenuEnabled = latestInteractive
             )
             when (updateAction) {
                 ReadOnlyPreviewUpdateAction.ApplyStableContent -> {

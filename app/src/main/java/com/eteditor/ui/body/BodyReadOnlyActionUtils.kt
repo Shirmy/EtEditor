@@ -38,23 +38,12 @@ internal fun bodyReadOnlyCustomActionKinds(
 internal fun bodySelectionSourceLineIndex(
     text: String,
     selectionStart: Int,
+    selectionEnd: Int = selectionStart,
     baseLineIndex: Int
 ): Int {
-    val end = selectionStart.coerceIn(0, text.length)
-    var lineOffset = 0
-    var index = 0
-    while (index < end) {
-        when (text[index]) {
-            '\r' -> {
-                lineOffset += 1
-                index += if (index + 1 < end && text[index + 1] == '\n') 2 else 1
-            }
-            '\n' -> {
-                lineOffset += 1
-                index += 1
-            }
-            else -> index += 1
-        }
-    }
-    return baseLineIndex + lineOffset
+    val start = selectionStart.coerceIn(0, text.length)
+    val end = selectionEnd.coerceIn(start, text.length)
+    val breakLength = txtLineBreakLengthAt(text, start)
+    val target = if (breakLength > 0 && end >= start + breakLength) start + breakLength else start
+    return baseLineIndex + countLineBreaksBefore(text, target)
 }

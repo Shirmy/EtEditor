@@ -5,9 +5,9 @@ import org.junit.Test
 
 class TextReplaceParameterFieldsTest {
     @Test
-    fun replacementModeUsesEpubOnlyVisibleLabel() {
+    fun replacementModeUsesJingduVisibleLabel() {
         assertEquals(
-            "EPUB 专用",
+            "静读专用",
             TEXT_REPLACE_MODE_OPTIONS.first { it.first == TEXT_REPLACE_MODE_REPLACEMENT }.second
         )
     }

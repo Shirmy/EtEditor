@@ -36,9 +36,7 @@ internal fun EditorController.setPreviewTextFromSource(
         (visibleStart + PREVIEW_LIMIT).coerceAtMost(source.length)
     }
     previewVisibleSourceOffset = visibleStart
-    previewVisibleSourceLineOffset = source
-        .take(visibleStart.coerceIn(0, source.length))
-        .count { it == '\n' }
+    previewVisibleSourceLineOffset = countLineBreaksBefore(source, visibleStart)
     previewText = source.substring(visibleStart, visibleEnd)
     previewHighlightStart = (sourceHighlightStart - visibleStart).coerceIn(0, previewText.length)
     previewHighlightEnd = (sourceHighlightEnd - visibleStart).coerceIn(previewHighlightStart, previewText.length)

@@ -126,29 +126,22 @@ internal fun txtPreviewIndexAfterChapterBlocksDeletion(
     return nextIndex.coerceIn(0, remainingChapterCount - 1)
 }
 
-internal fun txtLineOffsets(text: String): List<Int> {
-    val offsets = mutableListOf(0)
-    text.forEachIndexed { index, char ->
-        if (char == '\n') offsets += index + 1
-    }
-    offsets += text.length
-    return offsets
-}
-
 internal fun shiftTxtChaptersAfterTextChange(
     chapters: List<TxtChapter>,
+    sourceText: String,
     sourceStart: Int,
     sourceEnd: Int,
-    originalText: String,
     replacementText: String
 ): List<TxtChapter> {
-    val textDelta = replacementText.length - originalText.length
-    val lineDelta = replacementText.count { it == '\n' } - originalText.count { it == '\n' }
+    val start = sourceStart.coerceIn(0, sourceText.length)
+    val end = sourceEnd.coerceIn(start, sourceText.length)
+    val textDelta = replacementText.length - (end - start)
+    val lineDelta = txtLineBreakDeltaAfterReplacement(sourceText, start, end, replacementText)
     if (textDelta == 0 && lineDelta == 0) return chapters
     return chapters.map { chapter ->
         when {
-            chapter.endIndex <= sourceStart -> chapter
-            chapter.startIndex >= sourceEnd -> chapter.copy(
+            chapter.endIndex <= start -> chapter
+            chapter.startIndex >= end -> chapter.copy(
                 lineIndex = chapter.lineIndex + lineDelta,
                 endLineIndex = chapter.endLineIndex + lineDelta,
                 startIndex = chapter.startIndex + textDelta,
@@ -156,7 +149,7 @@ internal fun shiftTxtChaptersAfterTextChange(
                 endIndex = chapter.endIndex + textDelta
             )
             else -> chapter.copy(
-                bodyStartIndex = if (sourceStart < chapter.bodyStartIndex) {
+                bodyStartIndex = if (start < chapter.bodyStartIndex) {
                     chapter.bodyStartIndex + textDelta
                 } else {
                     chapter.bodyStartIndex

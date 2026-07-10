@@ -79,7 +79,7 @@ fun EditorController.resetBuiltInToolDefaults(toolId: String): Boolean {
 fun EditorController.resetBuiltInToolState(toolId: String? = null) {
     builtInParameterOverrides = resetBuiltInParameterOverridesFromDefaults(
         currentOverrides = builtInParameterOverrides,
-        savedDefaults = savedBuiltInDefaultOverrides,
+        savedDefaults = builtInDefaultOverridesForDocument(savedBuiltInDefaultOverrides, kind),
         toolId = toolId
     )
 

@@ -48,6 +48,37 @@ class TxtPreviewWindowUtilsTest {
     }
 
     @Test
+    fun buildTxtFullPreviewAndEditWindowsCountCrAndMixedLineEndingsConsistently() {
+        val crSource = buildString {
+            repeat(70_000) { append("x\r") }
+        }
+        val mixedSource = buildString {
+            repeat(35_000) { append("x\r\ny\r") }
+        }
+
+        val crPreview = buildTxtFullPreviewWindow(crSource, anchorOffset = 110_000)
+        val crEdit = buildTxtFullEditWindowSeed(crSource, anchorOffset = 110_000)
+        val mixedPreview = buildTxtFullPreviewWindow(mixedSource, anchorOffset = 110_000)
+
+        assertEquals(20_000, crPreview.startLineIndex)
+        assertEquals(35_000, crEdit.targetLineIndex)
+        assertEquals(countLineBreaksBefore(mixedSource, mixedPreview.startOffset), mixedPreview.startLineIndex)
+        assertEquals(30_000, mixedPreview.startLineIndex)
+    }
+
+    @Test
+    fun lineStartLookupHandlesOffsetsInsideCrLfWithoutScanningFromDocumentStart() {
+        val text = "aa\r\nbb\rc\n"
+
+        assertEquals(4, txtAlignedLineStart(text, text.indexOf('\r')))
+        assertEquals(4, txtAlignedLineStart(text, text.indexOf('\n')))
+        assertEquals(4, txtAlignedLineStart(text, text.indexOf("bb") + 1))
+        assertEquals(0, txtLineStartAtOffset(text, text.indexOf('\r')))
+        assertEquals(0, txtLineStartAtOffset(text, text.indexOf('\n')))
+        assertEquals(4, txtLineStartAtOffset(text, text.indexOf("bb")))
+    }
+
+    @Test
     fun txtFullPreviewAnchorOffsetPrefersSelectionThenCacheThenChapter() {
         val text = "前言\n第1章\n正文\n第2章\n正文"
         val firstStart = text.indexOf("第1章")
@@ -283,6 +314,22 @@ class TxtPreviewWindowUtilsTest {
                 sourceStart = source.indexOf('\r'),
                 sourceEnd = source.indexOf('\r') + 1,
                 baseLineIndex = 3
+            )
+        )
+    }
+
+    @Test
+    fun txtLineHighlightForSourceUsesCrAndMixedLineNumbers() {
+        val source = "一\r二\r\n三\n四"
+        val start = source.indexOf("四")
+
+        assertEquals(
+            TxtPreviewLineHighlight(lineIndex = 8, start = 0, end = 1),
+            txtLineHighlightForSource(
+                source = source,
+                sourceStart = start,
+                sourceEnd = start + 1,
+                baseLineIndex = 5
             )
         )
     }

@@ -40,46 +40,72 @@ fun EditorController.deleteTxtBodySelection(sourceStart: Int, sourceEnd: Int): B
     return true
 }
 
-private fun remapTxtLineIndicesAfterSelectionDeletion(
+internal fun remapTxtLineIndicesAfterSelectionDeletion(
     lineIndices: Set<Int>,
     sourceText: String,
     start: Int,
     end: Int
 ): Set<Int> {
+    val remap = txtSelectionDeletionLineRemap(sourceText, start, end) ?: return lineIndices
     return lineIndices
         .mapNotNull { lineIndex ->
-            remapTxtLineIndexAfterSelectionDeletion(sourceText, start, end, lineIndex)
+            remapTxtLineIndexAfterSelectionDeletion(remap, lineIndex)
         }
         .toSet()
 }
 
-private fun remapTxtSupplementedLinesAfterSelectionDeletion(
+internal fun remapTxtSupplementedLinesAfterSelectionDeletion(
     records: List<TxtSupplementedCatalogLine>,
     sourceText: String,
     start: Int,
     end: Int
 ): List<TxtSupplementedCatalogLine> {
+    val remap = txtSelectionDeletionLineRemap(sourceText, start, end) ?: return records
     return records.mapNotNull { record ->
-        remapTxtLineIndexAfterSelectionDeletion(sourceText, start, end, record.lineIndex)
+        remapTxtLineIndexAfterSelectionDeletion(remap, record.lineIndex)
             ?.let { nextLineIndex -> record.copy(lineIndex = nextLineIndex) }
     }
 }
 
-private fun remapTxtLineIndexAfterSelectionDeletion(
+private data class TxtSelectionDeletionLineRemap(
+    val removedLineBreaks: Int,
+    val startLine: Int,
+    val startLineFullyRemoved: Boolean,
+    val endOffset: Int,
+    val lineStarts: List<Int>
+)
+
+private fun txtSelectionDeletionLineRemap(
     sourceText: String,
     start: Int,
-    end: Int,
+    end: Int
+): TxtSelectionDeletionLineRemap? {
+    val lineStarts = txtLineStartOffsets(sourceText)
+    val startLine = countLineBreaksBefore(sourceText, start)
+    val startLineFullyRemoved = start == lineStarts.getOrNull(startLine) &&
+        (lineStarts.getOrNull(startLine + 1)?.let { nextLineStart -> end >= nextLineStart }
+            ?: (end >= sourceText.length && end > start))
+    val removedLineBreaks = (-txtLineBreakDeltaAfterReplacement(sourceText, start, end, ""))
+        .coerceAtLeast(0)
+    if (removedLineBreaks == 0 && !startLineFullyRemoved) return null
+    return TxtSelectionDeletionLineRemap(
+        removedLineBreaks = removedLineBreaks,
+        startLine = startLine,
+        startLineFullyRemoved = startLineFullyRemoved,
+        endOffset = end,
+        lineStarts = lineStarts
+    )
+}
+
+private fun remapTxtLineIndexAfterSelectionDeletion(
+    remap: TxtSelectionDeletionLineRemap,
     lineIndex: Int
 ): Int? {
-    val deletedText = sourceText.substring(start, end)
-    val removedLineBreaks = deletedText.count { it == '\n' }
-    if (removedLineBreaks == 0) return lineIndex
-    val startLine = sourceText.take(start).count { it == '\n' }
-    val endLine = sourceText.take(end).count { it == '\n' }
+    val lineStart = remap.lineStarts.getOrNull(lineIndex) ?: return null
     return when {
-        lineIndex < startLine -> lineIndex
-        lineIndex == startLine -> lineIndex
-        lineIndex <= endLine -> null
-        else -> lineIndex - removedLineBreaks
+        lineIndex < remap.startLine -> lineIndex
+        lineIndex == remap.startLine -> if (remap.startLineFullyRemoved) null else lineIndex
+        lineStart < remap.endOffset -> null
+        else -> lineIndex - remap.removedLineBreaks
     }
 }

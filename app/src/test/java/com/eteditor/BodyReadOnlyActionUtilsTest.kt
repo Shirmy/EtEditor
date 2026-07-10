@@ -29,4 +29,37 @@ class BodyReadOnlyActionUtilsTest {
         assertEquals(6, bodySelectionSourceLineIndex("一\r\n二", selectionStart = 3, baseLineIndex = 5))
         assertEquals(6, bodySelectionSourceLineIndex("一\r二", selectionStart = 2, baseLineIndex = 5))
     }
+
+    @Test
+    fun selectionStartingWithCoveredLineBreakTargetsFollowingEmptyLine() {
+        val text = "上一行\r\n\r\n下一行"
+        val firstBreak = text.indexOf("\r\n")
+
+        assertEquals(
+            1,
+            bodySelectionSourceLineIndex(
+                text = text,
+                selectionStart = firstBreak,
+                selectionEnd = firstBreak + 2,
+                baseLineIndex = 0
+            )
+        )
+        assertEquals(
+            0,
+            bodySelectionSourceLineIndex(
+                text = text,
+                selectionStart = firstBreak,
+                selectionEnd = firstBreak + 1,
+                baseLineIndex = 0
+            )
+        )
+        assertEquals(
+            1,
+            bodySelectionSourceLineIndex("上一行\n\n下一行", 3, 4, 0)
+        )
+        assertEquals(
+            1,
+            bodySelectionSourceLineIndex("上一行\r\r下一行", 3, 4, 0)
+        )
+    }
 }

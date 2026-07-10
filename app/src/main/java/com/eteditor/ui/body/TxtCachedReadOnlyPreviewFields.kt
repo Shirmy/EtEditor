@@ -32,7 +32,6 @@ internal fun TxtCachedReadOnlyPreview(
     chapterHighlightRange: Pair<Int, Int>?,
     onDoubleTap: ((Int) -> Unit)?,
     fullSelectionActions: List<BodyReadOnlySelectionAction>,
-    chapterSelectionActions: List<BodyReadOnlySelectionAction> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     val fullVisible = mode == TXT_PREVIEW_MODE_FULL
@@ -100,7 +99,6 @@ internal fun TxtCachedReadOnlyPreview(
             interactive = fullVisible,
             showLoading = fullVisible,
             onDoubleTap = if (fullVisible) onDoubleTap else null,
-            onLongPressLine = null,
             selectionActions = if (fullVisible) fullSelectionActions else emptyList(),
             modifier = fullLayerModifier
                 .alpha(if (fullVisible) 1f else 0f)
@@ -117,8 +115,7 @@ internal fun TxtCachedReadOnlyPreview(
             interactive = !fullVisible,
             showLoading = !fullVisible,
             onDoubleTap = if (!fullVisible) onDoubleTap else null,
-            onLongPressLine = null,
-            selectionActions = if (!fullVisible) chapterSelectionActions else emptyList(),
+            selectionActions = emptyList(),
             modifier = chapterLayerModifier
                 .alpha(if (fullVisible) 0f else 1f)
                 .zIndex(if (fullVisible) 0f else 1f)

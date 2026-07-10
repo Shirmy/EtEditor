@@ -107,6 +107,24 @@ class TxtMoveDeleteUtilsTest {
     }
 
     @Test
+    fun deleteTxtChapterBlockTextRemapsCrOnlyLines() {
+        val text = "第1章\r正文1\r第2章\r正文2\r第3章\r正文3"
+        val chapters = detect(text)
+
+        val result = deleteTxtChapterBlockText(
+            sourceText = text,
+            chapters = chapters,
+            index = 1,
+            hiddenCatalogLineIndices = setOf(1, 3, 5),
+            supplementedCatalogLines = listOf(TxtSupplementedCatalogLine(4, "第3章", "第3章 补充"))
+        )
+
+        assertEquals("第1章\r正文1\r第3章\r正文3", result?.text)
+        assertEquals(setOf(1, 3), result?.hiddenCatalogLineIndices)
+        assertEquals(listOf(2), result?.supplementedCatalogLines?.map { it.lineIndex })
+    }
+
+    @Test
     fun deleteTxtChapterBlocksTextRemovesMultipleRangesAndTracksDeletedIndices() {
         val text = "第1章\n正文1\n第2章\n正文2\n第3章\n正文3"
         val chapters = detect(text)
@@ -157,9 +175,9 @@ class TxtMoveDeleteUtilsTest {
 
         val shifted = shiftTxtChaptersAfterTextChange(
             chapters = chapters,
+            sourceText = text,
             sourceStart = sourceStart,
             sourceEnd = sourceEnd,
-            originalText = "正文1",
             replacementText = "正文一\n新增"
         )
 
@@ -182,15 +200,168 @@ class TxtMoveDeleteUtilsTest {
 
         val shifted = shiftTxtChaptersAfterTextChange(
             chapters = chapters,
+            sourceText = text,
             sourceStart = 0,
             sourceEnd = originalText.length,
-            originalText = originalText,
             replacementText = replacementText
         )
 
         assertEquals(listOf(2, 4), shifted.map { it.lineIndex })
         assertEquals(chapters.map { it.startIndex + textDelta }, shifted.map { it.startIndex })
         assertEquals(chapters.map { it.bodyStartIndex + textDelta }, shifted.map { it.bodyStartIndex })
+    }
+
+    @Test
+    fun shiftTxtChaptersAfterTextChangeCountsAllLineEndingShapes() {
+        val sourceText = "旧\r文\r\n后"
+        val chapters = listOf(
+            chapter(lineIndex = 3, endLineIndex = 5, startIndex = 20, bodyStartIndex = 25, endIndex = 40)
+        )
+
+        val shifted = shiftTxtChaptersAfterTextChange(
+            chapters = chapters,
+            sourceText = sourceText,
+            sourceStart = 0,
+            sourceEnd = 3,
+            replacementText = "a\r\nb\nc"
+        ).single()
+
+        assertEquals(4, shifted.lineIndex)
+        assertEquals(6, shifted.endLineIndex)
+        assertEquals(listOf(0, 2, 5, 7, 8), txtLineOffsets("a\rb\r\nc\nd"))
+        assertEquals(3, txtLineBreakCount("a\rb\r\nc\nd"))
+        assertEquals(2, countLineBreaksBefore("a\r\nb\r", 5))
+    }
+
+    @Test
+    fun selectionDeletionRemapsCrAndMixedHiddenAndSupplementedLines() {
+        val text = "头\r删1\r\n删2\n保留\r尾"
+        val start = text.indexOf("删1")
+        val end = text.indexOf("保留")
+
+        assertEquals(
+            setOf(1, 2),
+            remapTxtLineIndicesAfterSelectionDeletion(
+                lineIndices = setOf(3, 4),
+                sourceText = text,
+                start = start,
+                end = end
+            )
+        )
+        assertEquals(
+            listOf(1, 2),
+            remapTxtSupplementedLinesAfterSelectionDeletion(
+                records = listOf(
+                    TxtSupplementedCatalogLine(3, "保留", "第3章 保留"),
+                    TxtSupplementedCatalogLine(4, "尾", "第4章 尾")
+                ),
+                sourceText = text,
+                start = start,
+                end = end
+            ).map { it.lineIndex }
+        )
+    }
+
+    @Test
+    fun deletingOneHalfOfCrLfDoesNotMoveFollowingLineRecords() {
+        val text = "标题\r\n正文\r尾"
+        val crIndex = text.indexOf('\r')
+        val lfIndex = text.indexOf('\n')
+
+        assertEquals(
+            setOf(1, 2),
+            remapTxtLineIndicesAfterSelectionDeletion(
+                lineIndices = setOf(1, 2),
+                sourceText = text,
+                start = crIndex,
+                end = crIndex + 1
+            )
+        )
+        assertEquals(
+            setOf(1, 2),
+            remapTxtLineIndicesAfterSelectionDeletion(
+                lineIndices = setOf(1, 2),
+                sourceText = text,
+                start = lfIndex,
+                end = lfIndex + 1
+            )
+        )
+    }
+
+    @Test
+    fun deletingWholeStartingLineDropsItsRecordsButMidLineDeletionKeepsThem() {
+        val text = "标题\r正文\r尾"
+        val nextLineStart = text.indexOf("正文")
+        val records = listOf(
+            TxtSupplementedCatalogLine(0, "标题", "第1章 标题"),
+            TxtSupplementedCatalogLine(1, "正文", "第2章 正文")
+        )
+
+        assertEquals(
+            listOf(TxtSupplementedCatalogLine(0, "正文", "第2章 正文")),
+            remapTxtSupplementedLinesAfterSelectionDeletion(
+                records = records,
+                sourceText = text,
+                start = 0,
+                end = nextLineStart
+            )
+        )
+        assertEquals(
+            listOf(
+                TxtSupplementedCatalogLine(0, "标题", "第1章 标题"),
+                TxtSupplementedCatalogLine(0, "正文", "第2章 正文")
+            ),
+            remapTxtSupplementedLinesAfterSelectionDeletion(
+                records = records,
+                sourceText = text,
+                start = 1,
+                end = nextLineStart
+            )
+        )
+    }
+
+    @Test
+    fun replacementOfOneHalfOfCrLfKeepsFollowingChapterLineNumbers() {
+        val text = "前言\r\n第1章\r正文"
+        val chapter = chapter(
+            lineIndex = 1,
+            endLineIndex = 3,
+            startIndex = text.indexOf("第1章"),
+            bodyStartIndex = text.indexOf("正文"),
+            endIndex = text.length
+        )
+        val crIndex = text.indexOf('\r')
+
+        val shifted = shiftTxtChaptersAfterTextChange(
+            chapters = listOf(chapter),
+            sourceText = text,
+            sourceStart = crIndex,
+            sourceEnd = crIndex + 1,
+            replacementText = ""
+        ).single()
+
+        assertEquals(1, shifted.lineIndex)
+        assertEquals(3, shifted.endLineIndex)
+        assertEquals(chapter.startIndex - 1, shifted.startIndex)
+
+        val replaced = shiftTxtChaptersAfterTextChange(
+            chapters = listOf(chapter),
+            sourceText = text,
+            sourceStart = crIndex,
+            sourceEnd = crIndex + 1,
+            replacementText = "x"
+        ).single()
+        val lfIndex = text.indexOf('\n')
+        val deletedLf = shiftTxtChaptersAfterTextChange(
+            chapters = listOf(chapter),
+            sourceText = text,
+            sourceStart = lfIndex,
+            sourceEnd = lfIndex + 1,
+            replacementText = ""
+        ).single()
+
+        assertEquals(chapter.lineIndex, replaced.lineIndex)
+        assertEquals(chapter.lineIndex, deletedLf.lineIndex)
     }
 
     @Test
@@ -209,6 +380,25 @@ class TxtMoveDeleteUtilsTest {
         return ChapterDetector.detectTxtChapters(
             text = text,
             customPatterns = listOf("""^第\s*(\d+)\s*章.*$""")
+        )
+    }
+
+    private fun chapter(
+        lineIndex: Int,
+        endLineIndex: Int,
+        startIndex: Int,
+        bodyStartIndex: Int,
+        endIndex: Int
+    ): TxtChapter {
+        return TxtChapter(
+            index = 1,
+            lineIndex = lineIndex,
+            endLineIndex = endLineIndex,
+            title = "章节",
+            wordCount = 0,
+            startIndex = startIndex,
+            bodyStartIndex = bodyStartIndex,
+            endIndex = endIndex
         )
     }
 }

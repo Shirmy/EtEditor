@@ -73,6 +73,13 @@ class TxtChapterLineUtilsTest {
     }
 
     @Test
+    fun buildTxtSupplementedChapterLineNormalizesTitleWhitespace() {
+        assertEquals("第12章 标题", buildTxtSupplementedChapterLine("12", "  标题  "))
+        assertEquals("第12章 标题", buildTxtSupplementedChapterLine("12", "\t标题\t"))
+        assertEquals("第12章 标题", buildTxtSupplementedChapterLine("12", "　标题　"))
+    }
+
+    @Test
     fun manualChapterNumberHelpersNormalizeAndDetectChapterPrefixes() {
         assertEquals("12", normalizeManualChapterNumber(" 第 12 章 "))
         assertEquals("１２", normalizeManualChapterNumber("第１２章"))

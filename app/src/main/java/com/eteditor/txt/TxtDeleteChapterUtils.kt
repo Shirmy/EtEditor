@@ -87,7 +87,7 @@ private fun txtDeleteRangeForChapter(sourceText: String, chapters: List<TxtChapt
     return TxtDeleteRange(
         start = start,
         end = end,
-        removedLineBreaks = sourceText.substring(start, end).count { it == '\n' }
+        removedLineBreaks = txtLineBreakCount(sourceText.substring(start, end))
     )
 }
 

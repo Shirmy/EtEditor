@@ -78,15 +78,13 @@ private data class BodyEditTarget(
 
 private fun alignTxtFullEditWindowStart(text: String, roughStart: Int): Int {
     if (roughStart <= 0) return 0
-    val previousBreak = text.lastIndexOf('\n', roughStart)
-    val aligned = if (previousBreak >= 0) (previousBreak + 1).coerceIn(0, text.length) else roughStart
+    val aligned = txtAlignedLineStart(text, roughStart)
     return if (roughStart - aligned <= TXT_FULL_EDIT_WINDOW_ALIGN_LIMIT) aligned else roughStart
 }
 
 private fun alignTxtFullEditWindowEnd(text: String, roughEnd: Int): Int {
     if (roughEnd >= text.length) return text.length
-    val nextBreak = text.indexOf('\n', roughEnd)
-    val aligned = if (nextBreak >= 0) (nextBreak + 1).coerceIn(0, text.length) else roughEnd
+    val aligned = txtAlignedLineEnd(text, roughEnd)
     return if (aligned - roughEnd <= TXT_FULL_EDIT_WINDOW_ALIGN_LIMIT) aligned else roughEnd
 }
 
@@ -246,7 +244,7 @@ internal fun BodyPreview(
                     sourceStart = newStart,
                     text = prefix + currentText,
                     version = current.version + 1,
-                    targetLineIndex = visibleLineIndex + prefix.count { it == '\n' },
+                    targetLineIndex = visibleLineIndex + txtLineBreakCount(prefix),
                     selectionIndex = (cursorIndex + prefix.length).coerceAtLeast(0)
                 )
             }
@@ -378,7 +376,7 @@ internal fun BodyPreview(
                     .coerceIn(0, text.length)
                 editScrollTarget = (text
                     .take(selection)
-                    .count { it == '\n' } * editApproxLineHeightPx)
+                    .let(::txtLineBreakCount) * editApproxLineHeightPx)
                     .roundToInt()
                 TextFieldValue(text, TextRange(selection))
             } else {
@@ -653,9 +651,10 @@ internal fun BodyPreview(
                                 window?.targetLineIndex
                             } else {
                                 nativeSelectionTargetIndex?.let { selection ->
-                                    nativeEditorText
-                                        .take(selection.coerceIn(0, nativeEditorText.length))
-                                        .count { it == '\n' }
+                                    countLineBreaksBefore(
+                                        nativeEditorText,
+                                        selection.coerceIn(0, nativeEditorText.length)
+                                    )
                                 }
                             }
                             LargeBodyCodeEditor(

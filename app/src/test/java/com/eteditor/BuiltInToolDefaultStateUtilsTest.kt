@@ -1,9 +1,33 @@
 package com.eteditor
 
+import com.eteditor.core.DocumentKind
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class BuiltInToolDefaultStateUtilsTest {
+    @Test
+    fun builtInDefaultsForTxtExcludeOnlyEpubTextReplaceDefault() {
+        val saved = mapOf(
+            "text_replace" to mapOf("mode" to "replacement", "find" to "EPUB"),
+            "fetch_info" to mapOf("query" to "Saved")
+        )
+
+        assertEquals(
+            mapOf("fetch_info" to mapOf("query" to "Saved")),
+            builtInDefaultOverridesForDocument(saved, DocumentKind.Txt)
+        )
+    }
+
+    @Test
+    fun builtInDefaultsForEpubKeepSavedTextReplaceDefault() {
+        val saved = mapOf(
+            "text_replace" to mapOf("mode" to "replacement", "find" to "EPUB"),
+            "fetch_info" to mapOf("query" to "Saved")
+        )
+
+        assertEquals(saved, builtInDefaultOverridesForDocument(saved, DocumentKind.Epub))
+    }
+
     @Test
     fun updateBuiltInToolOverridesAddsUpdatesAndRemovesEmptyOverrides() {
         val added = updateBuiltInToolOverrides(

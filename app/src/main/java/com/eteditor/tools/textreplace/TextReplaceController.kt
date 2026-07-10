@@ -1315,16 +1315,17 @@ private fun EditorController.applySingleTextReplacement(
             if (warnTxtMoveChapterSyncPending("替换文本")) return null
             val document = txt ?: return null
             if (sourceEnd > document.text.length) return null
-            val originalText = document.text.substring(sourceStart, sourceEnd)
+            val sourceText = document.text
+            val originalText = sourceText.substring(sourceStart, sourceEnd)
             val replacement = singleMatchReplacement(originalText, rule, caseSensitive)
-            document.text = document.text.replaceRange(sourceStart, sourceEnd, replacement)
+            document.text = sourceText.replaceRange(sourceStart, sourceEnd, replacement)
             if (deferTxtRefresh) {
                 txtTextReplacementRefreshDeferred = true
                 document.chapters = shiftTxtChaptersAfterTextChange(
                     chapters = document.chapters,
+                    sourceText = sourceText,
                     sourceStart = sourceStart,
                     sourceEnd = sourceEnd,
-                    originalText = originalText,
                     replacementText = replacement
                 )
             } else {

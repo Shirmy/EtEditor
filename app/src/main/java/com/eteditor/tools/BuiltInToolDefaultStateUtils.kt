@@ -1,5 +1,18 @@
 package com.eteditor
 
+import com.eteditor.core.DocumentKind
+
+internal fun builtInDefaultOverridesForDocument(
+    savedDefaults: Map<String, Map<String, String>>,
+    documentKind: DocumentKind
+): Map<String, Map<String, String>> {
+    return if (documentKind == DocumentKind.Txt) {
+        savedDefaults - "text_replace"
+    } else {
+        savedDefaults
+    }
+}
+
 internal fun updateBuiltInToolOverrides(
     currentOverrides: Map<String, Map<String, String>>,
     toolId: String,

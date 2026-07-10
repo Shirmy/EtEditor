@@ -184,17 +184,10 @@ internal fun txtLinePositions(text: String): List<TxtLinePosition> {
     var start = 0
     while (start < text.length) {
         var end = start
-        while (end < text.length && text[end] != '\n' && text[end] != '\r') {
+        while (end < text.length && txtLineBreakLengthAt(text, end) == 0) {
             end += 1
         }
-        var next = end
-        if (next < text.length) {
-            next += if (text[next] == '\r' && next + 1 < text.length && text[next + 1] == '\n') {
-                2
-            } else {
-                1
-            }
-        }
+        val next = end + txtLineBreakLengthAt(text, end)
         result += TxtLinePosition(startIndex = start, nextIndex = next)
         start = next
     }
@@ -207,7 +200,7 @@ internal fun txtLinePositions(text: String): List<TxtLinePosition> {
 internal fun txtLineText(text: String, lineStart: Int): String {
     if (lineStart < 0 || lineStart > text.length) return ""
     var lineEnd = lineStart
-    while (lineEnd < text.length && text[lineEnd] != '\n' && text[lineEnd] != '\r') {
+    while (lineEnd < text.length && txtLineBreakLengthAt(text, lineEnd) == 0) {
         lineEnd += 1
     }
     return text.substring(lineStart, lineEnd)

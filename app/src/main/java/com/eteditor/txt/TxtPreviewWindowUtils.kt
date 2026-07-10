@@ -192,25 +192,14 @@ internal fun txtPreviewSelectedLineHighlight(
 
 private fun alignTxtWindowStart(text: String, roughStart: Int): Int {
     if (roughStart <= 0) return 0
-    val previousBreak = text.lastIndexOf('\n', roughStart)
-    val aligned = if (previousBreak >= 0) (previousBreak + 1).coerceIn(0, text.length) else roughStart
+    val aligned = txtAlignedLineStart(text, roughStart)
     return if (roughStart - aligned <= TXT_FULL_PREVIEW_WINDOW_LINE_ALIGN_LIMIT) aligned else roughStart
 }
 
 private fun alignTxtWindowEnd(text: String, roughEnd: Int): Int {
     if (roughEnd >= text.length) return text.length
-    val nextBreak = text.indexOf('\n', roughEnd)
-    val aligned = if (nextBreak >= 0) (nextBreak + 1).coerceIn(0, text.length) else roughEnd
+    val aligned = txtAlignedLineEnd(text, roughEnd)
     return if (aligned - roughEnd <= TXT_FULL_PREVIEW_WINDOW_LINE_ALIGN_LIMIT) aligned else roughEnd
-}
-
-internal fun countLineBreaksBefore(text: String, endExclusive: Int): Int {
-    val end = endExclusive.coerceIn(0, text.length)
-    var count = 0
-    for (index in 0 until end) {
-        if (text[index] == '\n') count += 1
-    }
-    return count
 }
 
 internal fun txtLineHighlightForSource(
@@ -228,10 +217,13 @@ internal fun txtLineHighlightForSource(
     } else {
         start
     }
-    val previousBreak = if (anchor <= 0) -1 else source.lastIndexOf('\n', anchor - 1)
-    val lineStart = if (previousBreak < 0) 0 else previousBreak + 1
-    val lineEnd = source.indexOf('\n', anchor)
-        .let { if (it < 0) source.length else it }
+    val lineStart = txtLineStartAtOffset(source, anchor)
+    val lineBreakStart = txtLineBreakStartAtOrAfter(source, anchor)
+    val lineEnd = if (lineBreakStart < source.length && source[lineBreakStart] == '\r') {
+        lineBreakStart + 1
+    } else {
+        lineBreakStart
+    }
     val lineIndex = baseLineIndex + countLineBreaksBefore(source, lineStart)
     val highlightStart = (start - lineStart).coerceAtLeast(0)
     val highlightEnd = (end.coerceAtMost(lineEnd) - lineStart)
@@ -250,12 +242,7 @@ internal fun mappedTxtChapterPreviewOffsetToSourceOffset(
 ): Int {
     if (source.isEmpty()) return 0
     val safeMappedOffset = mappedOffset.coerceAtLeast(0)
-    val rawLineEnd = source.indexOf('\n').let { if (it < 0) source.length else it }
-    val titleLineEnd = if (rawLineEnd > 0 && source[rawLineEnd - 1] == '\r') {
-        rawLineEnd - 1
-    } else {
-        rawLineEnd
-    }
+    val titleLineEnd = txtLineBreakStartAtOrAfter(source, 0)
     val displayTitle = mappedTitle.takeIf { it.isNotBlank() } ?: return safeMappedOffset.coerceIn(0, source.length)
     val rawTitle = source.substring(0, titleLineEnd)
     if (rawTitle == displayTitle) return safeMappedOffset.coerceIn(0, source.length)
