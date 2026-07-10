@@ -74,6 +74,13 @@ internal fun normalizeManualChapterNumber(raw: String): String {
     }.orEmpty()
 }
 
+internal fun buildTxtSupplementedChapterLine(
+    normalizedChapterNumber: String,
+    line: String
+): String {
+    return "第${normalizedChapterNumber}章 ${line.trim()}"
+}
+
 internal fun hasManualChapterPrefix(line: String): Boolean {
     return Regex("""^\s*第\s*[$TXT_CHAPTER_NUMBER_CHARS]+\s*(?:章|节|節|回|集|卷|部|篇|话|話)""")
         .containsMatchIn(line)

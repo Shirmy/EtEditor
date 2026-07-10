@@ -67,6 +67,12 @@ class TxtChapterLineUtilsTest {
     }
 
     @Test
+    fun buildTxtSupplementedChapterLineSeparatesPrefixFromTitle() {
+        assertEquals("第12章 aa", buildTxtSupplementedChapterLine("12", "aa"))
+        assertEquals("第十二章 标题", buildTxtSupplementedChapterLine("十二", "标题"))
+    }
+
+    @Test
     fun manualChapterNumberHelpersNormalizeAndDetectChapterPrefixes() {
         assertEquals("12", normalizeManualChapterNumber(" 第 12 章 "))
         assertEquals("１２", normalizeManualChapterNumber("第１２章"))

@@ -493,9 +493,9 @@ fun EditorController.supplementTxtChapterLine(lineIndex: Int, chapterNumber: Str
 
     txtHiddenCatalogLineIndices = txtHiddenCatalogLineIndices - lineIndex
     val alreadyChapter = hasManualChapterPrefix(line)
+    val supplementedLine = buildTxtSupplementedChapterLine(number, line)
     if (!alreadyChapter) {
         val originalLine = lines[lineIndex]
-        val supplementedLine = "第${number}章$line"
         lines[lineIndex] = supplementedLine
         txtSupplementedCatalogLines = txtSupplementedCatalogLines
             .filterNot { it.lineIndex == lineIndex }
@@ -531,7 +531,7 @@ fun EditorController.supplementTxtChapterLine(lineIndex: Int, chapterNumber: Str
     statusMessage = if (alreadyChapter) {
         "当前行已有章节号，已刷新目录"
     } else {
-        "已补章节：第${number}章$line"
+        "已补章节：$supplementedLine"
     }
     return true
 }
