@@ -31,10 +31,8 @@ internal fun TxtCachedReadOnlyPreview(
     chapterPositionKey: Any,
     chapterHighlightRange: Pair<Int, Int>?,
     onDoubleTap: ((Int) -> Unit)?,
-    onFullLongPressLine: ((Int) -> Unit)?,
-    onChapterLongPressLine: ((Int) -> Unit)?,
-    onFullDeleteSelection: ((Int, Int) -> Unit)?,
-    onChapterDeleteSelection: ((Int, Int) -> Unit)? = null,
+    fullSelectionActions: List<BodyReadOnlySelectionAction>,
+    chapterSelectionActions: List<BodyReadOnlySelectionAction> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     val fullVisible = mode == TXT_PREVIEW_MODE_FULL
@@ -102,12 +100,8 @@ internal fun TxtCachedReadOnlyPreview(
             interactive = fullVisible,
             showLoading = fullVisible,
             onDoubleTap = if (fullVisible) onDoubleTap else null,
-            onLongPressLine = if (fullVisible) onFullLongPressLine else null,
-            selectionActions = if (fullVisible && onFullDeleteSelection != null) {
-                listOf(BodyReadOnlySelectionAction("删除", onFullDeleteSelection))
-            } else {
-                emptyList()
-            },
+            onLongPressLine = null,
+            selectionActions = if (fullVisible) fullSelectionActions else emptyList(),
             modifier = fullLayerModifier
                 .alpha(if (fullVisible) 1f else 0f)
                 .zIndex(if (fullVisible) 1f else 0f)
@@ -123,12 +117,8 @@ internal fun TxtCachedReadOnlyPreview(
             interactive = !fullVisible,
             showLoading = !fullVisible,
             onDoubleTap = if (!fullVisible) onDoubleTap else null,
-            onLongPressLine = if (!fullVisible) onChapterLongPressLine else null,
-            selectionActions = if (!fullVisible && onChapterDeleteSelection != null) {
-                listOf(BodyReadOnlySelectionAction("删除", onChapterDeleteSelection))
-            } else {
-                emptyList()
-            },
+            onLongPressLine = null,
+            selectionActions = if (!fullVisible) chapterSelectionActions else emptyList(),
             modifier = chapterLayerModifier
                 .alpha(if (fullVisible) 0f else 1f)
                 .zIndex(if (fullVisible) 0f else 1f)

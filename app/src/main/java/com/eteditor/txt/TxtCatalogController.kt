@@ -112,7 +112,7 @@ fun EditorController.refreshTxtCatalog() {
                 statusMessage = buildString {
                     append("已刷新目录：${document.chapters.size} 项")
                     if (restoredCount > 0) append("，恢复移除目录 $restoredCount 项")
-                    if (restoredSupplementedCount > 0) append("，移除本次补章节 $restoredSupplementedCount 项")
+                    if (restoredSupplementedCount > 0) append("，移除本次分章 $restoredSupplementedCount 项")
                     if (result.mappedTitleCount > 0) append("，映射 ${result.mappedTitleCount} 项")
                 }
                 setSaveProgress(1f, "刷新目录完成")
@@ -473,7 +473,7 @@ fun EditorController.suggestTxtSupplementChapterNumber(lineIndex: Int): String {
 }
 
 fun EditorController.supplementTxtChapterLine(lineIndex: Int, chapterNumber: String): Boolean {
-    if (warnTxtMoveChapterSyncPending("补章节")) return false
+    if (warnTxtMoveChapterSyncPending("分章")) return false
     val document = txt ?: return false
     val position = txtLinePositions(document.text).getOrNull(lineIndex)
     if (position == null) {
@@ -483,7 +483,7 @@ fun EditorController.supplementTxtChapterLine(lineIndex: Int, chapterNumber: Str
     val originalLine = txtLineText(document.text, position.startIndex)
     val line = originalLine.trim()
     if (line.isBlank()) {
-        statusMessage = "当前行为空，不能补章节"
+        statusMessage = "当前行为空，不能分章"
         return false
     }
     val rawNumber = chapterNumber.trim()
@@ -531,7 +531,7 @@ fun EditorController.supplementTxtChapterLine(lineIndex: Int, chapterNumber: Str
     statusMessage = if (alreadyChapter) {
         "当前行已有章节号，已刷新目录"
     } else {
-        "已补章节：$supplementedLine"
+        "已分章：$supplementedLine"
     }
     return true
 }

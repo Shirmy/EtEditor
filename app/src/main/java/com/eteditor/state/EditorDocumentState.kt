@@ -34,7 +34,6 @@ internal class EditorDocumentState(initialSettings: EditorSettingsPreferenceStat
     var leftRailExpanded by mutableStateOf(initialSettings.leftRailExpanded)
     var hideDirectoryFileNameByDefault by mutableStateOf(initialSettings.hideDirectoryFileNameByDefault)
     var epubHideSection0001FromNcx by mutableStateOf(initialSettings.epubHideSection0001FromNcx)
-    var epubLongPressSplitChapter by mutableStateOf(initialSettings.epubLongPressSplitChapter)
     var epubDoubleTapEdit by mutableStateOf(initialSettings.epubDoubleTapEdit)
     var epubLeftPanelMode by mutableStateOf(initialSettings.epubLeftPanelMode)
     var epubRightPanelMode by mutableStateOf(initialSettings.epubRightPanelMode)

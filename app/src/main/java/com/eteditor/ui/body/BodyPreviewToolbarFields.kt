@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
-import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Edit
@@ -33,8 +32,6 @@ internal fun BodyPreviewHeader(
     modifiedCount: Int,
     onPreviousChapter: () -> Unit,
     onNextChapter: () -> Unit,
-    onToggleEpubLongPressSplitChapter: () -> Unit,
-    onToggleTxtSupplementLongPressMode: () -> Unit,
     onFormatTxt: () -> Unit,
     onStartEditing: () -> Unit,
     onSaveEditing: () -> Unit,
@@ -57,35 +54,6 @@ internal fun BodyPreviewHeader(
                     modifier = Modifier.size(34.dp)
                 ) {
                     Icon(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, contentDescription = "上一章")
-                }
-            }
-            if (!editing) {
-                IconButton(
-                    onClick = onToggleEpubLongPressSplitChapter,
-                    enabled = controller.previewText.isNotBlank() &&
-                        !controller.busy &&
-                        !controller.isEpubPackageTextPreviewSource(),
-                    colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = if (controller.epubLongPressSplitChapter) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.surfaceVariant
-                        },
-                        contentColor = if (controller.epubLongPressSplitChapter) {
-                            MaterialTheme.colorScheme.onPrimary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),
-                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                    ),
-                    modifier = Modifier.size(34.dp)
-                ) {
-                    Icon(
-                        Icons.Outlined.AutoStories,
-                        contentDescription = if (controller.epubLongPressSplitChapter) "关闭长按正文操作" else "开启长按正文操作",
-                        modifier = Modifier.size(18.dp)
-                    )
                 }
             }
             ChapterTitleWithLineEndingHint(
@@ -136,33 +104,6 @@ internal fun BodyPreviewHeader(
                     modifier = Modifier.size(32.dp)
                 ) {
                     Icon(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, contentDescription = "上一章")
-                }
-            }
-            if (controller.kind == DocumentKind.Txt && !editing) {
-                IconButton(
-                    onClick = onToggleTxtSupplementLongPressMode,
-                    enabled = controller.previewText.isNotBlank() && !controller.busy,
-                    colors = IconButtonDefaults.iconButtonColors(
-                        containerColor = if (controller.txtSupplementLongPressMode) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.surfaceVariant
-                        },
-                        contentColor = if (controller.txtSupplementLongPressMode) {
-                            MaterialTheme.colorScheme.onPrimary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),
-                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                    ),
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        Icons.Outlined.AutoStories,
-                        contentDescription = if (controller.txtSupplementLongPressMode) "关闭长按补章节" else "开启长按补章节",
-                        modifier = Modifier.size(18.dp)
-                    )
                 }
             }
             ChapterTitleWithLineEndingHint(

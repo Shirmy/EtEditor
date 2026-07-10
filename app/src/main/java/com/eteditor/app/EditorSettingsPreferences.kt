@@ -7,7 +7,6 @@ internal data class EditorSettingsPreferenceState(
     val leftRailExpanded: Boolean,
     val hideDirectoryFileNameByDefault: Boolean,
     val epubHideSection0001FromNcx: Boolean,
-    val epubLongPressSplitChapter: Boolean,
     val epubDoubleTapEdit: Boolean,
     val epubLeftPanelMode: String,
     val epubRightPanelMode: String,
@@ -24,8 +23,7 @@ internal data class EditorSettingsPreferenceState(
     val txtAutoNumberOnSave: Boolean,
     val txtChapterNumberStartAtOneOnSave: Boolean,
     val txtDoubleTapEdit: Boolean,
-    val txtDoubleTapTitleEdit: Boolean,
-    val txtSupplementLongPressMode: Boolean
+    val txtDoubleTapTitleEdit: Boolean
 )
 
 internal class EditorSettingsPreferences(
@@ -48,7 +46,6 @@ internal class EditorSettingsPreferences(
             leftRailExpanded = prefs.getBoolean(KEY_LEFT_RAIL_EXPANDED, false),
             hideDirectoryFileNameByDefault = true,
             epubHideSection0001FromNcx = true,
-            epubLongPressSplitChapter = false,
             epubDoubleTapEdit = prefs.getBoolean(KEY_EPUB_DOUBLE_TAP_EDIT, true),
             epubLeftPanelMode = prefs.getString(KEY_EPUB_LEFT_PANEL, defaultEpubLeftPanelMode) ?: defaultEpubLeftPanelMode,
             epubRightPanelMode = prefs.getString(KEY_EPUB_RIGHT_PANEL, defaultEpubRightPanelMode)
@@ -73,8 +70,7 @@ internal class EditorSettingsPreferences(
             txtAutoNumberOnSave = prefs.getBoolean(KEY_TXT_AUTO_NUMBER_ON_SAVE, true),
             txtChapterNumberStartAtOneOnSave = prefs.getBoolean(KEY_TXT_CHAPTER_NUMBER_START_AT_ONE_ON_SAVE, true),
             txtDoubleTapEdit = prefs.getBoolean(KEY_TXT_DOUBLE_TAP_EDIT, true),
-            txtDoubleTapTitleEdit = prefs.getBoolean(KEY_TXT_DOUBLE_TAP_TITLE_EDIT, true),
-            txtSupplementLongPressMode = false
+            txtDoubleTapTitleEdit = prefs.getBoolean(KEY_TXT_DOUBLE_TAP_TITLE_EDIT, true)
         )
     }
 

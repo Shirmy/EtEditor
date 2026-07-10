@@ -20,8 +20,6 @@ internal fun BodyReadOnlyPreviewContent(
     fullPreviewState: TxtFullPreviewState?,
     fullPreviewHighlightRange: Pair<Int, Int>?,
     previewScrollState: ScrollState,
-    editing: Boolean,
-    txtSupplementLongPressMode: Boolean,
     txtDoubleTapEditEnabled: Boolean,
     epubDoubleTapEditEnabled: Boolean,
     onOpenTxtEditFromPreview: (Int) -> Unit,
@@ -49,7 +47,6 @@ internal fun BodyReadOnlyPreviewContent(
                 fullPreviewHighlightRange = fullPreviewHighlightRange,
                 previewText = previewText,
                 hasPreview = hasPreview,
-                txtSupplementLongPressMode = txtSupplementLongPressMode,
                 txtDoubleTapEditEnabled = txtDoubleTapEditEnabled,
                 onOpenTxtEditFromPreview = onOpenTxtEditFromPreview,
                 onOpenSupplementChapterDialog = onOpenSupplementChapterDialog,
@@ -63,8 +60,6 @@ internal fun BodyReadOnlyPreviewContent(
                 controller = controller,
                 isTxtFullPreview = isTxtFullPreview,
                 fullPreviewHighlightRange = fullPreviewHighlightRange,
-                editing = editing,
-                txtSupplementLongPressMode = txtSupplementLongPressMode,
                 txtDoubleTapEditEnabled = txtDoubleTapEditEnabled,
                 epubDoubleTapEditEnabled = epubDoubleTapEditEnabled,
                 hasPreview = hasPreview,
@@ -91,7 +86,6 @@ private fun TxtFullReadOnlyPreviewContent(
     fullPreviewHighlightRange: Pair<Int, Int>?,
     previewText: String,
     hasPreview: Boolean,
-    txtSupplementLongPressMode: Boolean,
     txtDoubleTapEditEnabled: Boolean,
     onOpenTxtEditFromPreview: (Int) -> Unit,
     onOpenSupplementChapterDialog: (Int) -> Unit,
@@ -130,6 +124,32 @@ private fun TxtFullReadOnlyPreviewContent(
     val fullPreviewStartOffset = fullPreviewWindowKey.substringBefore(':').toIntOrNull() ?: 0
     val fullPreviewText = fullPreviewSourceText.ifBlank { "没有可预览的正文" }
     val previewDisplayChapterIndex = controller.previewDisplayChapterIndex()
+    val fullSelectionActions = if (fullPreviewSourceText.isNotBlank()) {
+        bodyReadOnlyCustomActionKinds(DocumentKind.Txt, splitAvailable = true).map { kind ->
+            BodyReadOnlySelectionAction(
+                title = kind.title,
+                onClick = { selectionStart, selectionEnd ->
+                    when (kind) {
+                        BodyReadOnlyActionKind.Delete -> onDeleteTxtSelection(
+                            fullPreviewStartOffset + selectionStart,
+                            fullPreviewStartOffset + selectionEnd
+                        )
+                        BodyReadOnlyActionKind.Split -> onOpenSupplementChapterDialog(
+                            bodySelectionSourceLineIndex(
+                                text = fullPreviewSourceText,
+                                selectionStart = selectionStart,
+                                baseLineIndex = fullPreviewStartLineIndex
+                            )
+                        )
+                        else -> Unit
+                    }
+                },
+                icon = kind.icon
+            )
+        }
+    } else {
+        emptyList()
+    }
     TxtCachedReadOnlyPreview(
         mode = controller.txtPreviewMode,
         fullText = fullPreviewText,
@@ -177,38 +197,7 @@ private fun TxtFullReadOnlyPreviewContent(
         } else {
             null
         },
-        onFullLongPressLine = if (fullPreviewSourceText.isNotBlank()) {
-            if (txtSupplementLongPressMode) {
-                { lineIndex ->
-                    onOpenSupplementChapterDialog(fullPreviewStartLineIndex + lineIndex)
-                }
-            } else {
-                null
-            }
-        } else {
-            null
-        },
-        onChapterLongPressLine = if (hasPreview) {
-            if (txtSupplementLongPressMode) {
-                { lineIndex ->
-                    onOpenSupplementChapterDialog(startLineIndex + lineIndex)
-                }
-            } else {
-                null
-            }
-        } else {
-            null
-        },
-        onFullDeleteSelection = if (fullPreviewSourceText.isNotBlank() && !txtSupplementLongPressMode) {
-            { selectionStart, selectionEnd ->
-                onDeleteTxtSelection(
-                    fullPreviewStartOffset + selectionStart,
-                    fullPreviewStartOffset + selectionEnd
-                )
-            }
-        } else {
-            null
-        },
+        fullSelectionActions = fullSelectionActions,
         modifier = modifier
     )
 }
@@ -218,8 +207,6 @@ private fun BodyPlainReadOnlyPreviewContent(
     controller: EditorController,
     isTxtFullPreview: Boolean,
     fullPreviewHighlightRange: Pair<Int, Int>?,
-    editing: Boolean,
-    txtSupplementLongPressMode: Boolean,
     txtDoubleTapEditEnabled: Boolean,
     epubDoubleTapEditEnabled: Boolean,
     hasPreview: Boolean,
@@ -258,22 +245,12 @@ private fun BodyPlainReadOnlyPreviewContent(
             controller.previewHighlightEnd
         }
         val epubPackageTextPreview = controller.isEpubPackageTextPreviewSource()
-        val epubLongPressActionEnabled = controller.kind == DocumentKind.Epub &&
-            hasPreview &&
-            !editing &&
-            !controller.busy &&
-            !epubPackageTextPreview
-        val epubLongPressSplitEnabled = epubLongPressActionEnabled &&
-            controller.epubLongPressSplitChapter
         val startLineIndex = when (controller.kind) {
             DocumentKind.Epub -> controller.epubPreviewVisibleStartLineIndex()
             DocumentKind.Txt -> controller.txtPreviewVisibleStartLineIndex()
             DocumentKind.None -> 0
         }
         val previewDisplayChapterIndex = controller.previewDisplayChapterIndex()
-        val directLongPressGestureEnabled =
-            (controller.kind == DocumentKind.Txt && txtSupplementLongPressMode && hasPreview) ||
-                epubLongPressSplitEnabled
         val previewHighlightRange = (previewHighlightStart to previewHighlightEnd).takeIf { (start, end) ->
             hasPreview &&
                 start >= 0 &&
@@ -294,56 +271,68 @@ private fun BodyPlainReadOnlyPreviewContent(
         } else {
             null
         }
-        val onLongPressLine = if (directLongPressGestureEnabled) {
-            { visibleLineIndex: Int ->
-                val sourceLine = startLineIndex + visibleLineIndex
-                if (controller.kind == DocumentKind.Epub) {
-                    onOpenEpubSplitDialog(sourceLine)
-                } else if (txtSupplementLongPressMode) {
-                    onOpenSupplementChapterDialog(sourceLine)
+        val selectionActions = if (!hasPreview || controller.busy) {
+            emptyList()
+        } else {
+            bodyReadOnlyCustomActionKinds(
+                kind = controller.kind,
+                splitAvailable = !epubPackageTextPreview
+            ).mapNotNull { kind ->
+                when (controller.kind) {
+                    DocumentKind.Epub -> BodyReadOnlySelectionAction(
+                        title = kind.title,
+                        icon = kind.icon,
+                        onClick = { selectionStart, selectionEnd ->
+                            val sourceStart = controller.previewVisibleSourceOffsetValue() +
+                                selectionStart.coerceIn(0, previewText.length)
+                            val sourceEnd = controller.previewVisibleSourceOffsetValue() +
+                                selectionEnd.coerceIn(0, previewText.length)
+                            when (kind) {
+                                BodyReadOnlyActionKind.Delete -> onDeleteEpubSelection(
+                                    sourceStart.coerceAtMost(sourceEnd),
+                                    sourceStart.coerceAtLeast(sourceEnd)
+                                )
+                                BodyReadOnlyActionKind.Volume -> onSetEpubVolumeFromSelection(
+                                    sourceStart.coerceAtMost(sourceEnd),
+                                    sourceStart.coerceAtLeast(sourceEnd)
+                                )
+                                BodyReadOnlyActionKind.Split -> onOpenEpubSplitDialog(
+                                    bodySelectionSourceLineIndex(previewText, selectionStart, startLineIndex)
+                                )
+                                BodyReadOnlyActionKind.Wrap -> onWrapEpubSelection(
+                                    sourceStart.coerceAtMost(sourceEnd),
+                                    sourceStart.coerceAtLeast(sourceEnd)
+                                )
+                            }
+                        }
+                    )
+                    DocumentKind.Txt -> BodyReadOnlySelectionAction(
+                        title = kind.title,
+                        icon = kind.icon,
+                        onClick = { selectionStart, selectionEnd ->
+                            when (kind) {
+                                BodyReadOnlyActionKind.Delete -> {
+                                    val sourceStart = controller.txtPreviewSourceOffsetFromVisibleOffset(
+                                        selectionStart.coerceIn(0, previewText.length)
+                                    )
+                                    val sourceEnd = controller.txtPreviewSourceOffsetFromVisibleOffset(
+                                        selectionEnd.coerceIn(0, previewText.length)
+                                    )
+                                    onDeleteTxtSelection(
+                                        sourceStart.coerceAtMost(sourceEnd),
+                                        sourceStart.coerceAtLeast(sourceEnd)
+                                    )
+                                }
+                                BodyReadOnlyActionKind.Split -> onOpenSupplementChapterDialog(
+                                    bodySelectionSourceLineIndex(previewText, selectionStart, startLineIndex)
+                                )
+                                else -> Unit
+                            }
+                        }
+                    )
+                    DocumentKind.None -> null
                 }
             }
-        } else {
-            null
-        }
-        val selectionActions = if (!hasPreview || directLongPressGestureEnabled || controller.busy) {
-            emptyList()
-        } else when (controller.kind) {
-            DocumentKind.Epub -> listOf(
-                BodyReadOnlySelectionAction("分卷") { selectionStart, selectionEnd ->
-                    val sourceStart = controller.previewVisibleSourceOffsetValue() +
-                        selectionStart.coerceIn(0, previewText.length)
-                    val sourceEnd = controller.previewVisibleSourceOffsetValue() +
-                        selectionEnd.coerceIn(0, previewText.length)
-                    onSetEpubVolumeFromSelection(sourceStart.coerceAtMost(sourceEnd), sourceStart.coerceAtLeast(sourceEnd))
-                },
-                BodyReadOnlySelectionAction("加标签") { selectionStart, selectionEnd ->
-                    val sourceStart = controller.previewVisibleSourceOffsetValue() +
-                        selectionStart.coerceIn(0, previewText.length)
-                    val sourceEnd = controller.previewVisibleSourceOffsetValue() +
-                        selectionEnd.coerceIn(0, previewText.length)
-                    onWrapEpubSelection(sourceStart.coerceAtMost(sourceEnd), sourceStart.coerceAtLeast(sourceEnd))
-                },
-                BodyReadOnlySelectionAction("删除") { selectionStart, selectionEnd ->
-                    val sourceStart = controller.previewVisibleSourceOffsetValue() +
-                        selectionStart.coerceIn(0, previewText.length)
-                    val sourceEnd = controller.previewVisibleSourceOffsetValue() +
-                        selectionEnd.coerceIn(0, previewText.length)
-                    onDeleteEpubSelection(sourceStart.coerceAtMost(sourceEnd), sourceStart.coerceAtLeast(sourceEnd))
-                }
-            )
-            DocumentKind.Txt -> listOf(
-                BodyReadOnlySelectionAction("删除") { selectionStart, selectionEnd ->
-                    val sourceStart = controller.txtPreviewSourceOffsetFromVisibleOffset(
-                        selectionStart.coerceIn(0, previewText.length)
-                    )
-                    val sourceEnd = controller.txtPreviewSourceOffsetFromVisibleOffset(
-                        selectionEnd.coerceIn(0, previewText.length)
-                    )
-                    onDeleteTxtSelection(sourceStart.coerceAtMost(sourceEnd), sourceStart.coerceAtLeast(sourceEnd))
-                }
-            )
-            DocumentKind.None -> emptyList()
         }
         LargeBodyReadOnlyPreview(
             text = previewText,
@@ -382,7 +371,7 @@ private fun BodyPlainReadOnlyPreviewContent(
             interactive = hasPreview,
             showLoading = true,
             onDoubleTap = onDoubleTap,
-            onLongPressLine = onLongPressLine,
+            onLongPressLine = null,
             selectionActions = selectionActions,
             modifier = Modifier.fillMaxSize()
         )

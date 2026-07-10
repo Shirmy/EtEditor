@@ -170,8 +170,6 @@ private data class OpenedEpubDocument(
 
 private fun EditorController.resetDocumentSessionRuntimeState() {
     resetOpenDocumentRuntimeState()
-    epubLongPressSplitChapter = false
-    txtSupplementLongPressMode = false
     clearTextSearchState()
     clearFileRenamePlan()
     clearTitleRenamePlan()

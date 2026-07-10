@@ -2,11 +2,13 @@ package com.eteditor
 
 import android.content.Context
 import android.text.InputType
+import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.HorizontalScrollView
+import android.widget.ImageButton
 import android.widget.TextView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -94,6 +96,7 @@ internal fun readOnlyPreviewUpdateAction(
 
 internal data class BodyReadOnlySelectionAction(
     val title: String,
+    val icon: BodyReadOnlyActionIcon? = null,
     val onClick: (Int, Int) -> Unit
 )
 
@@ -507,7 +510,7 @@ private class BodyReadOnlyTextActionWindow(
     private val targetEditor: CodeEditor,
     var actions: List<BodyReadOnlySelectionAction>
 ) : EditorTextActionWindow(targetEditor) {
-    private val actionButtons = mutableListOf<TextView>()
+    private val actionButtons = mutableListOf<View>()
 
     init {
         rebuildActionButtons()
@@ -520,10 +523,12 @@ private class BodyReadOnlyTextActionWindow(
             View.GONE
         }
         actionButtons.forEach { button ->
-            button.setTextColor(
-                targetEditor.getColorScheme()
-                    .getColor(io.github.rosemoe.sora.widget.schemes.EditorColorScheme.TEXT_ACTION_WINDOW_ICON_COLOR)
-            )
+            val color = targetEditor.getColorScheme()
+                .getColor(io.github.rosemoe.sora.widget.schemes.EditorColorScheme.TEXT_ACTION_WINDOW_ICON_COLOR)
+            when (button) {
+                is ImageButton -> button.setColorFilter(color)
+                is TextView -> button.setTextColor(color)
+            }
             button.visibility = visible
         }
         super.show()
@@ -534,33 +539,48 @@ private class BodyReadOnlyTextActionWindow(
         actionButtons.forEach { row.removeView(it) }
         actionButtons.clear()
         actions.forEachIndexed { index, action ->
-            val button = TextView(targetEditor.context).apply {
-                text = action.title
-                gravity = android.view.Gravity.CENTER
-                minWidth = (targetEditor.getDpUnit() * 52).roundToInt()
-                setPadding(
-                    (targetEditor.getDpUnit() * 12).roundToInt(),
-                    0,
-                    (targetEditor.getDpUnit() * 12).roundToInt(),
-                    0
-                )
-                layoutParams = ViewGroup.MarginLayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
-                setTextColor(
-                    targetEditor.getColorScheme()
+            val button = when (action.icon) {
+                BodyReadOnlyActionIcon.Delete -> ImageButton(targetEditor.context).apply {
+                    contentDescription = action.title
+                    setImageResource(R.drawable.ic_delete_outline_20)
+                    val color = targetEditor.getColorScheme()
                         .getColor(io.github.rosemoe.sora.widget.schemes.EditorColorScheme.TEXT_ACTION_WINDOW_ICON_COLOR)
-                )
-                setOnClickListener {
-                    val cursor = targetEditor.getCursor()
-                    val start = cursor.getLeft()
-                    val end = cursor.getRight()
-                    if (end > start) {
-                        actions.getOrNull(index)?.onClick?.invoke(start, end)
+                    setColorFilter(color)
+                    val size = (targetEditor.getDpUnit() * 45).roundToInt()
+                    layoutParams = ViewGroup.MarginLayoutParams(size, size)
+                    val backgroundValue = TypedValue()
+                    if (context.theme.resolveAttribute(android.R.attr.selectableItemBackground, backgroundValue, true)) {
+                        setBackgroundResource(backgroundValue.resourceId)
                     }
-                    dismiss()
                 }
+                null -> TextView(targetEditor.context).apply {
+                    text = action.title
+                    gravity = android.view.Gravity.CENTER
+                    minWidth = (targetEditor.getDpUnit() * 52).roundToInt()
+                    setPadding(
+                        (targetEditor.getDpUnit() * 12).roundToInt(),
+                        0,
+                        (targetEditor.getDpUnit() * 12).roundToInt(),
+                        0
+                    )
+                    layoutParams = ViewGroup.MarginLayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                    setTextColor(
+                        targetEditor.getColorScheme()
+                            .getColor(io.github.rosemoe.sora.widget.schemes.EditorColorScheme.TEXT_ACTION_WINDOW_ICON_COLOR)
+                    )
+                }
+            }
+            button.setOnClickListener {
+                val cursor = targetEditor.getCursor()
+                val start = cursor.getLeft()
+                val end = cursor.getRight()
+                if (end > start) {
+                    actions.getOrNull(index)?.onClick?.invoke(start, end)
+                }
+                dismiss()
             }
             row.addView(button)
             actionButtons += button

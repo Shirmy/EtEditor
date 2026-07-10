@@ -45,10 +45,6 @@ internal fun EditorController.resetEpubDirectoryVisibilityDefaults() {
     epubHideSection0001FromNcx = true
 }
 
-fun EditorController.updateEpubLongPressSplitChapter(enabled: Boolean) {
-    epubLongPressSplitChapter = enabled
-}
-
 fun EditorController.updateEpubDoubleTapEdit(enabled: Boolean) {
     epubDoubleTapEdit = enabled
     settingsPreferences.saveEpubDoubleTapEdit(enabled)
@@ -87,10 +83,6 @@ fun EditorController.updateTxtDoubleTapEdit(enabled: Boolean) {
 fun EditorController.updateTxtDoubleTapTitleEdit(enabled: Boolean) {
     txtDoubleTapTitleEdit = enabled
     settingsPreferences.saveTxtDoubleTapTitleEdit(enabled)
-}
-
-fun EditorController.updateTxtSupplementLongPressMode(enabled: Boolean) {
-    txtSupplementLongPressMode = enabled
 }
 
 fun EditorController.updateTxtPreviewMode(mode: String) {

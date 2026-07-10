@@ -341,7 +341,7 @@ internal fun TxtSupplementChapterDialog(
             .adaptiveDialogWidth(AdaptiveDialogWidth.Compact)
             .dialogBorder(),
         properties = DialogProperties(usePlatformDefaultWidth = false),
-        title = { Text("补章节") },
+        title = { Text("分章") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(

@@ -103,9 +103,6 @@ class EditorController(internal val appContext: Context) {
     var epubHideSection0001FromNcx: Boolean
         get() = documentState.epubHideSection0001FromNcx
         internal set(value) { documentState.epubHideSection0001FromNcx = value }
-    var epubLongPressSplitChapter: Boolean
-        get() = documentState.epubLongPressSplitChapter
-        internal set(value) { documentState.epubLongPressSplitChapter = value }
     var epubDoubleTapEdit: Boolean
         get() = documentState.epubDoubleTapEdit
         internal set(value) { documentState.epubDoubleTapEdit = value }
@@ -188,9 +185,6 @@ class EditorController(internal val appContext: Context) {
     var txtDoubleTapTitleEdit: Boolean
         get() = txtState.txtDoubleTapTitleEdit
         internal set(value) { txtState.txtDoubleTapTitleEdit = value }
-    var txtSupplementLongPressMode: Boolean
-        get() = txtState.txtSupplementLongPressMode
-        internal set(value) { txtState.txtSupplementLongPressMode = value }
     var txtCatalogParsing: Boolean
         get() = txtState.txtCatalogParsing
         internal set(value) { txtState.txtCatalogParsing = value }

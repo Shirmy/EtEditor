@@ -28,7 +28,6 @@ internal class EditorTxtState(initialSettings: EditorSettingsPreferenceState) {
     var txtChapterNumberStartAtOneOnSave by mutableStateOf(initialSettings.txtChapterNumberStartAtOneOnSave)
     var txtDoubleTapEdit by mutableStateOf(initialSettings.txtDoubleTapEdit)
     var txtDoubleTapTitleEdit by mutableStateOf(initialSettings.txtDoubleTapTitleEdit)
-    var txtSupplementLongPressMode by mutableStateOf(initialSettings.txtSupplementLongPressMode)
     var txtCatalogParsing by mutableStateOf(false)
     var txtMoveChapterSyncPending by mutableStateOf(false)
     var txtMoveChapterSyncWarningMessage by mutableStateOf<String?>(null)

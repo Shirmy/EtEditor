@@ -126,8 +126,6 @@ internal fun BodyPreview(
     val focusManager = LocalFocusManager.current
     val hostView = LocalView.current
     var showBodyKeyboardOnEditStart by remember(controller.documentSessionKey) { mutableStateOf(false) }
-    val epubLongPressSplitChapter = controller.epubLongPressSplitChapter
-    val txtSupplementLongPressMode = controller.txtSupplementLongPressMode
     var supplementDialogLineIndex by remember(controller.documentSessionKey) { mutableStateOf<Int?>(null) }
     var epubSplitDialogRequest by remember(controller.documentSessionKey) { mutableStateOf<Pair<Int, Int>?>(null) }
     var epubParagraphEditRequest by remember(controller.documentSessionKey) { mutableStateOf<Pair<Int, Int>?>(null) }
@@ -270,12 +268,12 @@ internal fun BodyPreview(
     }
     fun openSupplementChapterDialog(lineIndex: Int) {
         if (controller.kind == DocumentKind.Txt && controller.txtMoveChapterSyncPending) {
-            scope.launchAfterTxtMoveChapterSync(controller, "补章节") {
+            scope.launchAfterTxtMoveChapterSync(controller, "分章") {
                 openSupplementChapterDialog(lineIndex)
             }
             return
         }
-        if (controller.warnTxtMoveChapterSyncPending("补章节")) return
+        if (controller.warnTxtMoveChapterSyncPending("分章")) return
         supplementDialogLineIndex = lineIndex
     }
     fun openEpubSplitDialog(lineIndex: Int) {
@@ -603,12 +601,6 @@ internal fun BodyPreview(
                     controller.nextPreviewChapter()
                 }
             },
-            onToggleEpubLongPressSplitChapter = {
-                controller.updateEpubLongPressSplitChapter(!epubLongPressSplitChapter)
-            },
-            onToggleTxtSupplementLongPressMode = {
-                controller.updateTxtSupplementLongPressMode(!txtSupplementLongPressMode)
-            },
             onFormatTxt = {
                 scope.launchAfterTxtMoveChapterSync(controller, "格式整理") {
                     controller.formatTxtDefault()
@@ -743,8 +735,6 @@ internal fun BodyPreview(
                     fullPreviewState = fullPreviewState,
                     fullPreviewHighlightRange = fullPreviewHighlightRange,
                     previewScrollState = previewScrollState,
-                    editing = editing,
-                    txtSupplementLongPressMode = txtSupplementLongPressMode,
                     txtDoubleTapEditEnabled = txtDoubleTapEditEnabled,
                     epubDoubleTapEditEnabled = epubDoubleTapEditEnabled,
                     onOpenTxtEditFromPreview = { visibleOffset -> openTxtEditFromPreview(visibleOffset) },
