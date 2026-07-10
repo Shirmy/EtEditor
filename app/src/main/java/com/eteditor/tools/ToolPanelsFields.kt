@@ -184,6 +184,15 @@ private fun ToolsPanel(
     }
 
     fun startToolRun(tool: EditorTool) {
+        if (tool.toolId == "text_replace") {
+            textReplaceReplacementModeDocumentMessage(
+                controller.kind,
+                controller.textReplaceParameters(tool).isReplacementMode()
+            )?.let { message ->
+                toolRunMessage = tool.name.ifBlank { "文本替换" } to message
+                return
+            }
+        }
         if (tool.toolId == "fetch_info") {
             runJob?.cancel()
             fetchInfoRunJob?.cancel()

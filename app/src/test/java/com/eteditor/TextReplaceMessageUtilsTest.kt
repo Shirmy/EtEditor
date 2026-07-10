@@ -22,6 +22,58 @@ class TextReplaceMessageUtilsTest {
     }
 
     @Test
+    fun replacementModeDocumentMessageRejectsTxtAndRequiresEpubWhenEmpty() {
+        assertEquals(
+            ".replacement 规则仅支持 EPUB",
+            textReplaceReplacementModeDocumentMessage(DocumentKind.Txt, replacementMode = true)
+        )
+        assertEquals(
+            "请先打开 EPUB",
+            textReplaceReplacementModeDocumentMessage(DocumentKind.None, replacementMode = true)
+        )
+    }
+
+    @Test
+    fun replacementModeDocumentMessageAllowsEpubAndOrdinaryTxtReplacement() {
+        assertEquals(
+            null,
+            textReplaceReplacementModeDocumentMessage(DocumentKind.Epub, replacementMode = true)
+        )
+        assertEquals(
+            null,
+            textReplaceReplacementModeDocumentMessage(DocumentKind.Txt, replacementMode = false)
+        )
+    }
+
+    @Test
+    fun replacementPreviewSessionMessageRejectsDocumentSwitches() {
+        assertEquals(
+            null,
+            textReplaceReplacementPreviewSessionMessage(
+                expectedSessionKey = 7,
+                currentSessionKey = 7,
+                documentKind = DocumentKind.Epub
+            )
+        )
+        assertEquals(
+            "文档已切换，请重新加载 .replacement 预览",
+            textReplaceReplacementPreviewSessionMessage(
+                expectedSessionKey = 7,
+                currentSessionKey = 8,
+                documentKind = DocumentKind.Epub
+            )
+        )
+        assertEquals(
+            ".replacement 规则仅支持 EPUB",
+            textReplaceReplacementPreviewSessionMessage(
+                expectedSessionKey = 7,
+                currentSessionKey = 8,
+                documentKind = DocumentKind.Txt
+            )
+        )
+    }
+
+    @Test
     fun noMatchMessageKeepsScopeOrMatchRuleStatus() {
         assertEquals(
             "匹配规则无效",

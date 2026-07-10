@@ -39,29 +39,53 @@ class TextSearchStateControllerTest {
     }
 
     @Test
-    fun replacementPreviewVisibleSectionsOnlyIncludeNonEmptyGroups() {
+    fun replacementPreviewSectionKeepsCurrentOrFallsBackToFirstNonEmptyGroup() {
         val allGroups = replacementPreview(
             toolId = "tool-1",
-            multiRules = listOf(previewRule("multi", lineNo = 30)),
+            multiRules = listOf(
+                previewRule("multi-1", lineNo = 30),
+                previewRule("multi-2", lineNo = 31)
+            ),
             singleRules = listOf(previewRule("single", lineNo = 10)),
-            zeroRules = listOf(previewRule("zero", lineNo = 20))
+            zeroRules = listOf(
+                previewRule("zero-1", lineNo = 20),
+                previewRule("zero-2", lineNo = 21),
+                previewRule("zero-3", lineNo = 22)
+            )
         )
         val remainingGroups = replacementPreview(
             toolId = "tool-1",
             singleRules = listOf(previewRule("single", lineNo = 10)),
             zeroRules = listOf(previewRule("zero", lineNo = 20))
         )
+        val zeroOnly = replacementPreview(
+            toolId = "tool-1",
+            zeroRules = listOf(previewRule("zero", lineNo = 20))
+        )
+        val empty = replacementPreview(toolId = "tool-1")
 
         assertEquals(
-            listOf(ReplacementPreviewSection.Multi, ReplacementPreviewSection.Single, ReplacementPreviewSection.Zero),
-            replacementPreviewVisibleSections(allGroups)
+            ReplacementPreviewSection.Multi,
+            replacementPreviewResolvedSection(allGroups, selectedSection = null)
         )
-        assertEquals(6, replacementPreviewListItemCount(allGroups))
         assertEquals(
-            listOf(ReplacementPreviewSection.Single, ReplacementPreviewSection.Zero),
-            replacementPreviewVisibleSections(remainingGroups)
+            ReplacementPreviewSection.Single,
+            replacementPreviewResolvedSection(allGroups, selectedSection = ReplacementPreviewSection.Single)
         )
-        assertEquals(4, replacementPreviewListItemCount(remainingGroups))
+        assertEquals(
+            ReplacementPreviewSection.Single,
+            replacementPreviewResolvedSection(remainingGroups, selectedSection = ReplacementPreviewSection.Multi)
+        )
+        assertEquals(
+            ReplacementPreviewSection.Zero,
+            replacementPreviewResolvedSection(zeroOnly, selectedSection = ReplacementPreviewSection.Single)
+        )
+        assertEquals(null, replacementPreviewResolvedSection(empty, selectedSection = ReplacementPreviewSection.Multi))
+
+        assertEquals(3, replacementPreviewSectionItemCount(allGroups, ReplacementPreviewSection.Multi))
+        assertEquals(2, replacementPreviewSectionItemCount(allGroups, ReplacementPreviewSection.Single))
+        assertEquals(4, replacementPreviewSectionItemCount(allGroups, ReplacementPreviewSection.Zero))
+        assertEquals(1, replacementPreviewSectionItemCount(empty, section = null))
     }
 
     @Test

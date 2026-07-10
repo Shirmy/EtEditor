@@ -75,7 +75,7 @@ internal fun buildTextReplaceParameters(
         options = txtScopeOptions,
         fallback = TOOL_SCOPE_ALL
     )
-    if (kind == DocumentKind.Txt) {
+    if (kind == DocumentKind.Txt && !replacementMode) {
         return TextReplaceParameters(
             mode = TEXT_REPLACE_MODE_SINGLE,
             target = TEXT_REPLACE_TARGET_SOURCE,

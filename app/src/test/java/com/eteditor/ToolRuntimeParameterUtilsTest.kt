@@ -45,6 +45,60 @@ class ToolRuntimeParameterUtilsTest {
     }
 
     @Test
+    fun buildTextReplaceParametersForTxtPreservesReplacementModeForRejection() {
+        val parameters = buildTextReplaceParameters(
+            values = mapOf(
+                TEXT_REPLACE_PARAM_MODE to TEXT_REPLACE_MODE_REPLACEMENT,
+                TEXT_REPLACE_PARAM_BATCH_FILE to "stored.replacement",
+                TEXT_REPLACE_PARAM_FIND to "stale-find",
+                TEXT_REPLACE_PARAM_REPLACE to "stale-replacement",
+                TEXT_REPLACE_PARAM_PREVIEW to BOOL_FALSE
+            ),
+            kind = DocumentKind.Txt,
+            runtimeFile = "runtime.replacement",
+            batchSourceOptions = batchSourceOptions(),
+            textReplaceScopeOptions = epubSingleScopeOptions(),
+            epubBatchScopeOptions = epubBatchScopeOptions(),
+            txtScopeOptions = txtScopeOptions(),
+            defaultBatchSource = TEXT_REPLACE_MODE_BATCH,
+            trueValue = BOOL_TRUE,
+            falseValue = BOOL_FALSE
+        )
+
+        assertEquals(TEXT_REPLACE_MODE_REPLACEMENT, parameters.mode)
+        assertEquals(TEXT_REPLACE_BATCH_FILE, parameters.batchSource)
+        assertEquals("runtime.replacement", parameters.batchFile)
+        assertTrue(parameters.preview)
+    }
+
+    @Test
+    fun buildTextReplaceParametersForTxtPreservesLegacyReplacementModeForRejection() {
+        val parameters = buildTextReplaceParameters(
+            values = mapOf(
+                TEXT_REPLACE_PARAM_MODE to TEXT_REPLACE_MODE_BATCH,
+                TEXT_REPLACE_PARAM_BATCH_SOURCE to TEXT_REPLACE_BATCH_FILE,
+                TEXT_REPLACE_PARAM_BATCH_FILE to "legacy.replacement",
+                TEXT_REPLACE_PARAM_FIND to "stale-find",
+                TEXT_REPLACE_PARAM_REPLACE to "stale-replacement"
+            ),
+            kind = DocumentKind.Txt,
+            runtimeFile = "",
+            batchSourceOptions = batchSourceOptions(),
+            textReplaceScopeOptions = epubSingleScopeOptions(),
+            epubBatchScopeOptions = epubBatchScopeOptions(),
+            txtScopeOptions = txtScopeOptions(),
+            defaultBatchSource = TEXT_REPLACE_MODE_BATCH,
+            trueValue = BOOL_TRUE,
+            falseValue = BOOL_FALSE
+        )
+
+        assertEquals(TEXT_REPLACE_MODE_REPLACEMENT, parameters.mode)
+        assertEquals(TEXT_REPLACE_BATCH_FILE, parameters.batchSource)
+        assertEquals("legacy.replacement", parameters.batchFile)
+        assertTrue(parameters.preview)
+    }
+
+    @Test
     fun buildTextReplaceParametersForEpubNormalizesLegacyReplacementModeAndRuntimeFile() {
         val parameters = buildTextReplaceParameters(
             values = mapOf(

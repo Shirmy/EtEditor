@@ -61,20 +61,40 @@ internal enum class ReplacementPreviewSection {
     Zero
 }
 
-internal fun replacementPreviewVisibleSections(preview: ReplacementFilePreview): List<ReplacementPreviewSection> {
-    return buildList {
-        if (preview.multiRules.isNotEmpty()) add(ReplacementPreviewSection.Multi)
-        if (preview.singleRules.isNotEmpty()) add(ReplacementPreviewSection.Single)
-        if (preview.zeroRules.isNotEmpty()) add(ReplacementPreviewSection.Zero)
+private fun replacementPreviewSectionHasRules(
+    preview: ReplacementFilePreview,
+    section: ReplacementPreviewSection
+): Boolean {
+    return when (section) {
+        ReplacementPreviewSection.Multi -> preview.multiRules.isNotEmpty()
+        ReplacementPreviewSection.Single -> preview.singleRules.isNotEmpty()
+        ReplacementPreviewSection.Zero -> preview.zeroRules.isNotEmpty()
     }
 }
 
-internal fun replacementPreviewListItemCount(preview: ReplacementFilePreview): Int {
-    val count =
-        (if (preview.multiRules.isNotEmpty()) preview.multiRules.size + 1 else 0) +
-            (if (preview.singleRules.isNotEmpty()) preview.singleRules.size + 1 else 0) +
-            (if (preview.zeroRules.isNotEmpty()) preview.zeroRules.size + 1 else 0)
-    return count.coerceAtLeast(1)
+internal fun replacementPreviewResolvedSection(
+    preview: ReplacementFilePreview,
+    selectedSection: ReplacementPreviewSection?
+): ReplacementPreviewSection? {
+    if (selectedSection != null && replacementPreviewSectionHasRules(preview, selectedSection)) {
+        return selectedSection
+    }
+    return ReplacementPreviewSection.entries.firstOrNull { section ->
+        replacementPreviewSectionHasRules(preview, section)
+    }
+}
+
+internal fun replacementPreviewSectionItemCount(
+    preview: ReplacementFilePreview,
+    section: ReplacementPreviewSection?
+): Int {
+    val rules = when (section) {
+        ReplacementPreviewSection.Multi -> preview.multiRules.size
+        ReplacementPreviewSection.Single -> preview.singleRules.size
+        ReplacementPreviewSection.Zero -> preview.zeroRules.size
+        null -> 0
+    }
+    return (rules + 1).coerceAtLeast(1)
 }
 
 internal data class ReplacementRuleApplySelectedState(
@@ -477,10 +497,16 @@ private fun ReplacementFilePreviewPane(
             controller.setAutomationRunStepProgress(step, executionProgress, executionLabel)
         }
     }
-    val visibleSections = remember(preview) { replacementPreviewVisibleSections(preview) }
-    val previewListItemCount = remember(preview) { replacementPreviewListItemCount(preview) }
+    var selectedSection by remember(preview.toolId) {
+        mutableStateOf(replacementPreviewResolvedSection(preview, selectedSection = null))
+    }
+    val visibleSection = replacementPreviewResolvedSection(preview, selectedSection)
+    val previewListItemCount = replacementPreviewSectionItemCount(preview, visibleSection)
     var invalidRulesMessage by remember(preview) { mutableStateOf<String?>(null) }
-    LaunchedEffect(preview) {
+    LaunchedEffect(preview, visibleSection) {
+        if (visibleSection != selectedSection) {
+            selectedSection = visibleSection
+        }
         listState.scrollToItem(0)
     }
 
@@ -548,7 +574,10 @@ private fun ReplacementFilePreviewPane(
                 }
             }
             ReplacementPreviewStats(
-                preview = preview
+                preview = preview,
+                selectedSection = visibleSection,
+                enabled = !executing,
+                onSelectSection = { section -> selectedSection = section }
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             if (executing) {
@@ -569,7 +598,7 @@ private fun ReplacementFilePreviewPane(
                         .padding(end = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    if (ReplacementPreviewSection.Multi in visibleSections) {
+                    if (visibleSection == ReplacementPreviewSection.Multi) {
                         item("multi-header") {
                             ReplacementSectionHeader("多处匹配", preview.multiRules.size)
                         }
@@ -613,7 +642,7 @@ private fun ReplacementFilePreviewPane(
                             )
                         }
                     }
-                    if (ReplacementPreviewSection.Single in visibleSections) {
+                    if (visibleSection == ReplacementPreviewSection.Single) {
                         item("single-header") {
                             ReplacementSectionHeader("单处匹配", preview.singleRules.size)
                         }
@@ -628,7 +657,7 @@ private fun ReplacementFilePreviewPane(
                             )
                         }
                     }
-                    if (ReplacementPreviewSection.Zero in visibleSections) {
+                    if (visibleSection == ReplacementPreviewSection.Zero) {
                         item("zero-header") {
                             ReplacementSectionHeader("无匹配", preview.zeroRules.size)
                         }
@@ -636,7 +665,7 @@ private fun ReplacementFilePreviewPane(
                             ReplacementZeroRuleRow(rule)
                         }
                     }
-                    if (visibleSections.isEmpty()) {
+                    if (visibleSection == null) {
                         item("empty-section") {
                             Text(
                                 text = "当前没有规则",

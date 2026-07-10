@@ -279,6 +279,13 @@ internal fun ToolParameterPanel(
                 Button(
                     enabled = tool.implemented && controller.kind != DocumentKind.None && !controller.busy,
                     onClick = {
+                        textReplaceReplacementModeDocumentMessage(
+                            controller.kind,
+                            controller.textReplaceParameters(controller.builtInEditorTool(tool.id)).isReplacementMode()
+                        )?.let { message ->
+                            runMessage = tool.title to message
+                            return@Button
+                        }
                         if (replacementMode) {
                             onPickTextReplaceRuleFile { uri ->
                                 controller.updateTextReplaceRuntimeFile(controller.builtInToolPlanId(tool.id), uri)

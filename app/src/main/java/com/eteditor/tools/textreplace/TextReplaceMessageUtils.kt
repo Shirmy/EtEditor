@@ -14,6 +14,33 @@ internal fun textSearchFoundMessage(count: Int): String {
     return "找到 $count 处"
 }
 
+internal fun textReplaceReplacementModeDocumentMessage(
+    documentKind: DocumentKind,
+    replacementMode: Boolean
+): String? {
+    if (!replacementMode || documentKind == DocumentKind.Epub) return null
+    return if (documentKind == DocumentKind.None) {
+        "请先打开 EPUB"
+    } else {
+        ".replacement 规则仅支持 EPUB"
+    }
+}
+
+internal fun textReplaceReplacementPreviewSessionMessage(
+    expectedSessionKey: Int,
+    currentSessionKey: Int,
+    documentKind: DocumentKind
+): String? {
+    textReplaceReplacementModeDocumentMessage(documentKind, replacementMode = true)?.let { message ->
+        return message
+    }
+    return if (currentSessionKey != expectedSessionKey) {
+        "文档已切换，请重新加载 .replacement 预览"
+    } else {
+        null
+    }
+}
+
 internal fun textReplaceNoMatchMessage(
     documentKind: DocumentKind,
     currentStatusMessage: String,

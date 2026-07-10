@@ -5,6 +5,14 @@ import org.junit.Test
 
 class TextReplaceParameterFieldsTest {
     @Test
+    fun replacementModeUsesEpubOnlyVisibleLabel() {
+        assertEquals(
+            "EPUB 专用",
+            TEXT_REPLACE_MODE_OPTIONS.first { it.first == TEXT_REPLACE_MODE_REPLACEMENT }.second
+        )
+    }
+
+    @Test
     fun textReplaceModeForUiMapsSavedModesToDisplayedMode() {
         assertEquals(
             TEXT_REPLACE_MODE_REPLACEMENT,

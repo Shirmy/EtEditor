@@ -70,11 +70,7 @@ private fun TextReplaceModeSegmentedField(
     onModeChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val options = listOf(
-        TEXT_REPLACE_MODE_SINGLE to "单条",
-        TEXT_REPLACE_MODE_BATCH to "批量",
-        TEXT_REPLACE_MODE_REPLACEMENT to "静读专用"
-    )
+    val options = TEXT_REPLACE_MODE_OPTIONS
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(6.dp)

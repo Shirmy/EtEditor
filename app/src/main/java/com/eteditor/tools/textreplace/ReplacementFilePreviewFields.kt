@@ -35,28 +35,40 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 internal fun ReplacementPreviewStats(
-    preview: ReplacementFilePreview
+    preview: ReplacementFilePreview,
+    selectedSection: ReplacementPreviewSection?,
+    enabled: Boolean,
+    onSelectSection: (ReplacementPreviewSection) -> Unit
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
         if (preview.multiRules.isNotEmpty()) {
             ReplacementStatChip(
                 "多处",
                 preview.multiRules.size.toString(),
-                Modifier.weight(1f)
+                Modifier.weight(1f),
+                selected = selectedSection == ReplacementPreviewSection.Multi,
+                enabled = enabled,
+                onClick = { onSelectSection(ReplacementPreviewSection.Multi) }
             )
         }
         if (preview.singleRules.isNotEmpty()) {
             ReplacementStatChip(
                 "单处",
                 preview.singleRules.size.toString(),
-                Modifier.weight(1f)
+                Modifier.weight(1f),
+                selected = selectedSection == ReplacementPreviewSection.Single,
+                enabled = enabled,
+                onClick = { onSelectSection(ReplacementPreviewSection.Single) }
             )
         }
         if (preview.zeroRules.isNotEmpty()) {
             ReplacementStatChip(
                 "无匹配",
                 preview.zeroRules.size.toString(),
-                Modifier.weight(1f)
+                Modifier.weight(1f),
+                selected = selectedSection == ReplacementPreviewSection.Zero,
+                enabled = enabled,
+                onClick = { onSelectSection(ReplacementPreviewSection.Zero) }
             )
         }
     }
@@ -66,7 +78,10 @@ internal fun ReplacementPreviewStats(
 private fun ReplacementStatChip(
     label: String,
     value: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit
 ) {
     val chipContent: @Composable () -> Unit = {
         Row(
@@ -79,7 +94,7 @@ private fun ReplacementStatChip(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
@@ -88,17 +103,27 @@ private fun ReplacementStatChip(
                 text = value,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                 maxLines = 1
             )
         }
     }
     Surface(
+        onClick = onClick,
+        enabled = enabled,
         shape = RowShape,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),
+        color = if (selected) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.64f)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.48f)
+        },
         border = BorderStroke(
             1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
+            if (selected) {
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.68f)
+            } else {
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f)
+            }
         ),
         modifier = modifier.height(32.dp),
         content = chipContent

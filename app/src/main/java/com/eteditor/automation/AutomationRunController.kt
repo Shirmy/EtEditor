@@ -164,13 +164,20 @@ suspend fun EditorController.prepareTextReplaceRuleFileUploadForAutomationConfir
     }
     val step = automationConfirmationStep(request) ?: return false
     if (step.toolId != "text_replace" || ruleFileUri.isBlank()) return false
-    updateTextReplaceRuntimeFile(step.id, ruleFileUri)
     val tool = automationStepToolForRun(step) ?: run {
         automationConfirmationRequest = null
         statusMessage = AUTO_STEP_INVALID
         appendAutomationLog(AUTO_STEP_INVALID)
         return false
     }
+    textReplaceReplacementModeDocumentMessage(
+        kind,
+        textReplaceParameters(tool).isReplacementMode()
+    )?.let { message ->
+        failAutomationConfirmationStep(step, message)
+        return false
+    }
+    updateTextReplaceRuntimeFile(step.id, ruleFileUri)
     appendAutomationLog(AUTO_RULE_FILE_UPLOAD_READY)
     val previewEnabled = textReplaceParameters(tool).preview
     if (previewEnabled) {
@@ -470,6 +477,19 @@ private suspend fun EditorController.runAutomationChainFrom(chain: AutomationCha
             setAutomationRunStepState(step, AutomationRunStepState.Failed, AUTO_TOOL_MISSING)
             appendAutomationLog(AUTO_TOOL_MISSING)
             continue
+        }
+        if (runTool.toolId == "text_replace") {
+            val documentMessage = textReplaceReplacementModeDocumentMessage(
+                kind,
+                textReplaceParameters(runTool).isReplacementMode()
+            )
+            if (documentMessage != null) {
+                statusMessage = documentMessage
+                countAutomationRunTerminalState(AutomationRunStepState.Failed)
+                setAutomationRunStepState(step, AutomationRunStepState.Failed, documentMessage)
+                appendAutomationLog(documentMessage)
+                continue
+            }
         }
         if (runTool.toolId == "text_replace" && editorToolNeedsTextReplaceRuleFile(runTool)) {
             setAutomationRunStepState(step, AutomationRunStepState.NeedsUpload, AUTO_NEEDS_RULE_FILE)

@@ -228,6 +228,10 @@ fun EditorController.applySelectedReplacementPreviewMatch(): Boolean {
 }
 
 fun EditorController.applyReplacementPreviewMatches(matchIds: Set<String>): Boolean {
+    textReplaceReplacementModeDocumentMessage(kind, replacementMode = true)?.let { message ->
+        statusMessage = message
+        return false
+    }
     val preview = replacementFilePreview ?: run {
         statusMessage = "没有可用的规则预览"
         return false
@@ -288,6 +292,10 @@ suspend fun EditorController.applySelectedReplacementPreviewWithProgress(
     matchIds: Set<String>,
     onProgress: (completed: Int, total: Int) -> Unit
 ): Boolean {
+    textReplaceReplacementModeDocumentMessage(kind, replacementMode = true)?.let { message ->
+        statusMessage = message
+        return false
+    }
     val preview = replacementFilePreview ?: run {
         statusMessage = "没有可用的规则预览"
         return false
@@ -515,12 +523,16 @@ private fun EditorController.rebuildTextSearchPreviewAfterSingleReplacement(
 }
 
 internal fun EditorController.runTextReplaceTool(tool: EditorTool, manual: Boolean): Boolean {
+    val parameters = effectiveTextReplaceParameters(tool)
+    textReplaceReplacementModeDocumentMessage(kind, parameters.isReplacementMode())?.let { message ->
+        statusMessage = message
+        return false
+    }
     if (kind == DocumentKind.None) {
         statusMessage = "请先打开 EPUB 或 TXT"
         return false
     }
     statusMessage = ""
-    val parameters = effectiveTextReplaceParameters(tool)
     if (parameters.isReplacementMode()) {
         if (parameters.preview) {
             val ready = prepareReplacementFilePreview(tool)
@@ -587,12 +599,16 @@ internal fun EditorController.runTextReplaceTool(tool: EditorTool, manual: Boole
 }
 
 internal suspend fun EditorController.runTextReplaceToolAsync(tool: EditorTool, manual: Boolean): Boolean {
+    val parameters = effectiveTextReplaceParameters(tool)
+    textReplaceReplacementModeDocumentMessage(kind, parameters.isReplacementMode())?.let { message ->
+        statusMessage = message
+        return false
+    }
     if (kind == DocumentKind.None) {
         statusMessage = "请先打开 EPUB 或 TXT"
         return false
     }
     statusMessage = ""
-    val parameters = effectiveTextReplaceParameters(tool)
     if (parameters.isReplacementMode()) {
         if (parameters.preview) {
             val ready = prepareReplacementFilePreviewAsync(tool)
@@ -662,12 +678,16 @@ internal suspend fun EditorController.runTextReplaceToolForAutomationPreview(
     tool: EditorTool,
     onProgress: (phase: String, completed: Int, total: Int) -> Unit
 ): Boolean {
+    val parameters = effectiveTextReplaceParameters(tool)
+    textReplaceReplacementModeDocumentMessage(kind, parameters.isReplacementMode())?.let { message ->
+        statusMessage = message
+        return false
+    }
     if (kind == DocumentKind.None) {
         statusMessage = "请先打开 EPUB 或 TXT"
         return false
     }
     statusMessage = ""
-    val parameters = effectiveTextReplaceParameters(tool)
     if (!parameters.preview) {
         return runTextReplaceToolAsync(tool, manual = false)
     }
@@ -712,12 +732,16 @@ internal suspend fun EditorController.runTextReplaceToolForAutomationPreview(
 }
 
 internal fun EditorController.prepareReplacementFilePreview(tool: EditorTool): Boolean {
+    val parameters = effectiveTextReplaceParameters(tool)
+    textReplaceReplacementModeDocumentMessage(kind, parameters.isReplacementMode())?.let { message ->
+        statusMessage = message
+        return false
+    }
     if (kind == DocumentKind.None) {
         statusMessage = "请先打开 EPUB 或 TXT"
         return false
     }
     statusMessage = ""
-    val parameters = effectiveTextReplaceParameters(tool)
     if (!parameters.isReplacementMode()) {
         statusMessage = "请选择 replacement 模式"
         return false
@@ -746,20 +770,39 @@ internal suspend fun EditorController.prepareReplacementFilePreviewAsync(
     tool: EditorTool,
     onProgress: (phase: String, completed: Int, total: Int) -> Unit = { _, _, _ -> }
 ): Boolean {
+    val parameters = effectiveTextReplaceParameters(tool)
+    textReplaceReplacementModeDocumentMessage(kind, parameters.isReplacementMode())?.let { message ->
+        statusMessage = message
+        return false
+    }
     if (kind == DocumentKind.None) {
         statusMessage = "请先打开 EPUB 或 TXT"
         return false
     }
-    statusMessage = "加载预览"
-    yieldToAppUiBeforeHeavyWork()
-    val parameters = effectiveTextReplaceParameters(tool)
     if (!parameters.isReplacementMode()) {
         statusMessage = "请选择 replacement 模式"
         return false
     }
+    val previewSessionKey = documentSessionKey
+    fun previewSessionMessage(): String? {
+        return textReplaceReplacementPreviewSessionMessage(
+            expectedSessionKey = previewSessionKey,
+            currentSessionKey = documentSessionKey,
+            documentKind = kind
+        )
+    }
+    fun abortIfPreviewSessionChanged(): Boolean {
+        val message = previewSessionMessage() ?: return false
+        statusMessage = message
+        return true
+    }
+    statusMessage = "加载预览"
+    yieldToAppUiBeforeHeavyWork()
+    if (abortIfPreviewSessionChanged()) return false
     val ruleTextResult = withContext(Dispatchers.IO) {
         readTextReplaceRuleFileText(appContext.contentResolver, parameters.batchFile)
     }
+    if (abortIfPreviewSessionChanged()) return false
     if (ruleTextResult.message.isNotBlank()) {
         statusMessage = ruleTextResult.message
         return false
@@ -770,11 +813,13 @@ internal suspend fun EditorController.prepareReplacementFilePreviewAsync(
             parseReplacementRules(ruleText)
         }
     } catch (error: IllegalArgumentException) {
+        if (abortIfPreviewSessionChanged()) return false
         statusMessage = error.message
             ?.takeIf { it.startsWith("规则数量过多") }
             ?: textReplaceRegexErrorMessage(error)
         return false
     }
+    if (abortIfPreviewSessionChanged()) return false
     val sources = searchSources(parameters)
     val resolveLocation = textSearchResultLocationResolverSnapshot()
     val preview = try {
@@ -784,14 +829,20 @@ internal suspend fun EditorController.prepareReplacementFilePreviewAsync(
             skippedRules = parsed.second,
             sources = sources,
             resolveLocation = resolveLocation,
-            onProgress = onProgress
+            onProgress = { phase, completed, total ->
+                if (previewSessionMessage() == null) {
+                    onProgress(phase, completed, total)
+                }
+            }
         )
     } catch (error: IllegalArgumentException) {
+        if (abortIfPreviewSessionChanged()) return false
         statusMessage = error.message
             ?.takeIf { it.startsWith("规则数量过多") }
             ?: textReplaceRegexErrorMessage(error)
         return false
     }
+    if (abortIfPreviewSessionChanged()) return false
     replacementFilePreview = preview
     textSearchToolId = null
     textSearchResults = emptyList()
