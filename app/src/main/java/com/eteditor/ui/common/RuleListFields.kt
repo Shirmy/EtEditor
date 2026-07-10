@@ -712,7 +712,8 @@ internal fun DraggableCompactRuleListRow(
     onClick: (() -> Unit)? = null,
     showDragHandle: Boolean = true,
     sortMode: Boolean = false,
-    leadingContent: (@Composable RowScope.() -> Unit)? = null
+    leadingContent: (@Composable RowScope.() -> Unit)? = null,
+    statusContent: (@Composable RowScope.() -> Unit)? = null
 ) {
     var ownedDragOffset by remember(rowKey, itemCount) { mutableStateOf(0f) }
     var ownedDragging by remember(rowKey, itemCount) { mutableStateOf(false) }
@@ -737,6 +738,7 @@ internal fun DraggableCompactRuleListRow(
         onClick = onClick,
         leadingContent = leadingContent,
         trailingContent = {
+            statusContent?.invoke(this)
             if (sortMode) {
                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                     IconButton(

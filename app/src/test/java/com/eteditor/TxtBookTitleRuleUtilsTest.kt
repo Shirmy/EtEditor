@@ -171,6 +171,12 @@ class TxtBookTitleRuleUtilsTest {
     }
 
     @Test
+    fun txtBookTitleRuleMatchLabelOnlyAppearsForMatchedRule() {
+        assertEquals("已命中", txtBookTitleRuleMatchLabel(matchCount = 1))
+        assertNull(txtBookTitleRuleMatchLabel(matchCount = 0))
+    }
+
+    @Test
     fun serializeTxtBookTitleRuleItemsCleansTabsAndLineBreaks() {
         val text = serializeTxtBookTitleRuleItems(
             listOf(

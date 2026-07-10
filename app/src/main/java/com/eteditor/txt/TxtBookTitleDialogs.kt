@@ -1,6 +1,5 @@
 package com.eteditor
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,10 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material3.Button
@@ -329,6 +327,7 @@ private fun TxtBookTitleRuleRow(
     var showEditDialog by remember(rule.index) { mutableStateOf(false) }
     var deleteConfirm by remember(rule.index) { mutableStateOf<DeleteConfirmRequest?>(null) }
     val displayName = rule.name.ifBlank { "未命名" }
+    val matchLabel = txtBookTitleRuleMatchLabel(rule.matchCount)
     DraggableCompactRuleListRow(
         rowKey = "book-title-${rule.index}",
         index = rule.index + 1,
@@ -355,10 +354,26 @@ private fun TxtBookTitleRuleRow(
         onOpenSwipeRowChange = drag.onOpenSwipeRowChange,
         showDragHandle = drag.reorderEnabled,
         sortMode = sortMode,
-        leadingContent = {
-            RuleSelectCircle(
-                selected = rule.matchCount > 0
-            )
+        statusContent = matchLabel?.let { label ->
+            {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    Icon(
+                        Icons.Outlined.Check,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1
+                    )
+                }
+            }
         }
     )
     if (showEditDialog) {
@@ -443,37 +458,6 @@ private fun TxtBookTitleRuleEditDialog(
                     },
                     confirmEnabled = pattern.isNotBlank() && replacement.isNotBlank(),
                     confirmLabel = "保存"
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun RuleSelectCircle(
-    selected: Boolean,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        shape = RoundedCornerShape(999.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = if (selected) {
-            null
-        } else {
-            BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-        },
-        modifier = modifier.size(24.dp)
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            if (selected) {
-                Icon(
-                    Icons.Outlined.CheckCircle,
-                    contentDescription = "当前命中规则",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(21.dp)
                 )
             }
         }

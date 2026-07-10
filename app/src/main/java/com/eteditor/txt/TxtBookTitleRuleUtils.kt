@@ -81,6 +81,10 @@ internal fun enabledTxtBookTitleRules(text: String): List<TxtBookTitleRuleItem> 
         .filter { it.pattern.isNotBlank() && it.replacement.isNotBlank() }
 }
 
+internal fun txtBookTitleRuleMatchLabel(matchCount: Int): String? {
+    return "已命中".takeIf { matchCount > 0 }
+}
+
 internal fun cleanTxtBookTitleForDisplay(value: String): String {
     val trimmed = value.trim()
     return if (trimmed.endsWith(".txt", ignoreCase = true)) trimmed.dropLast(4).trim() else trimmed
