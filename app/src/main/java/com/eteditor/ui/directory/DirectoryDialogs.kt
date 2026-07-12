@@ -27,6 +27,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -36,6 +37,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,6 +50,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.eteditor.core.ChapterInfo
 import com.eteditor.core.DocumentKind
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 internal fun AddVolumeDialog(
@@ -272,12 +276,14 @@ internal fun EpubDirectoryEditDialog(
     chapter: ChapterInfo,
     onDismiss: () -> Unit
 ) {
+    val scope = rememberCoroutineScope()
     val hideFileName = controller.hideDirectoryFileNameByDefault
     var fileName by remember(chapter.index, chapter.fileName) { mutableStateOf(chapter.fileName) }
     var title by remember(chapter.index, chapter.title) { mutableStateOf(chapter.title) }
+    var saveState by remember(chapter.index) { mutableStateOf(DirectoryEditSaveState()) }
     val canSave = (hideFileName || fileName.trim().isNotBlank()) && title.trim().isNotBlank()
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!saveState.inFlight) onDismiss() },
         modifier = Modifier
             .adaptiveDialogWidth(AdaptiveDialogWidth.Compact)
             .dialogBorder(),
@@ -299,6 +305,7 @@ internal fun EpubDirectoryEditDialog(
                         label = "文件名",
                         value = fileName,
                         onValueChange = { fileName = it },
+                        enabled = !saveState.inFlight,
                         height = 42.dp
                     )
                 }
@@ -306,16 +313,57 @@ internal fun EpubDirectoryEditDialog(
                     label = "标题",
                     value = title,
                     onValueChange = { title = it },
+                    enabled = !saveState.inFlight,
                     height = 42.dp
                 )
+                if (saveState.showProgress) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    Text(
+                        text = "正在保存",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else if (saveState.message.isNotBlank()) {
+                    Text(
+                        text = saveState.message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         },
         confirmButton = {
             Button(
-                enabled = canSave,
+                enabled = canSave && !saveState.inFlight,
                 onClick = {
-                    if (controller.updateChapterItem(chapter.index - 1, fileName.trim(), title.trim())) {
-                        onDismiss()
+                    if (saveState.inFlight) return@Button
+                    val nextFileName = fileName.trim()
+                    val nextTitle = title.trim()
+                    saveState = directoryEditSaveStarted()
+                    scope.launch {
+                        val progressJob = launch {
+                            delay(150)
+                            if (saveState.inFlight) {
+                                saveState = directoryEditSaveProgress()
+                            }
+                        }
+                        val result = runCatching {
+                            controller.saveEpubChapterItem(
+                                chapterIndex = chapter.index - 1,
+                                fileName = nextFileName,
+                                chapterTitle = nextTitle
+                            )
+                        }.getOrElse { error ->
+                            EpubChapterItemSaveResult(
+                                message = error.message?.takeIf { it.isNotBlank() } ?: "保存失败"
+                            )
+                        }
+                        progressJob.cancel()
+                        if (result.success) {
+                            onDismiss()
+                        } else {
+                            saveState = directoryEditSaveFailed(result.message)
+                        }
                     }
                 },
                 shape = ControlShape,
@@ -325,7 +373,12 @@ internal fun EpubDirectoryEditDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, shape = ControlShape, contentPadding = CompactButtonPadding) {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !saveState.inFlight,
+                shape = ControlShape,
+                contentPadding = CompactButtonPadding
+            ) {
                 Text("取消", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },

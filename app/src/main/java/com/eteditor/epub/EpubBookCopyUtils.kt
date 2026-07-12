@@ -17,3 +17,16 @@ internal fun EpubBook.mutableDeepCopy(): EpubBook {
         }.toMutableList()
     )
 }
+
+internal fun EpubBook.mutableStructureCopy(): EpubBook {
+    return copy(
+        entries = LinkedHashMap(entries),
+        manifest = LinkedHashMap<String, ManifestItem>().also { copy ->
+            manifest.forEach { (id, item) -> copy[id] = item.copy() }
+        },
+        spineIds = spineIds.toMutableList(),
+        chapters = chapters.map { chapter ->
+            chapter.copy(pathAliases = chapter.pathAliases.toMutableSet())
+        }.toMutableList()
+    )
+}

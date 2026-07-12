@@ -66,6 +66,7 @@ internal fun ScrollableSingleLineBasicTextField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     visualTransformation: VisualTransformation = VisualTransformation.None,
+    enabled: Boolean = true,
     decorationBox: @Composable (innerTextField: @Composable () -> Unit) -> Unit = { innerTextField ->
         innerTextField()
     }
@@ -113,6 +114,7 @@ internal fun ScrollableSingleLineBasicTextField(
             textStyle = textStyle,
             visualTransformation = visualTransformation,
             cursorBrush = cursorBrush,
+            enabled = enabled,
             onTextLayout = { result ->
                 textLayoutResult = result
                 contentWidthPx = if (result.lineCount > 0) {
@@ -263,6 +265,7 @@ fun ToolTextInputField(
     height: Dp = 42.dp,
     showLineBreakMarks: Boolean = false,
     autoFocus: Boolean = false,
+    enabled: Boolean = true,
     labelTrailingContent: @Composable RowScope.() -> Unit = {}
 ) {
     var focused by remember { mutableStateOf(false) }
@@ -333,6 +336,7 @@ fun ToolTextInputField(
                         VisualTransformation.None
                     },
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    enabled = enabled,
                     modifier = Modifier.fillMaxWidth(),
                     textFieldModifier = Modifier
                         .focusRequester(focusRequester)

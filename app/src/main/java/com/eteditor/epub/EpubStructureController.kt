@@ -1,6 +1,64 @@
 package com.eteditor
 
 import com.eteditor.core.DocumentKind
+import com.eteditor.core.EpubBook
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+internal data class EpubChapterItemSaveResult(
+    val book: EpubBook? = null,
+    val message: String = ""
+) {
+    val success: Boolean get() = book != null
+}
+
+internal fun prepareEpubChapterItemSave(
+    source: EpubBook,
+    chapterIndex: Int,
+    fileName: String,
+    chapterTitle: String
+): EpubChapterItemSaveResult {
+    val book = source.mutableStructureCopy()
+    val result = updateEpubChapterItemModel(book, chapterIndex, fileName, chapterTitle)
+    return if (result.success) {
+        EpubChapterItemSaveResult(book = book)
+    } else {
+        EpubChapterItemSaveResult(message = result.message.ifBlank { "保存失败" })
+    }
+}
+
+internal fun EditorController.applyPreparedEpubChapterItemSave(
+    chapterIndex: Int,
+    result: EpubChapterItemSaveResult
+): Boolean {
+    val book = result.book ?: run {
+        statusMessage = result.message
+        return false
+    }
+    epub = book
+    checkReport = null
+    markDocumentChanged()
+    clearFileRenamePlan()
+    refreshEpubChapterInfoAt(chapterIndex)
+    selectPreviewChapter(chapterIndex)
+    return true
+}
+
+internal suspend fun EditorController.saveEpubChapterItem(
+    chapterIndex: Int,
+    fileName: String,
+    chapterTitle: String
+): EpubChapterItemSaveResult {
+    val source = epub ?: return EpubChapterItemSaveResult(message = "请先打开 EPUB")
+    val result = withContext(Dispatchers.Default) {
+        prepareEpubChapterItemSave(source, chapterIndex, fileName, chapterTitle)
+    }
+    if (epub !== source) {
+        return EpubChapterItemSaveResult(message = "文档内容已变化，请重试")
+    }
+    applyPreparedEpubChapterItemSave(chapterIndex, result)
+    return result
+}
 
 internal fun EditorController.updateEpubChapterItem(
     chapterIndex: Int,

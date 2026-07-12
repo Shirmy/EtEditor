@@ -6,10 +6,82 @@ import com.eteditor.core.ManifestItem
 import java.nio.charset.StandardCharsets
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotSame
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class EpubStructureUtilsTest {
+    @Test
+    fun mutableStructureCopySharesEntryBytesButIsolatesMutableStructure() {
+        val source = sampleBook(
+            listOf(chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"))
+        )
+
+        val copy = source.mutableStructureCopy()
+
+        assertNotSame(source.entries, copy.entries)
+        assertSame(
+            source.entries.getValue("OEBPS/Text/Chapter0001.xhtml"),
+            copy.entries.getValue("OEBPS/Text/Chapter0001.xhtml")
+        )
+        assertNotSame(source.manifest.getValue("c1"), copy.manifest.getValue("c1"))
+        assertNotSame(source.chapters[0], copy.chapters[0])
+        assertNotSame(source.chapters[0].pathAliases, copy.chapters[0].pathAliases)
+
+        copy.entries.remove("OEBPS/Text/Chapter0001.xhtml")
+        copy.manifest.getValue("c1").path = "OEBPS/Text/Changed.xhtml"
+        copy.chapters[0].pathAliases += "OEBPS/Text/Changed.xhtml"
+
+        assertTrue(source.entries.containsKey("OEBPS/Text/Chapter0001.xhtml"))
+        assertEquals("OEBPS/Text/Chapter0001.xhtml", source.manifest.getValue("c1").path)
+        assertFalse("OEBPS/Text/Changed.xhtml" in source.chapters[0].pathAliases)
+    }
+
+    @Test
+    fun prepareEpubChapterItemSaveUpdatesSnapshotWithoutMutatingSource() {
+        val source = sampleBook(
+            listOf(chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章 旧标题"))
+        )
+
+        val result = prepareEpubChapterItemSave(
+            source = source,
+            chapterIndex = 0,
+            fileName = "Chapter0001",
+            chapterTitle = "第1章 新标题"
+        )
+
+        assertTrue(result.success)
+        assertEquals("第1章 新标题", result.book?.chapters?.get(0)?.title)
+        assertEquals("第1章 旧标题", source.chapters[0].title)
+        assertTrue(
+            String(source.entries.getValue(source.chapters[0].path), StandardCharsets.UTF_8)
+                .contains("第1章 旧标题")
+        )
+    }
+
+    @Test
+    fun prepareEpubChapterItemSaveReturnsValidationFailureWithoutBook() {
+        val source = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章")
+            )
+        )
+
+        val result = prepareEpubChapterItemSave(
+            source = source,
+            chapterIndex = 0,
+            fileName = "Chapter0002",
+            chapterTitle = "第1章"
+        )
+
+        assertFalse(result.success)
+        assertEquals(null, result.book)
+        assertEquals("文件名已存在：Chapter0002.xhtml", result.message)
+        assertEquals("OEBPS/Text/Chapter0001.xhtml", source.chapters[0].path)
+    }
+
     @Test
     fun chapterTypeHelpersDetectCoverVolumeAndBodyChapters() {
         val cover = chapter("cover", "OEBPS/Text/Section0001.xhtml", "封面")
