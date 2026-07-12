@@ -59,6 +59,7 @@ internal fun AddVolumeDialog(
     fixedInsertIndex: Int? = null,
     onDismiss: () -> Unit
 ) {
+    val scope = rememberCoroutineScope()
     var kind by remember { mutableStateOf(VOLUME_KIND_EXTRA) }
     var volumeName by remember { mutableStateOf(controller.defaultVolumeTitle(VOLUME_KIND_EXTRA)) }
     var insertIndexValue by remember(controller.chapters.size) { mutableStateOf("0") }
@@ -159,11 +160,15 @@ internal fun AddVolumeDialog(
         },
         confirmButton = {
             Button(
-                enabled = canAdd,
+                enabled = canAdd && !controller.busy,
                 onClick = {
                     val name = volumeName
-                    if (controller.addEpubVolume(kind, name, insertIndex)) {
-                        onDismiss()
+                    scope.launch {
+                        controller.runEpubStructureUiOperation("EPUB 增加卷") {
+                            val success = controller.addEpubVolumeAsync(kind, name, insertIndex)
+                            if (success) onDismiss()
+                            success
+                        }
                     }
                 },
                 shape = ControlShape,

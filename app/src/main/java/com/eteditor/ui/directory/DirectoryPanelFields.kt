@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.eteditor.core.ChapterInfo
 import com.eteditor.core.DocumentKind
+import kotlinx.coroutines.launch
 
 private enum class DirectoryActionMode {
     MoveChapter,
@@ -53,6 +54,12 @@ internal fun DirectoryPanel(
     var txtMenuChapter by remember(controller.documentSessionKey) { mutableStateOf<ChapterInfo?>(null) }
     var txtDeleteOptionsChapter by remember(controller.documentSessionKey) { mutableStateOf<ChapterInfo?>(null) }
     var txtMoveChapter by remember(controller.documentSessionKey) { mutableStateOf<ChapterInfo?>(null) }
+    fun runEpubDirectoryOperation(label: String, action: suspend () -> Boolean) {
+        if (controller.busy) return
+        scope.launch {
+            controller.runEpubStructureUiOperation(label, action)
+        }
+    }
     fun runAfterTxtMoveSync(action: String, block: () -> Unit) {
         scope.launchAfterTxtMoveChapterSync(controller, action) {
             block()
@@ -189,8 +196,10 @@ internal fun DirectoryPanel(
                                     title = "确认删除章节",
                                     message = "确定删除选中的 ${selectedIndexes.size} 个 EPUB 章节吗？将同步移除对应 HTML 文件和目录引用。",
                                     onConfirm = {
-                                        if (controller.deleteEpubChapters(selectedIndexes)) {
-                                            cancelBulkDeleteChapter()
+                                        runEpubDirectoryOperation("EPUB 批量删除章节") {
+                                            val success = controller.deleteEpubChaptersAsync(selectedIndexes)
+                                            if (success) cancelBulkDeleteChapter()
+                                            success
                                         }
                                     }
                                 )
@@ -270,9 +279,13 @@ internal fun DirectoryPanel(
                             }
                         }
                     } else {
-                        if (controller.epubMoveChapterAfter(chapterIndex, targetIndex)) {
-                            moveTargetsByChapter = emptyMap()
-                            actionMode = null
+                        runEpubDirectoryOperation("EPUB 移动章节") {
+                            val success = controller.epubMoveChapterAfterAsync(chapterIndex, targetIndex)
+                            if (success) {
+                                moveTargetsByChapter = emptyMap()
+                                actionMode = null
+                            }
+                            success
                         }
                     }
                 },
@@ -418,8 +431,12 @@ internal fun DirectoryPanel(
                         .filter(::canBulkSelectChapter)
                         .toSet()
                     showBulkMoveChapterTargetDialog = false
-                    if (selectedIndexes.isNotEmpty() && controller.epubMoveChaptersAfter(selectedIndexes, targetIndex)) {
-                        cancelBulkMoveChapter()
+                    if (selectedIndexes.isNotEmpty()) {
+                        runEpubDirectoryOperation("EPUB 批量移动章节") {
+                            val success = controller.epubMoveChaptersAfterAsync(selectedIndexes, targetIndex)
+                            if (success) cancelBulkMoveChapter()
+                            success
+                        }
                     }
                 }
             )
@@ -482,7 +499,9 @@ internal fun DirectoryPanel(
                     title = "确认删除章节",
                     message = "确定删除“${chapter.title.ifBlank { chapter.fileName }}”吗？\n\n将删除 HTML 文件 ${chapter.source}\n并同步移除 spine、manifest、toc.ncx/nav 引用。",
                     onConfirm = {
-                        controller.deleteEpubChapter(chapter.index - 1)
+                        runEpubDirectoryOperation("EPUB 删除章节") {
+                            controller.deleteEpubChapterAsync(chapter.index - 1)
+                        }
                     }
                 )
             },

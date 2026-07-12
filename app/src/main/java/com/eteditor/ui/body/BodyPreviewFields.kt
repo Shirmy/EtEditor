@@ -127,32 +127,10 @@ internal fun BodyPreview(
     var supplementDialogLineIndex by remember(controller.documentSessionKey) { mutableStateOf<Int?>(null) }
     var epubSplitDialogRequest by remember(controller.documentSessionKey) { mutableStateOf<Pair<Int, Int>?>(null) }
     var epubParagraphEditRequest by remember(controller.documentSessionKey) { mutableStateOf<Pair<Int, Int>?>(null) }
-    fun runBodyStructureOperation(label: String, action: () -> Boolean) {
+    fun runBodyStructureOperation(label: String, action: suspend () -> Boolean) {
         if (controller.busy) return
         scope.launch {
-            controller.busy = true
-            controller.setBodyOperationProgress(0f, "$label：准备")
-            try {
-                delay(16)
-                controller.setBodyOperationProgress(0.45f, "$label：写入")
-                delay(16)
-                val success = action()
-                val resultMessage = controller.statusMessage
-                controller.setBodyOperationProgress(1f, "$label：${if (success) "完成" else "失败"}")
-                if (!success && resultMessage.isNotBlank()) {
-                    controller.statusMessage = resultMessage
-                }
-                delay(if (success) 260 else 520)
-            } catch (error: Throwable) {
-                val errorMessage = "$label 失败：${error.message ?: error.javaClass.simpleName}"
-                controller.statusMessage = errorMessage
-                controller.setBodyOperationProgress(1f, "$label：失败")
-                controller.statusMessage = errorMessage
-                delay(520)
-            } finally {
-                controller.busy = false
-                controller.clearBodyOperationProgress()
-            }
+            controller.runEpubStructureUiOperation(label, action)
         }
     }
     fun currentBodyEditTarget(): BodyEditTarget {
@@ -285,24 +263,36 @@ internal fun BodyPreview(
             if (controller.isEpubPackageTextPreviewSource()) {
                 controller.setEpubPackageTextVolumeFromBodySelection(sourceStart, sourceEnd)
             } else {
-                controller.setEpubVolumeFromBodySelection(chapterIndex, sourceStart, sourceEnd)
+                controller.setEpubVolumeFromBodySelectionAsync(chapterIndex, sourceStart, sourceEnd)
             }
         }
     }
     fun deleteEpubSelection(sourceStart: Int, sourceEnd: Int) {
         if (controller.kind != DocumentKind.Epub || controller.busy) return
-        if (controller.isEpubPackageTextPreviewSource()) {
-            controller.deleteEpubPackageTextBodySelection(sourceStart, sourceEnd)
-        } else {
-            controller.deleteEpubBodySelection(controller.previewDisplayChapterIndex(), sourceStart, sourceEnd)
+        runBodyStructureOperation("EPUB 删除正文") {
+            if (controller.isEpubPackageTextPreviewSource()) {
+                controller.deleteEpubPackageTextBodySelection(sourceStart, sourceEnd)
+            } else {
+                controller.deleteEpubBodySelectionAsync(
+                    controller.previewDisplayChapterIndex(),
+                    sourceStart,
+                    sourceEnd
+                )
+            }
         }
     }
     fun wrapEpubSelection(sourceStart: Int, sourceEnd: Int) {
         if (controller.kind != DocumentKind.Epub || controller.busy) return
-        if (controller.isEpubPackageTextPreviewSource()) {
-            controller.wrapEpubPackageTextBodySelection(sourceStart, sourceEnd)
-        } else {
-            controller.wrapEpubBodySelectionWithParagraphs(controller.previewDisplayChapterIndex(), sourceStart, sourceEnd)
+        runBodyStructureOperation("EPUB 加标签") {
+            if (controller.isEpubPackageTextPreviewSource()) {
+                controller.wrapEpubPackageTextBodySelection(sourceStart, sourceEnd)
+            } else {
+                controller.wrapEpubBodySelectionWithParagraphsAsync(
+                    controller.previewDisplayChapterIndex(),
+                    sourceStart,
+                    sourceEnd
+                )
+            }
         }
     }
     fun deleteTxtSelection(sourceStart: Int, sourceEnd: Int) {
@@ -774,7 +764,7 @@ internal fun BodyPreview(
             onConfirm = { title ->
                 epubSplitDialogRequest = null
                 runBodyStructureOperation("EPUB 分章") {
-                    controller.splitEpubChapterAtBodyLine(chapterIndex, lineIndex, title)
+                    controller.splitEpubChapterAtBodyLineAsync(chapterIndex, lineIndex, title)
                 }
             }
         )

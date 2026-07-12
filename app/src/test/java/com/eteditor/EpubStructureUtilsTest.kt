@@ -13,6 +13,73 @@ import org.junit.Test
 
 class EpubStructureUtilsTest {
     @Test
+    fun preparedMutationChangesSnapshotWithoutMutatingSource() {
+        val source = sampleBook(
+            listOf(chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"))
+        )
+        val originalHtml = source.chapters[0].html
+        val body = htmlBodyContentParts(originalHtml).body
+        val selectionStart = body.indexOf("正文")
+
+        val prepared = prepareEpubMutationModel(source) { book ->
+            deleteEpubBodySelectionFromBook(
+                book = book,
+                chapterIndex = 0,
+                sourceStart = selectionStart,
+                sourceEnd = selectionStart + 1
+            )
+        }
+
+        assertTrue(prepared.result.success)
+        assertEquals(originalHtml, source.chapters[0].html)
+        assertFalse(prepared.book.chapters[0].html == originalHtml)
+        assertSame(source, prepared.source)
+    }
+
+    @Test
+    fun preparedMutationIdentityRejectsResultForChangedBook() {
+        val source = sampleBook(
+            listOf(chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"))
+        )
+        val prepared = prepareEpubMutationModel(source) { true }
+        val replacement = source.mutableStructureCopy()
+
+        assertTrue(preparedEpubMutationMatchesSource(source, prepared))
+        assertFalse(preparedEpubMutationMatchesSource(replacement, prepared))
+    }
+
+    @Test
+    fun preparedStructuralMutationsDoNotChangeSourceChapterOrder() {
+        val source = sampleBook(
+            listOf(
+                chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"),
+                chapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第2章"),
+                chapter("c3", "OEBPS/Text/Chapter0003.xhtml", "第3章")
+            )
+        )
+        val originalIds = source.chapters.map { it.id }
+
+        val moved = prepareEpubMutationModel(source) { book ->
+            moveEpubChapterAfterInBook(
+                book = book,
+                sourceIndex = 0,
+                targetIndex = MOVE_TARGET_BOOK_END,
+                bookStartTarget = MOVE_TARGET_BOOK_START,
+                bookEndTarget = MOVE_TARGET_BOOK_END
+            )
+        }
+        val deleted = prepareEpubMutationModel(source) { book ->
+            deleteEpubChapterFromBook(book, chapterIndex = 1)
+        }
+
+        assertTrue(moved.result.success)
+        assertTrue(deleted.result.success)
+        assertEquals(originalIds, source.chapters.map { it.id })
+        assertFalse(originalIds == moved.book.chapters.map { it.id })
+        assertEquals(2, deleted.book.chapters.size)
+    }
+
+    @Test
     fun mutableStructureCopySharesEntryBytesButIsolatesMutableStructure() {
         val source = sampleBook(
             listOf(chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"))

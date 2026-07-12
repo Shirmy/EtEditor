@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.eteditor.core.ChapterInfo
+import kotlinx.coroutines.launch
 
 @Composable
 internal fun EpubMoveChapterDialog(
@@ -40,6 +41,7 @@ internal fun EpubMoveChapterDialog(
     chapter: ChapterInfo,
     onDismiss: () -> Unit
 ) {
+    val scope = rememberCoroutineScope()
     val currentIndex = chapter.index - 1
     var reverseOrder by remember(chapter.index) { mutableStateOf(false) }
     val options = remember(controller.chapters) {
@@ -73,7 +75,7 @@ internal fun EpubMoveChapterDialog(
             val targetIndex = option.key.toIntOrNull()
             option.copy(
                 current = targetIndex == currentIndex,
-                enabled = targetIndex != currentIndex
+                enabled = targetIndex != currentIndex && !controller.busy
             )
         }
     }
@@ -137,8 +139,12 @@ internal fun EpubMoveChapterDialog(
                     options = pickerOptions,
                     onSelect = { key ->
                         val targetIndex = key.toIntOrNull() ?: return@DirectoryPickerList
-                        if (controller.epubMoveChapterAfter(currentIndex, targetIndex)) {
-                            onDismiss()
+                        scope.launch {
+                            controller.runEpubStructureUiOperation("EPUB 移动章节") {
+                                val success = controller.epubMoveChapterAfterAsync(currentIndex, targetIndex)
+                                if (success) onDismiss()
+                                success
+                            }
                         }
                     },
                     modifier = Modifier
