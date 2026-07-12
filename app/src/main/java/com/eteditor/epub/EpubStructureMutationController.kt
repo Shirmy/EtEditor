@@ -71,11 +71,13 @@ internal suspend fun <R> withExclusiveOperation(
     isBusy: () -> Boolean,
     setBusy: (Boolean) -> Unit,
     onBusy: () -> R,
+    beforeAction: suspend () -> Unit = {},
     action: suspend () -> R
 ): R {
     if (isBusy()) return onBusy()
     setBusy(true)
     return try {
+        beforeAction()
         action()
     } finally {
         setBusy(false)

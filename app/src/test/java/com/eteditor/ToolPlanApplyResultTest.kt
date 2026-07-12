@@ -12,6 +12,12 @@ class ToolPlanApplyResultTest {
     }
 
     @Test
+    fun manualPlanClosesOnlyAfterSuccessfulExecution() {
+        assertFalse(shouldDismissToolPlanAfterManualExecution(successful = false))
+        assertTrue(shouldDismissToolPlanAfterManualExecution(successful = true))
+    }
+
+    @Test
     fun zeroChangesRemainSuccessfulWhenExecutionCompleted() {
         assertTrue(ToolPlanApplyResult.completed(changed = 0).successful)
     }

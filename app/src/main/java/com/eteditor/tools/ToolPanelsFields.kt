@@ -386,7 +386,6 @@ private fun ToolsPanel(
                 controller = controller,
                 toolId = activeFileRenamePreviewToolId,
                 onDismiss = { fileRenamePreviewToolId = null },
-                onApplyStarted = { fileRenamePreviewToolId = null },
                 modifier = Modifier.weight(1f)
             )
         } else if (activeTitleRenamePreviewToolId != null) {
@@ -394,7 +393,6 @@ private fun ToolsPanel(
                 controller = controller,
                 toolId = activeTitleRenamePreviewToolId,
                 onDismiss = { titleRenamePreviewToolId = null },
-                onApplyStarted = { titleRenamePreviewToolId = null },
                 modifier = Modifier.weight(1f)
             )
         } else if (activeTitleFormatPreviewToolId != null) {
@@ -402,7 +400,6 @@ private fun ToolsPanel(
                 controller = controller,
                 toolId = activeTitleFormatPreviewToolId,
                 onDismiss = { titleFormatPreviewToolId = null },
-                onApplyStarted = { titleFormatPreviewToolId = null },
                 modifier = Modifier.weight(1f)
             )
         } else if (activeTextReplacePreviewToolId != null) {

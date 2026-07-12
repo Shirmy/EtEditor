@@ -46,7 +46,6 @@ fun FileRenamePlanPane(
     toolId: String,
     onDismiss: () -> Unit,
     onApplied: (() -> Unit)? = null,
-    onApplyStarted: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val plan = controller.fileRenamePlan
@@ -76,7 +75,6 @@ fun FileRenamePlanPane(
             controller.setAutomationRunStepState(step, AutomationRunStepState.Running)
             controller.setAutomationRunStepProgress(step, 0f, executionLabel)
         }
-        onApplyStarted?.invoke()
         executionJob = controller.controllerScope.launch {
             delay(16)
             yieldToAppUiBeforeHeavyWork()
@@ -160,7 +158,7 @@ fun FileRenamePlanPane(
                                     updateExecutionProgress(completed, total)
                                 }
                                 executing = false
-                                if (applied) {
+                                if (shouldDismissToolPlanAfterManualExecution(successful = applied)) {
                                     onApplied?.invoke() ?: onDismiss()
                                 }
                             }

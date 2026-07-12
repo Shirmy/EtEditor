@@ -38,3 +38,7 @@ internal data class ToolPlanApplyResult(
 internal fun shouldCloseToolPlanBeforeExecution(automationStepPresent: Boolean): Boolean {
     return automationStepPresent
 }
+
+internal fun shouldDismissToolPlanAfterManualExecution(successful: Boolean): Boolean {
+    return successful
+}

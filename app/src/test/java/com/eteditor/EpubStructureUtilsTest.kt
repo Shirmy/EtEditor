@@ -41,6 +41,30 @@ class EpubStructureUtilsTest {
     }
 
     @Test
+    fun exclusiveOperationLocksBeforePreparingUi() = runBlocking {
+        var busy = false
+        val events = mutableListOf<String>()
+
+        withExclusiveOperation(
+            isBusy = { busy },
+            setBusy = { value ->
+                busy = value
+                events += if (value) "locked" else "released"
+            },
+            onBusy = { Unit },
+            beforeAction = {
+                assertTrue(busy)
+                events += "prepare"
+            }
+        ) {
+            assertTrue(busy)
+            events += "action"
+        }
+
+        assertEquals(listOf("locked", "prepare", "action", "released"), events)
+    }
+
+    @Test
     fun exclusiveOperationReleasesLockAfterFailure() = runBlocking {
         var busy = false
 

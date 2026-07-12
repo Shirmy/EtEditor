@@ -331,7 +331,6 @@ internal fun EditorToolEditor(
             controller = controller,
             toolId = toolId,
             onDismiss = { fileRenamePreviewToolId = null },
-            onApplyStarted = { fileRenamePreviewToolId = null },
             modifier = modifier
         )
         return
@@ -341,7 +340,6 @@ internal fun EditorToolEditor(
             controller = controller,
             toolId = toolId,
             onDismiss = { titleRenamePreviewToolId = null },
-            onApplyStarted = { titleRenamePreviewToolId = null },
             modifier = modifier
         )
         return
@@ -351,7 +349,6 @@ internal fun EditorToolEditor(
             controller = controller,
             toolId = toolId,
             onDismiss = { titleFormatPreviewToolId = null },
-            onApplyStarted = { titleFormatPreviewToolId = null },
             modifier = modifier
         )
         return

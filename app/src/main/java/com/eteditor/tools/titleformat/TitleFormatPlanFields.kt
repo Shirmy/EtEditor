@@ -47,7 +47,6 @@ fun TitleFormatPlanPane(
     toolId: String,
     onDismiss: () -> Unit,
     onApplied: (() -> Unit)? = null,
-    onApplyStarted: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val plan = controller.titleFormatPlan
@@ -78,7 +77,6 @@ fun TitleFormatPlanPane(
             controller.setAutomationRunStepState(step, AutomationRunStepState.Running)
             controller.setAutomationRunStepProgress(step, 0f, executionLabel)
         }
-        onApplyStarted?.invoke()
         executionJob = controller.controllerScope.launch {
             delay(16)
             yieldToAppUiBeforeHeavyWork()
@@ -185,7 +183,7 @@ fun TitleFormatPlanPane(
                                     updateExecutionProgress(completed, total)
                                 }
                                 executing = false
-                                if (applied) {
+                                if (shouldDismissToolPlanAfterManualExecution(successful = applied)) {
                                     onApplied?.invoke() ?: onDismiss()
                                 }
                             }
