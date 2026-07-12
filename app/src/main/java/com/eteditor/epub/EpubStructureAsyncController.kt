@@ -2,6 +2,11 @@ package com.eteditor
 
 import com.eteditor.core.EpubBook
 
+internal fun shouldRebuildEpubTextSearchPreview(
+    textSearchToolId: String?,
+    replacementPreviewPresent: Boolean
+): Boolean = textSearchToolId != null && !replacementPreviewPresent
+
 private suspend fun <R> EditorController.prepareCurrentEpubMutation(
     missingMessage: String,
     mutation: (EpubBook) -> R
@@ -17,15 +22,21 @@ private suspend fun <R> EditorController.prepareCurrentEpubMutation(
 private fun EditorController.finishPreparedEpubStructureChange(
     prepared: PreparedEpubMutation<*>,
     nextPreviewIndex: Int,
-    message: String
+    message: String,
+    preserveTextSearch: Boolean = false
 ): Boolean {
     if (!publishPreparedEpubMutation(prepared)) return false
     previewChapterIndex = nextPreviewIndex.coerceIn(0, prepared.book.chapters.lastIndex.coerceAtLeast(0))
     checkReport = null
     markDocumentChanged()
     clearFileRenamePlan()
-    clearTextSearchState()
+    val shouldRebuildTextSearchPreview = preserveTextSearch && shouldRebuildEpubTextSearchPreview(
+        textSearchToolId = textSearchToolId,
+        replacementPreviewPresent = replacementFilePreview != null
+    )
+    if (shouldRebuildTextSearchPreview) clearPreviewHighlight() else clearTextSearchState()
     refreshChapters()
+    if (shouldRebuildTextSearchPreview) rebuildCurrentTextSearchPreviewAfterDocumentChange()
     statusMessage = message
     return true
 }
@@ -40,7 +51,10 @@ private fun EditorController.finishPreparedEpubBodyChange(
     checkReport = null
     markDocumentChanged()
     clearFileRenamePlan()
-    val shouldRebuildTextSearchPreview = textSearchToolId != null && replacementFilePreview == null
+    val shouldRebuildTextSearchPreview = shouldRebuildEpubTextSearchPreview(
+        textSearchToolId = textSearchToolId,
+        replacementPreviewPresent = replacementFilePreview != null
+    )
     if (shouldRebuildTextSearchPreview) clearPreviewHighlight() else clearTextSearchState()
     refreshEpubChapterInfoAt(chapterIndex, refreshPreview = !shouldRebuildTextSearchPreview)
     if (shouldRebuildTextSearchPreview) rebuildCurrentTextSearchPreviewAfterDocumentChange()
@@ -243,7 +257,8 @@ internal suspend fun EditorController.setEpubVolumeFromBodySelectionAsync(
     return finishPreparedEpubStructureChange(
         prepared,
         chapterIndex,
-        "已设为卷：${result.volumeDisplayTitle}"
+        "已设为卷：${result.volumeDisplayTitle}",
+        preserveTextSearch = true
     )
 }
 

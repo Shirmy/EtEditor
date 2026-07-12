@@ -14,6 +14,13 @@ import org.junit.Test
 
 class EpubStructureUtilsTest {
     @Test
+    fun textSearchPreviewRebuildRequiresActiveSearchWithoutReplacementPreview() {
+        assertTrue(shouldRebuildEpubTextSearchPreview("search", replacementPreviewPresent = false))
+        assertFalse(shouldRebuildEpubTextSearchPreview(null, replacementPreviewPresent = false))
+        assertFalse(shouldRebuildEpubTextSearchPreview("search", replacementPreviewPresent = true))
+    }
+
+    @Test
     fun exclusiveOperationRejectsDuplicateWork() = runBlocking {
         var busy = true
         var actionRan = false
