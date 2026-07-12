@@ -207,6 +207,57 @@ class InsertChapterEpubImportUtilsTest {
         assertEquals("第2章 番外", book.chapters[1].title)
     }
 
+    @Test
+    fun insertChaptersIntoEpubBookContinuesNearestDisplayedChapterNumber() {
+        val book = sampleBook(
+            listOf(
+                epubChapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第68章 aa"),
+                epubChapter("c2", "OEBPS/Text/Chapter0002.xhtml", "没有章号")
+            )
+        )
+        val source = InsertChapterSourceData(
+            sourceUri = "content://source",
+            sourceType = INSERT_CHAPTER_SOURCE_UPLOAD,
+            originalName = "source.txt",
+            chapters = listOf(insertable(0, "aa"), insertable(1, "bb"))
+        )
+
+        insertChaptersIntoEpubBook(
+            book = book,
+            source = source,
+            selected = source.chapters,
+            positionMode = INSERT_CHAPTER_POSITION_END,
+            targetChapterIndex = null,
+            currentChapterIndex = 1
+        )
+
+        assertEquals(listOf("第69章 aa", "第70章 bb"), book.chapters.takeLast(2).map { it.title })
+    }
+
+    @Test
+    fun insertChaptersIntoEpubBookKeepsSourceTitleWithoutNumberedPredecessor() {
+        val book = sampleBook(
+            listOf(epubChapter("c1", "OEBPS/Text/Chapter0001.xhtml", "序章"))
+        )
+        val source = InsertChapterSourceData(
+            sourceUri = "content://source",
+            sourceType = INSERT_CHAPTER_SOURCE_UPLOAD,
+            originalName = "source.txt",
+            chapters = listOf(insertable(0, "aa"))
+        )
+
+        insertChaptersIntoEpubBook(
+            book = book,
+            source = source,
+            selected = source.chapters,
+            positionMode = INSERT_CHAPTER_POSITION_END,
+            targetChapterIndex = null,
+            currentChapterIndex = 0
+        )
+
+        assertEquals("aa", book.chapters.last().title)
+    }
+
     private fun insertable(index: Int, title: String, isVolume: Boolean = false): InsertableChapter {
         return InsertableChapter(
             sourceIndex = index,

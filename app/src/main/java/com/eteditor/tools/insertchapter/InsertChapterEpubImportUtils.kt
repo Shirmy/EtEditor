@@ -76,11 +76,8 @@ internal fun insertChaptersIntoEpubBook(
     val preservingSourceVolumes = source.sourceType == INSERT_CHAPTER_SOURCE_EPUB &&
         selected.any { it.isVolume }
     val chapterFileNameTemplate = dominantEpubChapterFileNameTemplate(book, epubBodyChapterIndices(book))
-    var number = book.chapters
-        .take(insertPosition)
-        .count { it.isEpubBodyNumberedChapter() } + 1
+    var nextChapterNumber = nextInsertedChapterNumber(book, insertPosition)
     val referenceStyle = epubInsertReferenceTitleStyle(book, insertPosition)
-    val referenceNumbered = epubInsertReferenceIsNumbered(book, insertPosition)
     val defaultLevel = targetTocLevelForInsert(book, insertPosition)
     val opfDir = book.opfPath.substringBeforeLast('/', missingDelimiterValue = "").let {
         if (it.isBlank()) "" else "$it/"
@@ -89,9 +86,11 @@ internal fun insertChaptersIntoEpubBook(
     val inserted = selected.mapIndexed { insertOffset, sourceChapter ->
         val isVolume = sourceChapter.isVolume
         val sourceParts = parseTitleFormatParts(sourceChapter.title)
-        val shouldRenumber = !isVolume && referenceNumbered
+        val shouldRenumber = !isVolume && nextChapterNumber != null
         val numberedTitle = if (shouldRenumber) {
-            renumberInsertedChapterTitle(sourceChapter.title, number++)
+            val number = nextChapterNumber ?: error("缺少插入章号")
+            nextChapterNumber = number + 1
+            renumberInsertedChapterTitle(sourceChapter.title, number)
         } else {
             sourceChapter.title
         }

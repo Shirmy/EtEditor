@@ -218,6 +218,40 @@ class InsertChapterUtilsTest {
     }
 
     @Test
+    fun nextInsertedChapterNumberUsesNearestRealPrecedingNumber() {
+        val book = sampleBook(
+            listOf(
+                epubChapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第12章 开始"),
+                epubChapter("c2", "OEBPS/Text/Chapter0002.xhtml", "第68章 aa")
+            )
+        )
+
+        assertEquals(69, nextInsertedChapterNumber(book, insertPosition = 2))
+    }
+
+    @Test
+    fun nextInsertedChapterNumberSkipsVolumesAndUnnumberedTitles() {
+        val book = sampleBook(
+            listOf(
+                epubChapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第68章 aa"),
+                epubChapter("v1", "OEBPS/Text/Vol01.xhtml", "第一卷"),
+                epubChapter("c2", "OEBPS/Text/Chapter0002.xhtml", "没有章号")
+            )
+        )
+
+        assertEquals(69, nextInsertedChapterNumber(book, insertPosition = 3))
+    }
+
+    @Test
+    fun nextInsertedChapterNumberReturnsNullWithoutNumberedPredecessor() {
+        val book = sampleBook(
+            listOf(epubChapter("c1", "OEBPS/Text/Chapter0001.xhtml", "序章"))
+        )
+
+        assertEquals(null, nextInsertedChapterNumber(book, insertPosition = 1))
+    }
+
+    @Test
     fun insertChapterProgressLabelAndValueClampVisibleProgress() {
         assertEquals("解析 2/5", insertChapterProgressLabel("插入", "解析", completed = 2, total = 5))
         assertEquals("插入 5/5", insertChapterProgressLabel("插入", "", completed = 8, total = 5))

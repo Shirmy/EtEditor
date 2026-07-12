@@ -12,6 +12,17 @@ internal fun renumberInsertedChapterTitle(title: String, number: Int): String {
     return if (suffix.isBlank()) "第${number}章" else "第${number}章$suffix"
 }
 
+internal fun nextInsertedChapterNumber(book: EpubBook, insertPosition: Int): Int? {
+    return book.chapters
+        .take(insertPosition.coerceIn(0, book.chapters.size))
+        .asReversed()
+        .asSequence()
+        .filterNot { chapter -> chapter.isVolumeChapter() || chapter.isCoverSection0001Or0002() }
+        .mapNotNull { chapter -> ChapterDetector.txtChapterNumberFromTitle(chapter.title) }
+        .firstOrNull()
+        ?.plus(1)
+}
+
 internal fun resolveEpubInsertChapterPosition(
     book: EpubBook,
     positionMode: String,
