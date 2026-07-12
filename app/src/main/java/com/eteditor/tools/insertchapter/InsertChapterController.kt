@@ -419,27 +419,30 @@ private suspend fun EditorController.insertChaptersIntoEpub(
     onProgress: InsertChapterProgressCallback
 ): Boolean {
     val sourceBook = epub ?: return false
-    val nextBook = sourceBook.mutableDeepCopy()
     val currentChapterIndex = previewChapterIndex
     onProgress("插入章节", 0, selected.size.coerceAtLeast(1))
-    val result = try {
+    val prepared = try {
         withContext(Dispatchers.Default) {
-            insertChaptersIntoEpubBook(
-                book = nextBook,
-                source = source,
-                selected = selected,
-                positionMode = positionMode,
-                targetChapterIndex = targetChapterIndex,
-                currentChapterIndex = currentChapterIndex,
-                onProgress = { _, _ -> }
-            )
+            prepareEpubMutationModel(sourceBook) { nextBook ->
+                insertChaptersIntoEpubBook(
+                    book = nextBook,
+                    source = source,
+                    selected = selected,
+                    positionMode = positionMode,
+                    targetChapterIndex = targetChapterIndex,
+                    currentChapterIndex = currentChapterIndex,
+                    onProgress = { _, _ -> }
+                )
+            }
         }
     } catch (error: Throwable) {
         statusMessage = "插入失败：${error.message ?: error.javaClass.simpleName}"
         return false
     }
+    val result = prepared.result
+    val nextBook = prepared.book
     onProgress("插入章节", selected.size, selected.size.coerceAtLeast(1))
-    epub = nextBook
+    if (!publishPreparedEpubMutation(prepared)) return false
     previewChapterIndex = result.insertPosition.coerceIn(0, nextBook.chapters.lastIndex.coerceAtLeast(0))
     checkReport = null
     markDocumentChanged()

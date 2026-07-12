@@ -1,6 +1,8 @@
 package com.eteditor
 
 import com.eteditor.core.DocumentKind
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 
 internal fun EditorController.titleFormatParameters(tool: EditorTool? = null): TitleFormatParameters {
@@ -140,18 +142,26 @@ private suspend fun EditorController.applyTitleFormatPlanWithProgress(
     val changed = when (kind) {
         DocumentKind.Epub -> {
             val source = epub ?: return 0
-            val book = source.mutableDeepCopy()
+            val book = withContext(Dispatchers.Default) { source.mutableStructureCopy() }
             var changedCount = 0
             for ((index, pair) in renderedByIndex.withIndex()) {
                 val (chapterIndex, rendered) = pair
-                if (applyEpubTitleFormatToChapter(book, chapterIndex, rendered)) {
+                val changedChapter = withContext(Dispatchers.Default) {
+                    applyEpubTitleFormatToChapter(book, chapterIndex, rendered)
+                }
+                if (changedChapter) {
                     changedCount += 1
                 }
                 onProgress(index + 1, total)
                 yield()
             }
-            if (changedCount > 0) epub = book
-            changedCount
+            if (changedCount > 0 && epub !== source) {
+                statusMessage = "文档内容已变化，请重试"
+                return 0
+            } else {
+                if (changedCount > 0) epub = book
+                changedCount
+            }
         }
         DocumentKind.Txt -> {
             if (warnTxtMoveChapterSyncPending("标题格式")) return 0
@@ -198,7 +208,7 @@ private suspend fun EditorController.applyTitleFormatPlanWithProgress(
 
 private fun EditorController.applyEpubTitleFormats(renderedByIndex: List<Pair<Int, TitleFormatRendered>>): Int {
     val source = epub ?: return 0
-    val book = source.mutableDeepCopy()
+    val book = source.mutableStructureCopy()
     val changed = applyEpubTitleFormatsToBook(book, renderedByIndex)
     if (changed > 0) epub = book
     return changed

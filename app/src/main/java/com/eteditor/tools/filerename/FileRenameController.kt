@@ -1,6 +1,8 @@
 package com.eteditor
 
 import com.eteditor.core.DocumentKind
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 
 internal fun EditorController.runFileRenameTool(tool: EditorTool, manual: Boolean): Boolean {
@@ -61,10 +63,14 @@ internal fun EditorController.applyFileRenamePlan(plan: List<FileRenamePlanItem>
         return 0
     }
     if (plan.isEmpty()) return 0
-    val book = source.mutableDeepCopy()
+    val book = source.mutableStructureCopy()
     val renamed = applyFileRenamePlanToEpub(book, plan)
     checkReport = null
     if (renamed > 0) {
+        if (epub !== source) {
+            statusMessage = "文档内容已变化，请重试"
+            return 0
+        }
         epub = book
         markDocumentChanged()
     }
@@ -100,20 +106,25 @@ private suspend fun EditorController.applyFileRenamePlanWithProgress(
         return 0
     }
     if (plan.isEmpty()) return 0
-    val book = source.mutableDeepCopy()
+    val book = withContext(Dispatchers.Default) { source.mutableStructureCopy() }
     val total = plan.size.coerceAtLeast(1)
     onProgress(0, total)
     yield()
     var renamed = 0
     val movedEntries = mutableListOf<Triple<com.eteditor.core.EpubChapter, FileRenamePlanItem, ByteArray?>>()
     for ((index, item) in plan.withIndex()) {
-        if (item.changed) {
-            val chapter = book.chapters.getOrNull(item.chapterIndex)
-            if (chapter != null) {
-                val bytes = book.entries.remove(item.oldPath)
-                renamed += 1
-                movedEntries += Triple(chapter, item, bytes)
+        val movedEntry = if (item.changed) {
+            withContext(Dispatchers.Default) {
+                book.chapters.getOrNull(item.chapterIndex)?.let { chapter ->
+                    Triple(chapter, item, book.entries.remove(item.oldPath))
+                }
             }
+        } else {
+            null
+        }
+        if (movedEntry != null) {
+            renamed += 1
+            movedEntries += movedEntry
         }
         onProgress(index + 1, total)
         yield()
@@ -138,10 +149,16 @@ private suspend fun EditorController.applyFileRenamePlanWithProgress(
                 renamedPaths[normalizeEpubPath(item.oldPath).lowercase()] = item.newPath
             }
         }
-        rewriteEpubBodyLinksForRenamedPaths(book, renamedPaths)
+        withContext(Dispatchers.Default) {
+            rewriteEpubBodyLinksForRenamedPaths(book, renamedPaths)
+        }
     }
     checkReport = null
     if (renamed > 0) {
+        if (epub !== source) {
+            statusMessage = "文档内容已变化，请重试"
+            return 0
+        }
         epub = book
         markDocumentChanged()
     }

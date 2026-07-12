@@ -122,22 +122,24 @@ private suspend fun EditorController.insertImageResourceIntoEpubAsync(parameters
         if (parameters.imageInsertType == COVER_IMAGE_INSERT_CUSTOM && parameters.imageUri.isNotBlank()) {
             rememberReadableDocumentUri(appContext, Uri.parse(parameters.imageUri.trim()))
         }
-        val nextBook = sourceBook.mutableDeepCopy()
-        val result = withContext(Dispatchers.IO) {
-            insertImageResourceIntoEpubBook(
-                book = nextBook,
-                parameters = parameters,
-                assets = appContext.assets,
-                contentResolver = appContext.contentResolver,
-                noteAssetPath = insertImageNoteAssetPath(),
-                warningAssetPath = insertImageWarningAssetPath()
-            )
+        val prepared = withContext(Dispatchers.IO) {
+            prepareEpubMutationModel(sourceBook) { nextBook ->
+                insertImageResourceIntoEpubBook(
+                    book = nextBook,
+                    parameters = parameters,
+                    assets = appContext.assets,
+                    contentResolver = appContext.contentResolver,
+                    noteAssetPath = insertImageNoteAssetPath(),
+                    warningAssetPath = insertImageWarningAssetPath()
+                )
+            }
         }
+        val result = prepared.result
         if (!result.success) {
             if (result.message.isNotBlank()) statusMessage = result.message
             return false
         }
-        epub = nextBook
+        if (!publishPreparedEpubMutation(prepared)) return false
         generatedCoverPreview = null
         checkReport = null
         markDocumentChanged()
@@ -155,7 +157,7 @@ private fun EditorController.writeCoverPreview(preview: GeneratedCoverPreview, s
         return false
     }
     return try {
-        val nextBook = sourceBook.mutableDeepCopy()
+        val nextBook = sourceBook.mutableStructureCopy()
         val coverName = coverFileNameForMediaType(preview.mediaType)
         writeCoverToEpub(nextBook, coverName, preview.bytes, preview.mediaType)
         epub = nextBook
@@ -176,12 +178,13 @@ private suspend fun EditorController.writeCoverPreviewAsync(preview: GeneratedCo
         return false
     }
     return try {
-        val nextBook = sourceBook.mutableDeepCopy()
         val coverName = coverFileNameForMediaType(preview.mediaType)
-        withContext(Dispatchers.Default) {
-            writeCoverToEpub(nextBook, coverName, preview.bytes, preview.mediaType)
+        val prepared = withContext(Dispatchers.Default) {
+            prepareEpubMutationModel(sourceBook) { nextBook ->
+                writeCoverToEpub(nextBook, coverName, preview.bytes, preview.mediaType)
+            }
         }
-        epub = nextBook
+        if (!publishPreparedEpubMutation(prepared)) return false
         checkReport = null
         markDocumentChanged()
         refreshChapters()

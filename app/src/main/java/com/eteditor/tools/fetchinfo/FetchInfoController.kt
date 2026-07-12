@@ -649,7 +649,7 @@ private suspend fun EditorController.applyFetchedInfoToEpub(
     val sourceBook = epub ?: error("没有 EPUB 可应用")
     // 先在副本上完成全部写入（标题、简介、封面），全部成功后再整体替换当前书；
     // 中途任何一步抛错都不会改到原书，避免留下半成品。
-    val book = sourceBook.mutableDeepCopy()
+    val book = withContext(Dispatchers.Default) { sourceBook.mutableStructureCopy() }
     val parameters = preview.parameters
     val info = if (filterActive) preview.filtered else preview.raw
     var catalogChanged = 0
@@ -667,16 +667,21 @@ private suspend fun EditorController.applyFetchedInfoToEpub(
     yield()
 
     if (parameters.writeCatalog && info.catalog.isNotEmpty()) {
-        val catalogResult = applyFetchedCatalogToEpub(
-            book = book,
-            parameters = parameters,
-            catalog = info.catalog,
-            currentChapterIndex = previewChapterIndex,
-            renames = renames,
-            deletes = deletes,
-            catalogOrder = catalogOrder,
-            onError = { message -> statusMessage = message }
-        )
+        var catalogError = ""
+        val currentChapterIndex = previewChapterIndex
+        val catalogResult = withContext(Dispatchers.Default) {
+            applyFetchedCatalogToEpub(
+                book = book,
+                parameters = parameters,
+                catalog = info.catalog,
+                currentChapterIndex = currentChapterIndex,
+                renames = renames,
+                deletes = deletes,
+                catalogOrder = catalogOrder,
+                onError = { message -> catalogError = message }
+            )
+        }
+        if (catalogError.isNotBlank()) statusMessage = catalogError
         catalogChanged = catalogResult.changed
         touchedCurrentChapter = catalogResult.touchedCurrentChapter
         completed += 1
@@ -685,7 +690,9 @@ private suspend fun EditorController.applyFetchedInfoToEpub(
     }
 
     if (parameters.writeIntro && info.intro.isNotBlank()) {
-        writeFetchInfoIntroFileToEpub(book, parameters.introTargetPath, info, parameters.source)
+        withContext(Dispatchers.Default) {
+            writeFetchInfoIntroFileToEpub(book, parameters.introTargetPath, info, parameters.source)
+        }
         introWritten = true
         completed += 1
         onProgress("应用简介", completed, total)
@@ -714,7 +721,9 @@ private suspend fun EditorController.applyFetchedInfoToEpub(
         }
         coverResult
             .onSuccess { response ->
-                writeCoverToEpub(book, info.coverUrl, response.bytes, response.contentType)
+                withContext(Dispatchers.Default) {
+                    writeCoverToEpub(book, info.coverUrl, response.bytes, response.contentType)
+                }
                 coverWritten = true
             }
             .onFailure { error ->
@@ -726,6 +735,7 @@ private suspend fun EditorController.applyFetchedInfoToEpub(
     }
 
     // 全部写入完成、未抛异常，才把副本整体替换为当前书，并按需刷新当前章预览。
+    if (epub !== sourceBook) error("文档内容已变化，请重试")
     epub = book
     if (touchedCurrentChapter) refreshPreview()
 

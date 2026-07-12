@@ -1,6 +1,8 @@
 package com.eteditor
 
 import com.eteditor.core.DocumentKind
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 
 internal fun EditorController.titleRenameParameters(tool: EditorTool? = null): TitleRenameParameters {
@@ -122,10 +124,23 @@ private suspend fun EditorController.applyTitleRenamePlanWithProgress(
     val changed = when (kind) {
         DocumentKind.Epub -> {
             val source = epub ?: return 0
-            val book = source.mutableDeepCopy()
-            val count = applyRenamedTitlesToEpubWithProgress(book, changedTitles, onProgress)
-            if (count > 0) epub = book
-            count
+            val book = withContext(Dispatchers.Default) { source.mutableStructureCopy() }
+            var count = 0
+            changedTitles.forEachIndexed { index, pair ->
+                val result = withContext(Dispatchers.Default) {
+                    applyRenamedTitlesToEpub(book, listOf(pair))
+                }
+                count += result.count
+                onProgress(index + 1, changedTitles.size)
+                yield()
+            }
+            if (count > 0 && epub !== source) {
+                statusMessage = "文档内容已变化，请重试"
+                return 0
+            } else {
+                if (count > 0) epub = book
+                count
+            }
         }
         DocumentKind.Txt -> {
             if (warnTxtMoveChapterSyncPending("写回标题")) return 0
@@ -154,7 +169,7 @@ private fun EditorController.applyTitlesToIndices(newTitles: List<Pair<Int, Stri
     when (kind) {
         DocumentKind.Epub -> {
             val source = epub ?: return 0
-            val book = source.mutableDeepCopy()
+            val book = source.mutableStructureCopy()
             val result = applyRenamedTitlesToEpub(book, newTitles)
             if (!result.attempted) return 0
             if (result.count > 0) {

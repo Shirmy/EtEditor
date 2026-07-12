@@ -1398,22 +1398,24 @@ private suspend fun EditorController.replaceInEpubAsync(
     rules: List<TextReplaceRule>
 ): ReplaceResult {
     val sourceBook = epub ?: return ReplaceResult(0, 0)
-    val nextBook = sourceBook.mutableDeepCopy()
     val currentPath = sourceBook.chapters.getOrNull(previewChapterIndex)?.path
     val introPath = defaultFetchInfoIntroTarget(sourceBook)
-    val result = withContext(Dispatchers.Default) {
+    val prepared = withContext(Dispatchers.Default) {
         val context = currentCoroutineContext()
-        replaceInEpubPackageText(
-            book = nextBook,
-            parameters = parameters,
-            currentPath = currentPath,
-            introPath = introPath,
-            rules = rules,
-            ensureActive = { context.ensureActive() }
-        )
+        prepareEpubMutationModel(sourceBook) { nextBook ->
+            replaceInEpubPackageText(
+                book = nextBook,
+                parameters = parameters,
+                currentPath = currentPath,
+                introPath = introPath,
+                rules = rules,
+                ensureActive = { context.ensureActive() }
+            )
+        }
     }
+    val result = prepared.result
     if (result.replacements > 0) {
-        epub = nextBook
+        if (!publishPreparedEpubMutation(prepared)) return ReplaceResult(0, 0)
     }
     return result
 }
