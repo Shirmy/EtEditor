@@ -19,6 +19,8 @@ internal fun EpubBook.mutableDeepCopy(): EpubBook {
 }
 
 internal fun EpubBook.mutableStructureCopy(): EpubBook {
+    // Entry byte arrays are shared with the source book. Treat them as read-only:
+    // any content change must replace the map value with a newly created ByteArray.
     return copy(
         entries = LinkedHashMap(entries),
         manifest = LinkedHashMap<String, ManifestItem>().also { copy ->

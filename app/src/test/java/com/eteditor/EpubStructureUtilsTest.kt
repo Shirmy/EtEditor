@@ -5,6 +5,7 @@ import com.eteditor.core.EpubChapter
 import com.eteditor.core.ManifestItem
 import java.nio.charset.StandardCharsets
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotSame
@@ -64,6 +65,7 @@ class EpubStructureUtilsTest {
             listOf(chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"))
         )
         val originalHtml = source.chapters[0].html
+        val originalEntry = source.entries.getValue(source.chapters[0].path).copyOf()
         val body = htmlBodyContentParts(originalHtml).body
         val selectionStart = body.indexOf("正文")
 
@@ -78,7 +80,12 @@ class EpubStructureUtilsTest {
 
         assertTrue(prepared.result.success)
         assertEquals(originalHtml, source.chapters[0].html)
+        assertArrayEquals(originalEntry, source.entries.getValue(source.chapters[0].path))
         assertFalse(prepared.book.chapters[0].html == originalHtml)
+        assertFalse(
+            source.entries.getValue(source.chapters[0].path)
+                .contentEquals(prepared.book.entries.getValue(prepared.book.chapters[0].path))
+        )
         assertSame(source, prepared.source)
     }
 
