@@ -101,14 +101,13 @@ suspend fun EditorController.applyPreparedTitleRenamePlanWithProgress(
     // 正文还在后台同步时被挡下：什么都不做并算没通过，避免自动化误判为成功后拿旧内容继续。
     if (kind == DocumentKind.Txt && warnTxtMoveChapterSyncPending("写回标题")) return false
     // 真正执行；零改动也返回 true，底层已设好"无需修改"提示，自动化成功路径会据此识别为"跳过"而非"失败"
-    applyTitleRenamePlanWithProgress(titleRenamePlan, onProgress)
-    return true
+    return applyTitleRenamePlanWithProgress(titleRenamePlan, onProgress).successful
 }
 
 private suspend fun EditorController.applyTitleRenamePlanWithProgress(
     plan: List<TitleRenamePlanItem>,
     onProgress: (completed: Int, total: Int) -> Unit
-): Int {
+): ToolPlanApplyResult {
     val changedTitles = plan
         .filter { it.changed }
         .map { it.chapterIndex to it.newTitle }
@@ -119,11 +118,11 @@ private suspend fun EditorController.applyTitleRenamePlanWithProgress(
         onProgress(total, total)
         statusMessage = "标题重命名：处理 ${plan.size} 章，修改 0 章，无需修改"
         clearTitleRenamePlan()
-        return 0
+        return ToolPlanApplyResult.completed(changed = 0)
     }
     val changed = when (kind) {
         DocumentKind.Epub -> {
-            val source = epub ?: return 0
+            val source = epub ?: return ToolPlanApplyResult.failed()
             val sourceContentVersion = documentContentVersion
             val book = withContext(Dispatchers.Default) { source.mutableStructureCopy() }
             var count = 0
@@ -137,21 +136,21 @@ private suspend fun EditorController.applyTitleRenamePlanWithProgress(
             }
             if (count > 0 && !epubMutationSourceMatches(epub, documentContentVersion, source, sourceContentVersion)) {
                 statusMessage = "文档内容已变化，请重试"
-                return 0
+                return ToolPlanApplyResult.failed()
             } else {
                 if (count > 0) epub = book
                 count
             }
         }
         DocumentKind.Txt -> {
-            if (warnTxtMoveChapterSyncPending("写回标题")) return 0
-            val document = txt ?: return 0
+            if (warnTxtMoveChapterSyncPending("写回标题")) return ToolPlanApplyResult.failed()
+            val document = txt ?: return ToolPlanApplyResult.failed()
             val count = applyRenamedTitlesToTxtWithProgress(document, changedTitles, ::detectCurrentTxtChapters, onProgress)
             // 与"关预览直接执行"那条路径保持一致：写回标题后补跑一次目录自动净化(对应总报告第 81 项)。
             applyTxtCatalogPurifyRulesAfterCatalogChange()
             count
         }
-        DocumentKind.None -> 0
+        DocumentKind.None -> return ToolPlanApplyResult.failed()
     }
     checkReport = null
     if (changed > 0) markDocumentChanged()
@@ -163,7 +162,7 @@ private suspend fun EditorController.applyTitleRenamePlanWithProgress(
     }
     log(statusMessage)
     clearTitleRenamePlan()
-    return changed
+    return ToolPlanApplyResult.completed(changed = changed)
 }
 
 private fun EditorController.applyTitlesToIndices(newTitles: List<Pair<Int, String>>): Int {

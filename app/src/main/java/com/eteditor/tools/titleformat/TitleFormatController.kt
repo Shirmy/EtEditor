@@ -125,14 +125,13 @@ suspend fun EditorController.applyPreparedTitleFormatPlanWithProgress(
     // 正文还在后台同步时被挡下：什么都不做并算没通过，避免自动化误判为成功后拿旧内容继续。
     if (kind == DocumentKind.Txt && warnTxtMoveChapterSyncPending("标题格式")) return false
     // 真正执行；零改动也返回 true，底层已设好"无需修改"提示，自动化成功路径会据此识别为"跳过"而非"失败"
-    applyTitleFormatPlanWithProgress(titleFormatPlan, onProgress)
-    return true
+    return applyTitleFormatPlanWithProgress(titleFormatPlan, onProgress).successful
 }
 
 private suspend fun EditorController.applyTitleFormatPlanWithProgress(
     plan: List<TitleFormatPlanItem>,
     onProgress: (completed: Int, total: Int) -> Unit
-): Int {
+): ToolPlanApplyResult {
     val renderedByIndex = plan.map { item ->
         item.chapterIndex to renderTitleFormat(item.prefix, item.suffix, item.styleCode)
     }
@@ -141,7 +140,7 @@ private suspend fun EditorController.applyTitleFormatPlanWithProgress(
     yield()
     val changed = when (kind) {
         DocumentKind.Epub -> {
-            val source = epub ?: return 0
+            val source = epub ?: return ToolPlanApplyResult.failed()
             val sourceContentVersion = documentContentVersion
             val book = withContext(Dispatchers.Default) { source.mutableStructureCopy() }
             var changedCount = 0
@@ -158,15 +157,15 @@ private suspend fun EditorController.applyTitleFormatPlanWithProgress(
             }
             if (changedCount > 0 && !epubMutationSourceMatches(epub, documentContentVersion, source, sourceContentVersion)) {
                 statusMessage = "文档内容已变化，请重试"
-                return 0
+                return ToolPlanApplyResult.failed()
             } else {
                 if (changedCount > 0) epub = book
                 changedCount
             }
         }
         DocumentKind.Txt -> {
-            if (warnTxtMoveChapterSyncPending("标题格式")) return 0
-            val document = txt ?: return 0
+            if (warnTxtMoveChapterSyncPending("标题格式")) return ToolPlanApplyResult.failed()
+            val document = txt ?: return ToolPlanApplyResult.failed()
             var text = document.text
             var changedCount = 0
             val sortedRendered = renderedByIndex.sortedByDescending { it.first }
@@ -190,12 +189,12 @@ private suspend fun EditorController.applyTitleFormatPlanWithProgress(
             }
             changedCount
         }
-        DocumentKind.None -> 0
+        DocumentKind.None -> return ToolPlanApplyResult.failed()
     }
     if (changed <= 0) {
         statusMessage = titleFormatNoChangeMessage(plan)
         clearTitleFormatPlan()
-        return 0
+        return ToolPlanApplyResult.completed(changed = 0)
     }
 
     checkReport = null
@@ -204,7 +203,7 @@ private suspend fun EditorController.applyTitleFormatPlanWithProgress(
     statusMessage = titleFormatCompletionMessage(plan, changed)
     log(statusMessage)
     clearTitleFormatPlan()
-    return changed
+    return ToolPlanApplyResult.completed(changed = changed)
 }
 
 private fun EditorController.applyEpubTitleFormats(renderedByIndex: List<Pair<Int, TitleFormatRendered>>): Int {

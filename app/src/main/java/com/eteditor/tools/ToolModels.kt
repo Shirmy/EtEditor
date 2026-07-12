@@ -23,3 +23,14 @@ data class EditorTool(
     val toolId: String,
     val parameterOverrides: Map<String, String> = emptyMap()
 )
+
+internal data class ToolPlanApplyResult(
+    val changed: Int,
+    val successful: Boolean
+) {
+    companion object {
+        fun completed(changed: Int) = ToolPlanApplyResult(changed = changed, successful = true)
+
+        fun failed() = ToolPlanApplyResult(changed = 0, successful = false)
+    }
+}
