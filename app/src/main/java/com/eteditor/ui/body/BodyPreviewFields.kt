@@ -261,7 +261,7 @@ internal fun BodyPreview(
         val chapterIndex = controller.previewDisplayChapterIndex()
         runBodyStructureOperation("EPUB 分卷") {
             if (controller.isEpubPackageTextPreviewSource()) {
-                controller.setEpubPackageTextVolumeFromBodySelection(sourceStart, sourceEnd)
+                controller.setEpubPackageTextVolumeFromBodySelectionAsync(sourceStart, sourceEnd)
             } else {
                 controller.setEpubVolumeFromBodySelectionAsync(chapterIndex, sourceStart, sourceEnd)
             }
@@ -271,7 +271,7 @@ internal fun BodyPreview(
         if (controller.kind != DocumentKind.Epub || controller.busy) return
         runBodyStructureOperation("EPUB 删除正文") {
             if (controller.isEpubPackageTextPreviewSource()) {
-                controller.deleteEpubPackageTextBodySelection(sourceStart, sourceEnd)
+                controller.deleteEpubPackageTextBodySelectionAsync(sourceStart, sourceEnd)
             } else {
                 controller.deleteEpubBodySelectionAsync(
                     controller.previewDisplayChapterIndex(),
@@ -285,7 +285,7 @@ internal fun BodyPreview(
         if (controller.kind != DocumentKind.Epub || controller.busy) return
         runBodyStructureOperation("EPUB 加标签") {
             if (controller.isEpubPackageTextPreviewSource()) {
-                controller.wrapEpubPackageTextBodySelection(sourceStart, sourceEnd)
+                controller.wrapEpubPackageTextBodySelectionAsync(sourceStart, sourceEnd)
             } else {
                 controller.wrapEpubBodySelectionWithParagraphsAsync(
                     controller.previewDisplayChapterIndex(),
