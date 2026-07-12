@@ -4,6 +4,7 @@ import com.eteditor.core.EpubBook
 import com.eteditor.core.EpubChapter
 import com.eteditor.core.ManifestItem
 import java.nio.charset.StandardCharsets
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotSame
@@ -12,6 +13,44 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class EpubStructureUtilsTest {
+    @Test
+    fun exclusiveOperationRejectsDuplicateWork() = runBlocking {
+        var busy = true
+        var actionRan = false
+
+        val result = withExclusiveOperation(
+            isBusy = { busy },
+            setBusy = { busy = it },
+            onBusy = { "busy" }
+        ) {
+            actionRan = true
+            "done"
+        }
+
+        assertEquals("busy", result)
+        assertFalse(actionRan)
+        assertTrue(busy)
+    }
+
+    @Test
+    fun exclusiveOperationReleasesLockAfterFailure() = runBlocking {
+        var busy = false
+
+        val result = runCatching {
+            withExclusiveOperation(
+                isBusy = { busy },
+                setBusy = { busy = it },
+                onBusy = { Unit }
+            ) {
+                assertTrue(busy)
+                error("expected")
+            }
+        }
+
+        assertTrue(result.isFailure)
+        assertFalse(busy)
+    }
+
     @Test
     fun preparedMutationChangesSnapshotWithoutMutatingSource() {
         val source = sampleBook(

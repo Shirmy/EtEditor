@@ -67,32 +67,50 @@ internal fun EditorController.publishPreparedEpubMutation(
     return true
 }
 
+internal suspend fun <R> withExclusiveOperation(
+    isBusy: () -> Boolean,
+    setBusy: (Boolean) -> Unit,
+    onBusy: () -> R,
+    action: suspend () -> R
+): R {
+    if (isBusy()) return onBusy()
+    setBusy(true)
+    return try {
+        action()
+    } finally {
+        setBusy(false)
+    }
+}
+
 internal suspend fun EditorController.runEpubStructureUiOperation(
     label: String,
     action: suspend () -> Boolean
 ): Boolean {
-    if (busy) return false
-    busy = true
     val controller = this
-    return try {
-        coroutineScope {
-            val progressJob: Job = launch {
-                delay(150)
-                controller.setBodyOperationProgress(0.45f, "$label：处理中")
+    return withExclusiveOperation(
+        isBusy = { busy },
+        setBusy = { busy = it },
+        onBusy = { false }
+    ) {
+        try {
+            coroutineScope {
+                val progressJob: Job = launch {
+                    delay(150)
+                    controller.setBodyOperationProgress(0.45f, "$label：处理中")
+                }
+                try {
+                    action()
+                } finally {
+                    progressJob.cancel()
+                }
             }
-            try {
-                action()
-            } finally {
-                progressJob.cancel()
-            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            statusMessage = "$label 失败：${error.message ?: error.javaClass.simpleName}"
+            false
+        } finally {
+            clearBodyOperationProgress()
         }
-    } catch (error: CancellationException) {
-        throw error
-    } catch (error: Throwable) {
-        statusMessage = "$label 失败：${error.message ?: error.javaClass.simpleName}"
-        false
-    } finally {
-        clearBodyOperationProgress()
-        busy = false
     }
 }
