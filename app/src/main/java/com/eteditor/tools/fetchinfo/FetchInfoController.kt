@@ -615,26 +615,35 @@ suspend fun EditorController.applyFetchInfoPreviewWithProgress(
         statusMessage = "抓取信息应用仅支持 EPUB"
         return false
     }
-    statusMessage = "正在应用抓取信息..."
-    return try {
-        val result = applyFetchedInfoToEpub(preview, filterActive, renames, deletes, catalogOrder, onProgress)
-        val parts = buildList {
-            if (preview.parameters.writeCatalog) add("标题 ${result.catalogChanged}")
-            if (preview.parameters.writeIntro) add(if (result.introWritten) "简介 1" else "简介 0")
-            if (preview.parameters.writeCover) add(if (result.coverWritten) "封面 1" else "封面 0")
+    return withExclusiveOperation(
+        isBusy = { busy },
+        setBusy = { busy = it },
+        onBusy = {
+            statusMessage = "正在处理，请稍后重试"
+            false
         }
-        checkReport = null
-        markDocumentChanged()
-        refreshChapters()
-        fetchInfoPreview = null
-        fetchInfoSearchChoiceRequest = null
-        statusMessage = "抓取信息已应用：${parts.joinToString("；").ifBlank { "无变更" }}".let { message ->
-            if (result.coverError.isBlank()) message else "$message；封面失败：${result.coverError}"
+    ) {
+        statusMessage = "正在应用抓取信息..."
+        try {
+            val result = applyFetchedInfoToEpub(preview, filterActive, renames, deletes, catalogOrder, onProgress)
+            val parts = buildList {
+                if (preview.parameters.writeCatalog) add("标题 ${result.catalogChanged}")
+                if (preview.parameters.writeIntro) add(if (result.introWritten) "简介 1" else "简介 0")
+                if (preview.parameters.writeCover) add(if (result.coverWritten) "封面 1" else "封面 0")
+            }
+            checkReport = null
+            markDocumentChanged()
+            refreshChapters()
+            fetchInfoPreview = null
+            fetchInfoSearchChoiceRequest = null
+            statusMessage = "抓取信息已应用：${parts.joinToString("；").ifBlank { "无变更" }}".let { message ->
+                if (result.coverError.isBlank()) message else "$message；封面失败：${result.coverError}"
+            }
+            true
+        } catch (error: Throwable) {
+            statusMessage = "应用失败：${error.message ?: error.javaClass.simpleName}"
+            false
         }
-        true
-    } catch (error: Throwable) {
-        statusMessage = "应用失败：${error.message ?: error.javaClass.simpleName}"
-        false
     }
 }
 
