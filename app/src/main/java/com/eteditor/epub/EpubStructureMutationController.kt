@@ -11,17 +11,20 @@ import kotlinx.coroutines.withContext
 
 internal data class PreparedEpubMutation<R>(
     val source: EpubBook,
+    val sourceContentVersion: Int,
     val book: EpubBook,
     val result: R
 )
 
 internal fun <R> prepareEpubMutationModel(
     source: EpubBook,
+    sourceContentVersion: Int,
     mutation: (EpubBook) -> R
 ): PreparedEpubMutation<R> {
     val book = source.mutableStructureCopy()
     return PreparedEpubMutation(
         source = source,
+        sourceContentVersion = sourceContentVersion,
         book = book,
         result = mutation(book)
     )
@@ -29,20 +32,34 @@ internal fun <R> prepareEpubMutationModel(
 
 internal suspend fun <R> prepareEpubMutation(
     source: EpubBook,
+    sourceContentVersion: Int,
     mutation: (EpubBook) -> R
 ): PreparedEpubMutation<R> = withContext(Dispatchers.Default) {
-    prepareEpubMutationModel(source, mutation)
+    prepareEpubMutationModel(source, sourceContentVersion, mutation)
 }
 
 internal fun preparedEpubMutationMatchesSource(
     activeBook: EpubBook?,
+    activeContentVersion: Int,
     prepared: PreparedEpubMutation<*>
-): Boolean = activeBook === prepared.source
+): Boolean = epubMutationSourceMatches(
+    activeBook = activeBook,
+    activeContentVersion = activeContentVersion,
+    sourceBook = prepared.source,
+    sourceContentVersion = prepared.sourceContentVersion
+)
+
+internal fun epubMutationSourceMatches(
+    activeBook: EpubBook?,
+    activeContentVersion: Int,
+    sourceBook: EpubBook,
+    sourceContentVersion: Int
+): Boolean = activeBook === sourceBook && activeContentVersion == sourceContentVersion
 
 internal fun EditorController.publishPreparedEpubMutation(
     prepared: PreparedEpubMutation<*>
 ): Boolean {
-    if (!preparedEpubMutationMatchesSource(epub, prepared)) {
+    if (!preparedEpubMutationMatchesSource(epub, documentContentVersion, prepared)) {
         statusMessage = "文档内容已变化，请重试"
         return false
     }

@@ -50,10 +50,11 @@ internal suspend fun EditorController.saveEpubChapterItem(
     chapterTitle: String
 ): EpubChapterItemSaveResult {
     val source = epub ?: return EpubChapterItemSaveResult(message = "请先打开 EPUB")
+    val sourceContentVersion = documentContentVersion
     val result = withContext(Dispatchers.Default) {
         prepareEpubChapterItemSave(source, chapterIndex, fileName, chapterTitle)
     }
-    if (epub !== source) {
+    if (!epubMutationSourceMatches(epub, documentContentVersion, source, sourceContentVersion)) {
         return EpubChapterItemSaveResult(message = "文档内容已变化，请重试")
     }
     applyPreparedEpubChapterItemSave(chapterIndex, result)

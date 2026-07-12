@@ -118,12 +118,13 @@ private suspend fun EditorController.insertImageResourceIntoEpubAsync(parameters
         statusMessage = "插入图片仅支持 EPUB"
         return false
     }
+    val sourceContentVersion = documentContentVersion
     return try {
         if (parameters.imageInsertType == COVER_IMAGE_INSERT_CUSTOM && parameters.imageUri.isNotBlank()) {
             rememberReadableDocumentUri(appContext, Uri.parse(parameters.imageUri.trim()))
         }
         val prepared = withContext(Dispatchers.IO) {
-            prepareEpubMutationModel(sourceBook) { nextBook ->
+            prepareEpubMutationModel(sourceBook, sourceContentVersion) { nextBook ->
                 insertImageResourceIntoEpubBook(
                     book = nextBook,
                     parameters = parameters,
@@ -177,10 +178,11 @@ private suspend fun EditorController.writeCoverPreviewAsync(preview: GeneratedCo
         statusMessage = "封面写入仅支持 EPUB"
         return false
     }
+    val sourceContentVersion = documentContentVersion
     return try {
         val coverName = coverFileNameForMediaType(preview.mediaType)
         val prepared = withContext(Dispatchers.Default) {
-            prepareEpubMutationModel(sourceBook) { nextBook ->
+            prepareEpubMutationModel(sourceBook, sourceContentVersion) { nextBook ->
                 writeCoverToEpub(nextBook, coverName, preview.bytes, preview.mediaType)
             }
         }

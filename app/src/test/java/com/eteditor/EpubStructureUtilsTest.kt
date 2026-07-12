@@ -21,7 +21,7 @@ class EpubStructureUtilsTest {
         val body = htmlBodyContentParts(originalHtml).body
         val selectionStart = body.indexOf("正文")
 
-        val prepared = prepareEpubMutationModel(source) { book ->
+        val prepared = prepareEpubMutationModel(source, sourceContentVersion = 0) { book ->
             deleteEpubBodySelectionFromBook(
                 book = book,
                 chapterIndex = 0,
@@ -41,11 +41,21 @@ class EpubStructureUtilsTest {
         val source = sampleBook(
             listOf(chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"))
         )
-        val prepared = prepareEpubMutationModel(source) { true }
+        val prepared = prepareEpubMutationModel(source, sourceContentVersion = 7) { true }
         val replacement = source.mutableStructureCopy()
 
-        assertTrue(preparedEpubMutationMatchesSource(source, prepared))
-        assertFalse(preparedEpubMutationMatchesSource(replacement, prepared))
+        assertTrue(preparedEpubMutationMatchesSource(source, activeContentVersion = 7, prepared = prepared))
+        assertFalse(preparedEpubMutationMatchesSource(replacement, activeContentVersion = 7, prepared = prepared))
+    }
+
+    @Test
+    fun preparedMutationRejectsResultWhenSameBookContentChanged() {
+        val source = sampleBook(
+            listOf(chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"))
+        )
+        val prepared = prepareEpubMutationModel(source, sourceContentVersion = 7) { true }
+
+        assertFalse(preparedEpubMutationMatchesSource(source, activeContentVersion = 8, prepared = prepared))
     }
 
     @Test
@@ -59,7 +69,7 @@ class EpubStructureUtilsTest {
         )
         val originalIds = source.chapters.map { it.id }
 
-        val moved = prepareEpubMutationModel(source) { book ->
+        val moved = prepareEpubMutationModel(source, sourceContentVersion = 0) { book ->
             moveEpubChapterAfterInBook(
                 book = book,
                 sourceIndex = 0,
@@ -68,7 +78,7 @@ class EpubStructureUtilsTest {
                 bookEndTarget = MOVE_TARGET_BOOK_END
             )
         }
-        val deleted = prepareEpubMutationModel(source) { book ->
+        val deleted = prepareEpubMutationModel(source, sourceContentVersion = 0) { book ->
             deleteEpubChapterFromBook(book, chapterIndex = 1)
         }
 

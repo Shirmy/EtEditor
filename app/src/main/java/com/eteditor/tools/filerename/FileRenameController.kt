@@ -105,6 +105,7 @@ private suspend fun EditorController.applyFileRenamePlanWithProgress(
         statusMessage = "\u6ca1\u6709\u53ef\u91cd\u547d\u540d\u7684 EPUB"
         return 0
     }
+    val sourceContentVersion = documentContentVersion
     if (plan.isEmpty()) return 0
     val book = withContext(Dispatchers.Default) { source.mutableStructureCopy() }
     val total = plan.size.coerceAtLeast(1)
@@ -155,7 +156,7 @@ private suspend fun EditorController.applyFileRenamePlanWithProgress(
     }
     checkReport = null
     if (renamed > 0) {
-        if (epub !== source) {
+        if (!epubMutationSourceMatches(epub, documentContentVersion, source, sourceContentVersion)) {
             statusMessage = "文档内容已变化，请重试"
             return 0
         }

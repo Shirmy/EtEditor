@@ -10,7 +10,8 @@ private suspend fun <R> EditorController.prepareCurrentEpubMutation(
         statusMessage = missingMessage
         return null
     }
-    return prepareEpubMutation(source, mutation)
+    val sourceContentVersion = documentContentVersion
+    return prepareEpubMutation(source, sourceContentVersion, mutation)
 }
 
 private fun EditorController.finishPreparedEpubStructureChange(

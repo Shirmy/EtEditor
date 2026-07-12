@@ -142,6 +142,7 @@ private suspend fun EditorController.applyTitleFormatPlanWithProgress(
     val changed = when (kind) {
         DocumentKind.Epub -> {
             val source = epub ?: return 0
+            val sourceContentVersion = documentContentVersion
             val book = withContext(Dispatchers.Default) { source.mutableStructureCopy() }
             var changedCount = 0
             for ((index, pair) in renderedByIndex.withIndex()) {
@@ -155,7 +156,7 @@ private suspend fun EditorController.applyTitleFormatPlanWithProgress(
                 onProgress(index + 1, total)
                 yield()
             }
-            if (changedCount > 0 && epub !== source) {
+            if (changedCount > 0 && !epubMutationSourceMatches(epub, documentContentVersion, source, sourceContentVersion)) {
                 statusMessage = "文档内容已变化，请重试"
                 return 0
             } else {

@@ -647,6 +647,7 @@ private suspend fun EditorController.applyFetchedInfoToEpub(
     onProgress: (phase: String, completed: Int, total: Int) -> Unit = { _, _, _ -> }
 ): FetchInfoWriteResult {
     val sourceBook = epub ?: error("没有 EPUB 可应用")
+    val sourceContentVersion = documentContentVersion
     // 先在副本上完成全部写入（标题、简介、封面），全部成功后再整体替换当前书；
     // 中途任何一步抛错都不会改到原书，避免留下半成品。
     val book = withContext(Dispatchers.Default) { sourceBook.mutableStructureCopy() }
@@ -735,7 +736,9 @@ private suspend fun EditorController.applyFetchedInfoToEpub(
     }
 
     // 全部写入完成、未抛异常，才把副本整体替换为当前书，并按需刷新当前章预览。
-    if (epub !== sourceBook) error("文档内容已变化，请重试")
+    if (!epubMutationSourceMatches(epub, documentContentVersion, sourceBook, sourceContentVersion)) {
+        error("文档内容已变化，请重试")
+    }
     epub = book
     if (touchedCurrentChapter) refreshPreview()
 

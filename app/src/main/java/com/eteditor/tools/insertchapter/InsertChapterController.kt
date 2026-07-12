@@ -419,11 +419,12 @@ private suspend fun EditorController.insertChaptersIntoEpub(
     onProgress: InsertChapterProgressCallback
 ): Boolean {
     val sourceBook = epub ?: return false
+    val sourceContentVersion = documentContentVersion
     val currentChapterIndex = previewChapterIndex
     onProgress("插入章节", 0, selected.size.coerceAtLeast(1))
     val prepared = try {
         withContext(Dispatchers.Default) {
-            prepareEpubMutationModel(sourceBook) { nextBook ->
+            prepareEpubMutationModel(sourceBook, sourceContentVersion) { nextBook ->
                 insertChaptersIntoEpubBook(
                     book = nextBook,
                     source = source,
