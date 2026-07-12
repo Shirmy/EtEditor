@@ -158,7 +158,7 @@ fun TitleRenamePlanPane(
                     enabled = plan.any { it.changed } && !executing,
                     onClick = {
                         executionJob?.cancel()
-                        if (onApplyStarted != null || automationStep != null) {
+                        if (shouldCloseToolPlanBeforeExecution(automationStepPresent = automationStep != null)) {
                             startExecutionAfterClosing()
                         } else {
                             executing = true

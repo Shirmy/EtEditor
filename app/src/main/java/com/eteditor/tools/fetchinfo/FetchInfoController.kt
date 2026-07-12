@@ -624,6 +624,7 @@ suspend fun EditorController.applyFetchInfoPreviewWithProgress(
         }
     ) {
         statusMessage = "正在应用抓取信息..."
+        yieldToAppUiBeforeHeavyWork()
         try {
             val result = applyFetchedInfoToEpub(preview, filterActive, renames, deletes, catalogOrder, onProgress)
             val parts = buildList {

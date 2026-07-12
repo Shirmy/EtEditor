@@ -34,3 +34,7 @@ internal data class ToolPlanApplyResult(
         fun failed() = ToolPlanApplyResult(changed = 0, successful = false)
     }
 }
+
+internal fun shouldCloseToolPlanBeforeExecution(automationStepPresent: Boolean): Boolean {
+    return automationStepPresent
+}

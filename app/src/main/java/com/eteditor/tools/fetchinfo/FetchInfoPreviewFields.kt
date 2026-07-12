@@ -175,8 +175,6 @@ fun FetchInfoPreviewPane(
         }
         onApplyStarted?.invoke()
         controller.controllerScope.launch {
-            delay(16)
-            yieldToAppUiBeforeHeavyWork()
             val applied = controller.applyFetchInfoPreviewWithProgress(
                 toolId,
                 filterActive = filterActive,
@@ -454,7 +452,6 @@ fun FetchInfoPreviewPane(
                             writingProgress = 0f
                             writingLabel = "应用抓取信息"
                             scope.launch {
-                                yieldToAppUiBeforeHeavyWork()
                                 val applied = controller.applyFetchInfoPreviewWithProgress(
                                     toolId,
                                     filterActive = filterActive,
