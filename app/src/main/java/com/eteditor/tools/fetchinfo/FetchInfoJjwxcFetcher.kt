@@ -313,6 +313,18 @@ class JjwxcFetcher : FetchInfoFetcher {
     }
 
     private fun getJjwxcKeywordLine(infoBlock: String, html: String): String {
+        val meta = Regex(
+            """<meta[^>]+(?:name|property)=["']keywords["'][^>]+content=["']([^"']*)["'][^>]*>""",
+            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+        ).find(html)?.groupValues?.getOrNull(1)?.decodeHtmlEntities().orEmpty()
+        val metaStart = meta.indexOf("主角：")
+        if (metaStart >= 0) {
+            val metaEnd = meta.indexOf('|', metaStart).let { if (it < 0) meta.length else it }
+            return "搜索关键字：" + meta.substring(metaStart, metaEnd)
+                .replace('，', ' ')
+                .replace('、', ' ')
+                .compactLines()
+        }
         if (infoBlock.isNotBlank()) {
             val text = infoBlock.cleanHtmlBlock()
             val parts = listOf("主角", "配角", "其它").mapNotNull { label ->
@@ -320,17 +332,7 @@ class JjwxcFetcher : FetchInfoFetcher {
             }
             if (parts.isNotEmpty()) return "搜索关键字：${parts.joinToString(" ┃ ")}"
         }
-        val meta = Regex(
-            """<meta[^>]+(?:name|property)=["']keywords["'][^>]+content=["']([^"']*)["'][^>]*>""",
-            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
-        ).find(html)?.groupValues?.getOrNull(1)?.decodeHtmlEntities().orEmpty()
-        val start = meta.indexOf("主角：")
-        if (start < 0) return ""
-        val end = meta.indexOf('|', start).let { if (it < 0) meta.length else it }
-        return "搜索关键字：" + meta.substring(start, end)
-            .replace('，', ' ')
-            .replace('、', ' ')
-            .compactLines()
+        return ""
     }
 
     private fun getJjwxcInfoLine(infoBlock: String, label: String): String {
