@@ -224,7 +224,7 @@ class JjwxcFetcher : FetchInfoFetcher {
 
         val infoBlock = findJjwxcIntroInfoBlock(html)
         addUniqueLine(lines, getJjwxcContentTagLine(infoBlock))
-        addUniqueLine(lines, getJjwxcKeywordLine(infoBlock, html))
+        addUniqueLine(lines, getJjwxcKeywordLine(infoBlock))
         addUniqueLine(lines, getJjwxcInfoLine(infoBlock, "一句话简介"))
         addUniqueLine(lines, getJjwxcInfoLine(infoBlock, "立意"))
 
@@ -312,27 +312,118 @@ class JjwxcFetcher : FetchInfoFetcher {
         return if (tags.isEmpty()) "" else "内容标签：${tags.joinToString(" ")}"
     }
 
-    private fun getJjwxcKeywordLine(infoBlock: String, html: String): String {
-        val meta = Regex(
-            """<meta[^>]+(?:name|property)=["']keywords["'][^>]+content=["']([^"']*)["'][^>]*>""",
+    private fun getJjwxcKeywordLine(infoBlock: String): String {
+        if (infoBlock.isBlank()) return ""
+        val visibleInfoBlock = visibleJjwxcInfoHtml(infoBlock)
+        val roleBoundary = Regex("""(?:一句话简介|立意)\s*[：:]""")
+            .find(visibleInfoBlock)
+            ?.range
+            ?.first
+            ?: visibleInfoBlock.length
+        val roleInfoBlock = visibleInfoBlock.substring(0, roleBoundary)
+        val roles = linkedMapOf<String, MutableList<String>>()
+        var currentLabel: String? = null
+        Regex(
+            """<img\b[^>]*\balt=["'](主角|配角|其它)["'][^>]*>|<div\b[^>]*\bclass=["'][^"']*character_name[^"']*["'][^>]*>(.*?)</div>""",
             setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
-        ).find(html)?.groupValues?.getOrNull(1)?.decodeHtmlEntities().orEmpty()
-        val metaStart = meta.indexOf("主角：")
-        if (metaStart >= 0) {
-            val metaEnd = meta.indexOf('|', metaStart).let { if (it < 0) meta.length else it }
-            return "搜索关键字：" + meta.substring(metaStart, metaEnd)
-                .replace('，', ' ')
-                .replace('、', ' ')
-                .compactLines()
-        }
-        if (infoBlock.isNotBlank()) {
-            val text = infoBlock.cleanHtmlBlock()
-            val parts = listOf("主角", "配角", "其它").mapNotNull { label ->
-                findJjwxcInfoLineFromText(text, label).takeIf { it.isNotBlank() }
+        ).findAll(roleInfoBlock).forEach { match ->
+            val label = match.groupValues[1]
+            if (label.isNotBlank()) {
+                currentLabel = label
+                roles.getOrPut(label) { mutableListOf() }
+            } else {
+                val name = match.groupValues[2].cleanHtmlText()
+                val names = currentLabel?.let { roles.getOrPut(it) { mutableListOf() } }
+                if (name.isNotBlank() && names != null && name !in names) names += name
             }
-            if (parts.isNotEmpty()) return "搜索关键字：${parts.joinToString(" ┃ ")}"
         }
-        return ""
+
+        val text = roleInfoBlock.cleanHtmlBlock()
+        val parts = listOf("主角", "配角", "其它").mapNotNull { label ->
+            val names = roles[label].orEmpty()
+            if (names.isNotEmpty()) {
+                "$label：${names.joinToString(" ")}"
+            } else {
+                findJjwxcVisibleRoleLineFromText(text, label).takeIf { it.isNotBlank() }
+            }
+        }
+        return if (parts.isEmpty()) "" else "搜索关键字：${parts.joinToString(" ┃ ")}"
+    }
+
+    private fun visibleJjwxcInfoHtml(html: String): String {
+        data class OpenTag(val name: String, val hidden: Boolean)
+
+        val source = html.replace(
+            Regex("""<!--.*?-->""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)),
+            ""
+        )
+        val voidTags = setOf("area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr")
+        val hiddenContainerTags = setOf("noscript", "script", "style", "template")
+        val stack = mutableListOf<OpenTag>()
+        val visible = StringBuilder()
+        var cursor = 0
+        val tagRegex = Regex(
+            """</?\s*([a-z0-9]+)\b[^>]*>""",
+            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+        )
+        tagRegex.findAll(source).forEach { match ->
+            val hiddenBefore = stack.any(OpenTag::hidden)
+            if (!hiddenBefore && cursor < match.range.first) {
+                visible.append(source, cursor, match.range.first)
+            }
+
+            val tag = match.value
+            val name = match.groupValues[1].lowercase()
+            if (tag.startsWith("</")) {
+                val openIndex = stack.indexOfLast { it.name == name }
+                if (openIndex >= 0) {
+                    while (stack.size > openIndex) stack.removeAt(stack.lastIndex)
+                }
+                if (!hiddenBefore) visible.append(tag)
+            } else {
+                val hidden = hiddenBefore || name in hiddenContainerTags || isExplicitlyHiddenHtmlTag(tag)
+                if (!hidden) visible.append(tag)
+                val selfClosing = tag.trimEnd().endsWith("/>") || name in voidTags
+                if (!selfClosing) stack += OpenTag(name, hidden)
+            }
+            cursor = match.range.last + 1
+        }
+        if (stack.none(OpenTag::hidden) && cursor < source.length) visible.append(source, cursor, source.length)
+        return visible.toString()
+    }
+
+    private fun isExplicitlyHiddenHtmlTag(tag: String): Boolean {
+        val style = htmlAttributeValue(tag, "style")
+        val classes = htmlAttributeValue(tag, "class").split(Regex("""\s+"""))
+        return Regex(
+            """\shidden(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?(?=\s|/?>)""",
+            RegexOption.IGNORE_CASE
+        ).containsMatchIn(tag) ||
+            htmlAttributeValue(tag, "aria-hidden").equals("true", ignoreCase = true) ||
+            classes.any { it.equals("hidden", ignoreCase = true) } ||
+            Regex("""(?:display\s*:\s*none|visibility\s*:\s*hidden)""", RegexOption.IGNORE_CASE)
+                .containsMatchIn(style)
+    }
+
+    private fun htmlAttributeValue(tag: String, name: String): String {
+        val match = Regex(
+            """\b${Regex.escape(name)}\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))""",
+            RegexOption.IGNORE_CASE
+        ).find(tag) ?: return ""
+        return match.groupValues.drop(1).firstOrNull { it.isNotEmpty() }.orEmpty()
+    }
+
+    private fun findJjwxcVisibleRoleLineFromText(text: String, label: String): String {
+        val flatText = text.replace(Regex("""\s+"""), " ").trim()
+        val marker = Regex("""${Regex.escape(label)}[：:]""").find(flatText) ?: return ""
+        val valueStart = marker.range.last + 1
+        val valueEnd = Regex("""(?:主角|配角|其它|一句话简介|立意)[：:]""")
+            .find(flatText, valueStart)
+            ?.range
+            ?.first
+            ?: flatText.length
+        val value = flatText.substring(valueStart, valueEnd).trim()
+        return if (value.isBlank()) "" else "$label：$value"
     }
 
     private fun getJjwxcInfoLine(infoBlock: String, label: String): String {

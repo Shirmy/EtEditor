@@ -35,7 +35,7 @@ class JjwxcIntroParseTest {
     }
 
     @Test
-    fun parseJjwxcIntroPrefersCompleteMetaKeywordsForRoleCards() {
+    fun parseJjwxcIntroUsesOnlyVisibleRoleCards() {
         val html = """
             <meta name="Keywords" content="《贵族学院，但平民万人迷》,apriu,校园 万人迷,主角：林庭唯，辻一 ┃ 配角：moemoe小唯，睡衣小唯，季令璟，季思明，绪川夏也，加利安·莱克西斯，齐衍，有栖川律 ┃ 其它：预收《全A男团的共同前任》《靠站哥走上爱豆巅峰》|最新更新:2026-04-23 15:14:16|作品积分：918925568"/>
             <div id="novelintro" itemprop="description">简介正文</div>
@@ -47,7 +47,6 @@ class JjwxcIntroParseTest {
                 <span class="role_pic_frame"><span class="role_pic"><div class="character_name">辻一</div></span></span>
                 <span class="role_icon_out"><img src="costar.png" alt="配角"></span>
                 <span class="role_pic_frame"><span class="role_pic"><div class="character_name">moemoe小唯</div></span></span>
-                <span class="bluetext">其它：预收《全A男团的共同前任》《靠站哥走上爱豆巅峰》</span>
             </div>
         """.trimIndent()
 
@@ -55,7 +54,68 @@ class JjwxcIntroParseTest {
         val keywordLine = intro.lines().first { it.startsWith("搜索关键字：") }
 
         assertEquals(
-            "搜索关键字：主角：林庭唯 辻一 ┃ 配角：moemoe小唯 睡衣小唯 季令璟 季思明 绪川夏也 加利安·莱克西斯 齐衍 有栖川律 ┃ 其它：预收《全A男团的共同前任》《靠站哥走上爱豆巅峰》",
+            "搜索关键字：主角：林庭唯 辻一 ┃ 配角：moemoe小唯",
+            keywordLine
+        )
+    }
+
+    @Test
+    fun parseJjwxcIntroFallsBackToVisibleRoleText() {
+        val html = """
+            <div id="novelintro" itemprop="description">简介正文</div>
+            <div class="smallreadbody">
+                <span>内容标签：</span>
+                <span>主角：楚荆溪、晏子瞻</span>
+                <span>配角：幻境</span>
+                <span>其它：修仙</span>
+            </div>
+        """.trimIndent()
+
+        val intro = JjwxcFetcher().parseJjwxcIntro(html)
+        val keywordLine = intro.lines().first { it.startsWith("搜索关键字：") }
+
+        assertEquals(
+            "搜索关键字：主角：楚荆溪、晏子瞻 ┃ 配角：幻境 ┃ 其它：修仙",
+            keywordLine
+        )
+    }
+
+    @Test
+    fun parseJjwxcIntroIgnoresExplicitlyHiddenRoles() {
+        val html = """
+            <div id="novelintro" itemprop="description">简介正文</div>
+            <div class="smallreadbody">
+                <span>内容标签：</span>
+                <span class="role_icon_out"><img src="main_role.png" alt="主角"></span>
+                <span class="role_pic_frame"><div class="character_name">可见主角</div></span>
+                <span style="display: none"><div class="character_name">隐藏主角</div></span>
+                <span hidden>配角：隐藏配角</span>
+                <!-- <span><img alt="配角"><div class="character_name">注释配角</div></span> -->
+                <template><span><img alt="配角"><div class="character_name">模板配角</div></span></template>
+                <span aria-hidden=true>配角：无障碍隐藏配角</span>
+                <span style=display:none>配角：样式隐藏配角</span>
+                <span class=hidden>配角：类名隐藏配角</span>
+            </div>
+        """.trimIndent()
+
+        val intro = JjwxcFetcher().parseJjwxcIntro(html)
+        val keywordLine = intro.lines().first { it.startsWith("搜索关键字：") }
+
+        assertEquals("搜索关键字：主角：可见主角", keywordLine)
+    }
+
+    @Test
+    fun parseJjwxcIntroSeparatesMinifiedVisibleRoleText() {
+        val html = """
+            <div id="novelintro" itemprop="description">简介正文</div>
+            <div class="smallreadbody"><span>内容标签：</span><span>主角：楚荆溪、晏子瞻</span><span>配角：幻境</span><span>其它：修仙</span><span>一句话简介：善语结善缘。</span><span>立意：相信自己</span><span><img alt="配角"><div class="character_name">后续无关人物</div></span></div>
+        """.trimIndent()
+
+        val intro = JjwxcFetcher().parseJjwxcIntro(html)
+        val keywordLine = intro.lines().first { it.startsWith("搜索关键字：") }
+
+        assertEquals(
+            "搜索关键字：主角：楚荆溪、晏子瞻 ┃ 配角：幻境 ┃ 其它：修仙",
             keywordLine
         )
     }
