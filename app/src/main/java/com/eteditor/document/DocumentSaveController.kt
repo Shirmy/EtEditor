@@ -85,11 +85,23 @@ private suspend fun EditorController.renameTxtSourceToDisplayedTitle(uri: Uri): 
         return "已保存，但重命名失败：$reason"
     }
 
-    sourceUri = renamedUri
     rememberWritableDocumentUri(appContext, renamedUri)
-    txt = document.copy(originalName = targetBaseName)
+    val renamedSourceIsWritable = canContinueWritingDocument(appContext, renamedUri)
+    val transitionResult = resolveTxtRenameSaveTransition(
+        renamed = renamedUri,
+        targetBaseName = targetBaseName,
+        canContinueSaving = { candidate -> candidate == renamedUri && renamedSourceIsWritable }
+    )
+    val transition = transitionResult.getOrElse { error ->
+        sourceUri = renamedUri
+        txt = document.copy(originalName = targetBaseName)
+        title = targetBaseName
+        throw error
+    }
+    sourceUri = transition.activeSource
+    txt = document.copy(originalName = transition.baseName)
     documentContentVersion++
-    title = targetBaseName
+    title = transition.baseName
     return "已保存并重命名"
 }
 

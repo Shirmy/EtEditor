@@ -189,6 +189,15 @@ internal suspend fun renameDocumentFile(
     }
 }
 
+internal suspend fun canContinueWritingDocument(context: Context, uri: Uri): Boolean = withContext(Dispatchers.IO) {
+    runCatching {
+        context.contentResolver.openFileDescriptor(uri, "rw")?.use { }
+            ?: error("无法打开改名后的文件")
+        context.contentResolver.openInputStream(uri)?.use { }
+            ?: error("无法读取改名后的文件")
+    }.isSuccess
+}
+
 internal fun documentDisplayName(context: Context, uri: Uri): String {
     return displayName(context.contentResolver, uri)
 }
