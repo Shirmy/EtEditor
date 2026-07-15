@@ -232,22 +232,61 @@ class TitleRenameUtilsTest {
     }
 
     @Test
-    fun applyRenamedTitlesToEpubPreservesExistingHeadingLineBreaks() {
+    fun applyRenamedTitlesToEpubMatchesDirectoryTitleHtmlForStyle01() {
         val book = sampleBook()
         val html = """<html><head><title>第001章 旧标题</title></head><body><h1 class="chapter-title_01">第001章<br/>旧标题</h1><p>正文</p></body></html>"""
         book.chapters[0].title = "第001章 旧标题"
         book.chapters[0].html = html
         book.entries[book.chapters[0].path] = html.toByteArray(StandardCharsets.UTF_8)
 
+        val expectedHtml = updateEpubChapterTitleHtml(book.chapters[0], "第1章 旧标题")
         val result = applyRenamedTitlesToEpub(book, listOf(0 to "第1章 旧标题"))
 
         assertTrue(result.attempted)
         assertEquals(1, result.count)
         assertEquals("第1章 旧标题", book.chapters[0].title)
-        assertTrue(book.chapters[0].html.contains("<title>第1章 旧标题</title>"))
-        assertTrue(book.chapters[0].html.contains("""<h1 class="chapter-title_01">第1章<br/>旧标题</h1>"""))
+        assertEquals(expectedHtml, book.chapters[0].html)
+        assertTrue(book.chapters[0].html.contains("第1章<br/>旧标题") || book.chapters[0].html.contains("第1章<br>旧标题"))
+        assertTrue(book.chapters[0].html.contains("chapter-title_01"))
         val entryHtml = decodeEpubHtmlBytes(book.entries.getValue("OEBPS/Text/chapter1.xhtml"))
-        assertTrue(entryHtml.contains("""<h1 class="chapter-title_01">第1章<br/>旧标题</h1>"""))
+        assertTrue(entryHtml.contains("第1章<br/>旧标题") || entryHtml.contains("第1章<br>旧标题"))
+    }
+
+    @Test
+    fun applyRenamedTitlesToEpubInsertsBrForVolumeWhenDirectoryEditWould() {
+        val path = "OEBPS/Text/Vol01.xhtml"
+        val volumeHtml = """<html><head><title>第一卷 旧</title></head><body><h1>第一卷 旧</h1><p>正文</p></body></html>"""
+        val chapter = epubChapter(
+            id = "v1",
+            path = path,
+            title = "第一卷 旧",
+            html = volumeHtml
+        )
+        val book = EpubBook(
+            originalName = "book.epub",
+            metadataTitle = "Book",
+            metadataAuthor = "",
+            entries = linkedMapOf(path to volumeHtml.toByteArray(StandardCharsets.UTF_8)),
+            opfPath = "OEBPS/content.opf",
+            tocPath = "OEBPS/toc.ncx",
+            manifest = mutableMapOf(
+                "v1" to ManifestItem(
+                    id = "v1",
+                    href = "Text/Vol01.xhtml",
+                    mediaType = "application/xhtml+xml",
+                    path = path
+                )
+            ),
+            spineIds = mutableListOf("v1"),
+            chapters = mutableListOf(chapter)
+        )
+        val expectedHtml = updateEpubChapterTitleHtml(chapter, "第一卷 开端")
+        val result = applyRenamedTitlesToEpub(book, listOf(0 to "第一卷 开端"))
+
+        assertTrue(result.attempted)
+        assertEquals(1, result.count)
+        assertEquals(expectedHtml, book.chapters[0].html)
+        assertTrue(book.chapters[0].html.contains("第一卷<br/>开端") || book.chapters[0].html.contains("第一卷<br>开端"))
     }
 
     @Test

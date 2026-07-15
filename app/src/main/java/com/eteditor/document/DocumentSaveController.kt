@@ -70,27 +70,31 @@ suspend fun EditorController.saveToOriginal() {
 
 private suspend fun EditorController.renameTxtSourceToDisplayedTitle(uri: Uri): String? {
     val document = txt ?: return null
-    val targetBaseName = title.sanitizedSaveBaseName(document.originalName.baseName("TXT"))
-    val targetFileName = "$targetBaseName.txt"
+    val target = resolveTxtSaveRenameTarget(
+        displayedTitle = title,
+        originalName = document.originalName
+    )
     val currentFileName = documentDisplayName(appContext, uri)
-    if (currentFileName == targetFileName) return null
+    if (!shouldRenameTxtAfterSave(currentFileName, target.fileName)) {
+        return txtRenameAfterSaveMessage(renamed = false)
+    }
 
-    val renameResult = renameDocumentFile(appContext, uri, targetFileName)
+    val renameResult = renameDocumentFile(appContext, uri, target.fileName)
     val renamedUri = renameResult.getOrNull()
     if (renamedUri == null) {
         val reason = renameResult.exceptionOrNull()?.let { error ->
             error.message ?: error.javaClass.simpleName
         } ?: "当前文件位置不支持重命名"
         log("TXT 重命名失败：$reason")
-        return "已保存，但重命名失败：$reason"
+        return txtRenameAfterSaveMessage(renamed = false, failureReason = reason)
     }
 
     rememberWritableDocumentUri(appContext, renamedUri)
     sourceUri = renamedUri
-    txt = document.copy(originalName = targetBaseName)
+    txt = document.copy(originalName = target.baseName)
     documentContentVersion++
-    title = targetBaseName
-    return "已保存并重命名"
+    title = target.baseName
+    return txtRenameAfterSaveMessage(renamed = true)
 }
 
 private suspend fun EditorController.writeCurrentDocument(

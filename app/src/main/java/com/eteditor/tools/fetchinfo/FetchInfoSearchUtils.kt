@@ -21,8 +21,7 @@ internal data class SosadSearchItem(
 
 internal data class SearchChoiceResolution(
     val choice: FetchInfoSearchChoice? = null,
-    val promptChoices: List<FetchInfoSearchChoice> = emptyList(),
-    val skipReason: String? = null
+    val promptChoices: List<FetchInfoSearchChoice> = emptyList()
 )
 
 internal fun preferredSearchChoiceByMetadata(

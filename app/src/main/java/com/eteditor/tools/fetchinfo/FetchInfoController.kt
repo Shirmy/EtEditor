@@ -324,12 +324,6 @@ private suspend fun EditorController.prepareFetchInfoPreviewFromParameters(
             )
             val choices = distinctVisibleSearchChoices(fetcher.searchChoices(parameters, sourceProgress))
             val choiceResolution = resolveFetchInfoSearchChoiceByMetadata(choices, parameters.query)
-            if (choiceResolution.skipReason != null) {
-                lastFailure = "${sourceLabel}${choiceResolution.skipReason}"
-                fetchInfoPreview = null
-                fetchInfoSearchChoiceRequest = null
-                continue
-            }
             if (choiceResolution.promptChoices.isNotEmpty()) {
                 fetchInfoRetryRequest = null
                 fetchInfoSearchChoiceRequest = FetchInfoSearchChoiceRequest(

@@ -131,6 +131,22 @@ class DirectoryBulkTitleEditUtilsTest {
         assertFalse(plan.items.single().changed)
     }
 
+    @Test
+    fun buildPlanWritePairsOnlyIncludeChangedNonEmptyTitles() {
+        val plan = buildBulkTitleEditPlan(
+            chapters = chapters,
+            targetIndexes = listOf(2, 3, 5),
+            find = "第",
+            replace = "番外",
+            regex = false
+        )
+        val writePairs = plan.items.filter { it.changed }.map { it.chapterIndex to it.newTitle }
+        assertEquals(3, plan.changedCount)
+        assertEquals(3, writePairs.size)
+        assertTrue(writePairs.all { it.second.isNotBlank() })
+        assertEquals(listOf(2, 3, 5), writePairs.map { it.first })
+    }
+
     private fun info(index: Int, title: String, isVolume: Boolean): ChapterInfo {
         return ChapterInfo(
             index = index,

@@ -135,17 +135,25 @@ private suspend fun EditorController.prepareInsertChapterSosadCatalog(
         val choices = distinctVisibleSearchChoices(
             FetchInfoFetcherFactory.create(FetchInfoSources.SOSAD).searchChoices(fetchParameters, phaseProgress)
         )
-        val preferredChoice = preferredSearchChoiceByMetadata(choices, parameters.sosadQuery)
-        if (choices.size > 1 && preferredChoice == null) {
+        // 与抓取信息统一：元数据认不准就弹窗，不静默自动挑书。
+        val choiceResolution = resolveFetchInfoSearchChoiceByMetadata(
+            choices = choices,
+            query = parameters.sosadQuery,
+            metadataTitle = epub?.metadataTitle.orEmpty(),
+            metadataAuthor = epub?.metadataAuthor.orEmpty()
+        )
+        if (choiceResolution.promptChoices.isNotEmpty()) {
             fetchInfoSearchChoiceRequest = FetchInfoSearchChoiceRequest(
                 toolId = tool.id,
                 parameters = fetchParameters,
-                choices = choices
+                choices = choiceResolution.promptChoices
             )
             statusMessage = "请选择废文搜索结果"
             return false
         }
-        val fetchQuery = (preferredChoice ?: choices.firstOrNull())?.detailUrl ?: parameters.sosadQuery
+        val fetchQuery = choiceResolution.choice?.detailUrl
+            ?: choices.singleOrNull()?.detailUrl
+            ?: parameters.sosadQuery
         onPhase("正在抓取目录")
         prepareInsertChapterSosadPreviewWithQuery(
             toolId = tool.id,

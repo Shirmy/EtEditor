@@ -8,6 +8,9 @@ import com.eteditor.core.ManifestItem
 import com.eteditor.core.TxtChapter
 import com.eteditor.core.TxtDocument
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DocumentUtilityTest {
@@ -40,6 +43,43 @@ class DocumentUtilityTest {
     fun sanitizedSaveBaseNameTrimsOuterDotsAfterExtensionRemoval() {
         assertEquals("Book", "..Book..txt".sanitizedSaveBaseName("fallback"))
         assertEquals("Book.Part.1", ".Book.Part.1.".sanitizedSaveBaseName("fallback"))
+    }
+
+    @Test
+    fun resolveTxtSaveRenameTargetUsesDisplayedTitleAndTxtExtension() {
+        val target = resolveTxtSaveRenameTarget(
+            displayedTitle = " 新书:名 ",
+            originalName = "old_book.txt"
+        )
+        assertEquals("新书_名", target.baseName)
+        assertEquals("新书_名.txt", target.fileName)
+    }
+
+    @Test
+    fun resolveTxtSaveRenameTargetFallsBackToOriginalBaseNameWhenTitleBlank() {
+        val target = resolveTxtSaveRenameTarget(
+            displayedTitle = "   ",
+            originalName = "dir/archive.txt"
+        )
+        assertEquals("archive", target.baseName)
+        assertEquals("archive.txt", target.fileName)
+    }
+
+    @Test
+    fun shouldRenameTxtAfterSaveOnlyWhenFileNameDiffers() {
+        assertTrue(shouldRenameTxtAfterSave("old.txt", "new.txt"))
+        assertFalse(shouldRenameTxtAfterSave("same.txt", "same.txt"))
+        assertTrue(shouldRenameTxtAfterSave(null, "new.txt"))
+    }
+
+    @Test
+    fun txtRenameAfterSaveMessageCoversSuccessFailureAndUnchanged() {
+        assertEquals("已保存并重命名", txtRenameAfterSaveMessage(renamed = true))
+        assertNull(txtRenameAfterSaveMessage(renamed = false))
+        assertEquals(
+            "已保存，但重命名失败：不支持",
+            txtRenameAfterSaveMessage(renamed = false, failureReason = "不支持")
+        )
     }
 
     @Test

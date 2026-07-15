@@ -43,7 +43,7 @@ internal fun DirectoryBulkTitleEditDialog(
     var findText by remember { mutableStateOf("") }
     var replaceText by remember { mutableStateOf("") }
     var regexEnabled by remember { mutableStateOf(false) }
-    var previewEnabled by remember { mutableStateOf(true) }
+    var previewEnabled by remember { mutableStateOf(false) }
     var previewItems by remember { mutableStateOf<List<BulkTitleEditPlanItem>?>(null) }
     var message by remember { mutableStateOf(scopeLabel) }
     var applying by remember { mutableStateOf(false) }

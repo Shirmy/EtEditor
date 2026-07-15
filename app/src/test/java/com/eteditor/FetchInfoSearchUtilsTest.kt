@@ -91,7 +91,6 @@ class FetchInfoSearchUtilsTest {
             metadataAuthor = "作者C"
         )
         assertNull(authorMismatch.choice)
-        assertNull(authorMismatch.skipReason)
         assertEquals(listOf("a", "b"), authorMismatch.promptChoices.map { it.detailUrl })
     }
 
@@ -105,7 +104,6 @@ class FetchInfoSearchUtilsTest {
         )
 
         assertNull(resolution.choice)
-        assertNull(resolution.skipReason)
         assertEquals(listOf("a"), resolution.promptChoices.map { it.detailUrl })
     }
 
@@ -123,7 +121,6 @@ class FetchInfoSearchUtilsTest {
 
         assertEquals("a", resolution.choice?.detailUrl)
         assertEquals(emptyList<FetchInfoSearchChoice>(), resolution.promptChoices)
-        assertNull(resolution.skipReason)
     }
 
     @Test
@@ -211,7 +208,6 @@ class FetchInfoSearchUtilsTest {
         )
 
         assertNull(resolution.choice)
-        assertNull(resolution.skipReason)
         assertEquals(listOf("a", "b"), resolution.promptChoices.map { it.detailUrl })
     }
 
@@ -251,7 +247,6 @@ class FetchInfoSearchUtilsTest {
 
         assertNull(resolution.choice)
         assertEquals(listOf("a1", "a2"), resolution.promptChoices.map { it.detailUrl })
-        assertNull(resolution.skipReason)
         assertEquals(SearchChoiceResolution(), resolveFetchInfoSearchChoiceByMetadata(emptyList(), "", "", ""))
     }
 

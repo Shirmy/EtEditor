@@ -37,3 +37,40 @@ internal fun String.sanitizedSaveBaseName(fallback: String): String {
         .trim('.')
         .ifBlank { fallback }
 }
+
+/** Target display base name + file name used when TXT save renames the source document. */
+internal data class TxtSaveRenameTarget(
+    val baseName: String,
+    val fileName: String
+)
+
+internal fun resolveTxtSaveRenameTarget(
+    displayedTitle: String,
+    originalName: String
+): TxtSaveRenameTarget {
+    val baseName = displayedTitle.sanitizedSaveBaseName(originalName.baseName("TXT"))
+    return TxtSaveRenameTarget(
+        baseName = baseName,
+        fileName = "$baseName.txt"
+    )
+}
+
+internal fun shouldRenameTxtAfterSave(
+    currentFileName: String?,
+    targetFileName: String
+): Boolean = currentFileName != targetFileName
+
+/**
+ * User-facing status after content write. null means keep the generic "已保存" path.
+ * failureReason non-null means rename failed after a successful content write.
+ */
+internal fun txtRenameAfterSaveMessage(
+    renamed: Boolean,
+    failureReason: String? = null
+): String? {
+    if (failureReason != null) {
+        return "已保存，但重命名失败：$failureReason"
+    }
+    if (!renamed) return null
+    return "已保存并重命名"
+}
