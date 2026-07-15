@@ -54,13 +54,13 @@ internal suspend fun EditorController.applyDirectoryBulkTitleEdits(newTitles: Li
             val document = txt ?: return 0
             val result = applyRenamedTitlesToTxt(document, cleaned, ::detectCurrentTxtChapters)
             if (!result.attempted) return 0
-            applyTxtCatalogPurifyRulesAfterCatalogChange()
-            if (result.count > 0) markDocumentChanged()
-            refreshChapters()
-            statusMessage = if (result.count > 0) {
-                "批量编辑标题：修改 ${result.count} 项"
+            if (result.count > 0) {
+                applyTxtCatalogPurifyRulesAfterCatalogChange()
+                markDocumentChanged()
+                refreshChapters()
+                statusMessage = "批量编辑标题：修改 ${result.count} 项"
             } else {
-                "批量编辑标题：无需修改"
+                statusMessage = "批量编辑标题：无需修改"
             }
             result.count
         }
@@ -100,13 +100,11 @@ private suspend fun EditorController.applyDirectoryBulkTitleEditsToEpub(
         if (count > 0) {
             epub = prepared.book
             markDocumentChanged()
-        }
-        checkReport = null
-        refreshChapters()
-        statusMessage = if (count > 0) {
-            "批量编辑标题：修改 $count 项"
+            checkReport = null
+            refreshChapters()
+            statusMessage = "批量编辑标题：修改 $count 项"
         } else {
-            "批量编辑标题：无需修改"
+            statusMessage = "批量编辑标题：无需修改"
         }
         count
     }
