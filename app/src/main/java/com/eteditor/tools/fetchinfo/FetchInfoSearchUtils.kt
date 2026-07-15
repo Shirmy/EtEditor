@@ -24,25 +24,6 @@ internal data class SearchChoiceResolution(
     val promptChoices: List<FetchInfoSearchChoice> = emptyList()
 )
 
-internal fun preferredSearchChoiceByMetadata(
-    choices: List<FetchInfoSearchChoice>,
-    query: String,
-    metadataTitle: String,
-    metadataAuthor: String
-): FetchInfoSearchChoice? {
-    if (choices.size <= 1) return choices.firstOrNull()
-    val normalizedAuthor = metadataAuthor.normalizeSearchText()
-    if (normalizedAuthor.isBlank()) return null
-    val authorMatches = choices.filter { choice ->
-        choice.author.normalizeSearchText() == normalizedAuthor
-    }
-    if (authorMatches.size == 1) return authorMatches.first()
-    val normalizedQuery = query.ifBlank { metadataTitle }.normalizeSearchText()
-    val titleScopedChoices = authorMatches
-        .filter { choice -> choice.title.normalizeSearchText() == normalizedQuery }
-    return titleScopedChoices.singleOrNull()
-}
-
 internal fun resolveFetchInfoSearchChoiceByMetadata(
     choices: List<FetchInfoSearchChoice>,
     query: String,
