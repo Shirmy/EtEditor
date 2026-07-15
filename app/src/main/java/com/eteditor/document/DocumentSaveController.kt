@@ -86,15 +86,10 @@ private suspend fun EditorController.renameTxtSourceToDisplayedTitle(uri: Uri): 
     }
 
     rememberWritableDocumentUri(appContext, renamedUri)
-    val transitionResult = resolveTxtRenameSaveTransition(
-        renamed = renamedUri,
-        targetBaseName = targetBaseName
-    )
-    val transition = transitionResult.getOrThrow()
-    sourceUri = transition.activeSource
-    txt = document.copy(originalName = transition.baseName)
+    sourceUri = renamedUri
+    txt = document.copy(originalName = targetBaseName)
     documentContentVersion++
-    title = transition.baseName
+    title = targetBaseName
     return "已保存并重命名"
 }
 
