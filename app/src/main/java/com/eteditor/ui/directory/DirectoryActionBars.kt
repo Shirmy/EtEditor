@@ -10,6 +10,7 @@ import androidx.compose.material.icons.automirrored.outlined.DriveFileMove
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DeleteSweep
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
@@ -27,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -239,6 +241,49 @@ internal fun BulkDeleteChapterBar(
         DirectoryCompactActionButton(
             text = "删除",
             icon = Icons.Outlined.DeleteSweep,
+            selected = selectedCount > 0,
+            onClick = onConfirm,
+            outlined = true,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+internal fun BulkEditTitleBar(
+    selectedCount: Int,
+    scopeHint: String,
+    onCancel: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 6.dp, top = 8.dp, end = 6.dp, bottom = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        DirectoryCompactActionButton(
+            text = "取消",
+            icon = Icons.Outlined.Close,
+            selected = false,
+            onClick = onCancel,
+            outlined = true,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = if (scopeHint.isNotBlank()) scopeHint else "已选$selectedCount",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1.4f)
+        )
+        DirectoryCompactActionButton(
+            text = "下一步",
+            icon = Icons.Outlined.Edit,
             selected = selectedCount > 0,
             onClick = onConfirm,
             outlined = true,

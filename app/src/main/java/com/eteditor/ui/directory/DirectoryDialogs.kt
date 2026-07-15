@@ -197,6 +197,7 @@ internal fun EpubDirectoryItemMenuDialog(
     allowStructureActions: Boolean = true,
     onDismiss: () -> Unit,
     onEdit: () -> Unit,
+    onStartBulkEdit: () -> Unit,
     onMove: () -> Unit,
     onStartBulkMove: () -> Unit,
     onAddVolume: () -> Unit,
@@ -246,7 +247,8 @@ internal fun EpubDirectoryItemMenuDialog(
                 EpubDirectoryMenuButton(
                     icon = Icons.Outlined.Edit,
                     text = "编辑",
-                    onClick = onEdit
+                    onClick = onEdit,
+                    onLongClick = onStartBulkEdit
                 )
                 EpubDirectoryMenuButton(
                     icon = Icons.Outlined.CreateNewFolder,

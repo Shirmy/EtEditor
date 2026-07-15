@@ -40,6 +40,11 @@ internal fun DirectoryPanel(
     var bulkMoveChapterIndexes by remember(controller.documentSessionKey) { mutableStateOf<Set<Int>>(emptySet()) }
     var bulkDeleteChapterMode by remember(controller.documentSessionKey) { mutableStateOf(false) }
     var bulkDeleteChapterIndexes by remember(controller.documentSessionKey) { mutableStateOf<Set<Int>>(emptySet()) }
+    var bulkEditTitleMode by remember(controller.documentSessionKey) { mutableStateOf(false) }
+    var bulkEditTitleIndexes by remember(controller.documentSessionKey) { mutableStateOf<Set<Int>>(emptySet()) }
+    var bulkEditTitleRequest by remember(controller.documentSessionKey) {
+        mutableStateOf<BulkTitleEditResolveResult?>(null)
+    }
     var showBulkMoveChapterTargetDialog by remember(controller.documentSessionKey) { mutableStateOf(false) }
     var moveTargetsByChapter by remember(controller.documentSessionKey) { mutableStateOf<Map<Int, Int>>(emptyMap()) }
     var expandAllRequest by remember(controller.documentSessionKey) { mutableStateOf(0) }
@@ -83,12 +88,18 @@ internal fun DirectoryPanel(
         bulkDeleteChapterMode = false
         bulkDeleteChapterIndexes = emptySet()
     }
+    fun cancelBulkEditTitle() {
+        bulkEditTitleMode = false
+        bulkEditTitleIndexes = emptySet()
+        bulkEditTitleRequest = null
+    }
     fun startBulkRemoveCatalog(chapterIndex: Int) {
         if (chapterIndex !in controller.chapters.indices) return
         actionMode = null
         moveTargetsByChapter = emptyMap()
         cancelBulkMoveChapter()
         cancelBulkDeleteChapter()
+        cancelBulkEditTitle()
         bulkRemoveCatalogMode = true
         bulkRemoveCatalogIndexes = setOf(chapterIndex)
     }
@@ -98,6 +109,7 @@ internal fun DirectoryPanel(
         moveTargetsByChapter = emptyMap()
         cancelBulkRemoveCatalog()
         cancelBulkDeleteChapter()
+        cancelBulkEditTitle()
         bulkMoveChapterMode = true
         bulkMoveChapterIndexes = setOf(chapterIndex)
     }
@@ -107,8 +119,47 @@ internal fun DirectoryPanel(
         moveTargetsByChapter = emptyMap()
         cancelBulkRemoveCatalog()
         cancelBulkMoveChapter()
+        cancelBulkEditTitle()
         bulkDeleteChapterMode = true
         bulkDeleteChapterIndexes = setOf(chapterIndex)
+    }
+    fun startBulkEditTitle(chapterIndex: Int) {
+        if (!canBulkSelectChapter(chapterIndex)) return
+        actionMode = null
+        moveTargetsByChapter = emptyMap()
+        cancelBulkRemoveCatalog()
+        cancelBulkMoveChapter()
+        cancelBulkDeleteChapter()
+        bulkEditTitleMode = true
+        bulkEditTitleIndexes = setOf(chapterIndex)
+        bulkEditTitleRequest = null
+    }
+    fun toggleBulkEditTitle(chapterIndex: Int) {
+        if (!canBulkSelectChapter(chapterIndex)) return
+        if (chapterIndex in bulkEditTitleIndexes) {
+            bulkEditTitleIndexes = bulkEditTitleIndexes - chapterIndex
+            return
+        }
+        val reject = canToggleBulkTitleEditSelection(
+            chapters = controller.chapters,
+            selectedIndexes = bulkEditTitleIndexes,
+            toggleIndex = chapterIndex
+        )
+        if (reject != null) {
+            controller.showStatusMessage(reject)
+            return
+        }
+        bulkEditTitleIndexes = bulkEditTitleIndexes + chapterIndex
+    }
+    fun bulkEditTitleScopeHint(): String {
+        val kind = classifyBulkTitleEditSelection(controller.chapters, bulkEditTitleIndexes)
+        return when (kind) {
+            BulkTitleEditSelectionKind.Empty -> "已选0"
+            BulkTitleEditSelectionKind.Chapters -> "已选${bulkEditTitleIndexes.size}章"
+            BulkTitleEditSelectionKind.SingleVolume -> "单卷→卷下章"
+            BulkTitleEditSelectionKind.MultiVolumes -> "已选${bulkEditTitleIndexes.size}卷"
+            BulkTitleEditSelectionKind.Mixed -> "勿混选"
+        }
     }
     fun toggleBulkRemoveCatalog(chapterIndex: Int) {
         if (chapterIndex !in controller.chapters.indices) return
@@ -217,6 +268,24 @@ internal fun DirectoryPanel(
                         }
                     }
                 )
+            } else if (bulkEditTitleMode) {
+                BulkEditTitleBar(
+                    selectedCount = bulkEditTitleIndexes.size,
+                    scopeHint = bulkEditTitleScopeHint(),
+                    onCancel = { cancelBulkEditTitle() },
+                    onConfirm = {
+                        val resolved = resolveBulkTitleEditTargets(
+                            chapters = controller.chapters,
+                            selectedIndexes = bulkEditTitleIndexes,
+                            isEditable = ::canBulkSelectChapter
+                        )
+                        if (resolved.targetIndexes.isEmpty()) {
+                            controller.showStatusMessage(resolved.message.ifBlank { "没有可改的标题" })
+                        } else {
+                            bulkEditTitleRequest = resolved
+                        }
+                    }
+                )
             } else {
                 if (controller.kind == DocumentKind.Txt) {
                     TxtDirectoryOptionBar(
@@ -267,9 +336,11 @@ internal fun DirectoryPanel(
                 bulkRemoveMode = controller.kind == DocumentKind.Txt && bulkRemoveCatalogMode,
                 bulkMoveMode = bulkMoveChapterMode,
                 bulkDeleteMode = bulkDeleteChapterMode,
+                bulkEditTitleMode = bulkEditTitleMode,
                 bulkRemoveSelectedChapterIndexes = bulkRemoveCatalogIndexes,
                 bulkMoveSelectedChapterIndexes = bulkMoveChapterIndexes,
                 bulkDeleteSelectedChapterIndexes = bulkDeleteChapterIndexes,
+                bulkEditTitleSelectedChapterIndexes = bulkEditTitleIndexes,
                 moveTargetsByChapter = moveTargetsByChapter,
                 onMoveTargetSelected = { chapterIndex, targetIndex ->
                     if (controller.kind == DocumentKind.Txt) {
@@ -290,7 +361,9 @@ internal fun DirectoryPanel(
                     }
                 },
                 onPickChapter = { index ->
-                    if (bulkMoveChapterMode && (controller.kind == DocumentKind.Txt || controller.kind == DocumentKind.Epub)) {
+                    if (bulkEditTitleMode && (controller.kind == DocumentKind.Txt || controller.kind == DocumentKind.Epub)) {
+                        toggleBulkEditTitle(index)
+                    } else if (bulkMoveChapterMode && (controller.kind == DocumentKind.Txt || controller.kind == DocumentKind.Epub)) {
                         toggleBulkMoveChapter(index)
                     } else if (controller.kind == DocumentKind.Txt && bulkRemoveCatalogMode) {
                         toggleBulkRemoveCatalog(index)
@@ -481,6 +554,10 @@ internal fun DirectoryPanel(
                 epubMenuChapter = null
                 epubEditChapter = chapter
             },
+            onStartBulkEdit = {
+                epubMenuChapter = null
+                startBulkEditTitle(chapter.index - 1)
+            },
             onMove = {
                 epubMenuChapter = null
                 epubMoveChapter = chapter
@@ -516,6 +593,19 @@ internal fun DirectoryPanel(
             controller = controller,
             chapter = chapter,
             onDismiss = { epubEditChapter = null }
+        )
+    }
+    bulkEditTitleRequest?.let { request ->
+        DirectoryBulkTitleEditDialog(
+            controller = controller,
+            chaptersSnapshot = controller.chapters.toList(),
+            targetIndexes = request.targetIndexes,
+            scopeLabel = request.scopeLabel,
+            onDismiss = { bulkEditTitleRequest = null },
+            onApplied = {
+                bulkEditTitleRequest = null
+                cancelBulkEditTitle()
+            }
         )
     }
     epubMoveChapter?.let { chapter ->

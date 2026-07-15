@@ -40,9 +40,11 @@ internal fun ChapterDirectoryList(
     bulkRemoveMode: Boolean = false,
     bulkMoveMode: Boolean = false,
     bulkDeleteMode: Boolean = false,
+    bulkEditTitleMode: Boolean = false,
     bulkRemoveSelectedChapterIndexes: Set<Int> = emptySet(),
     bulkMoveSelectedChapterIndexes: Set<Int> = emptySet(),
     bulkDeleteSelectedChapterIndexes: Set<Int> = emptySet(),
+    bulkEditTitleSelectedChapterIndexes: Set<Int> = emptySet(),
     moveTargetsByChapter: Map<Int, Int> = emptyMap(),
     onMoveTargetSelected: (Int, Int) -> Unit = { _, _ -> },
     onLongPressChapter: ((ChapterInfo) -> Unit)? = null,
@@ -257,9 +259,11 @@ internal fun ChapterDirectoryList(
                     val longPressHandler = onLongPressChapter
                     val bulkSelectable = when {
                         chapter.index <= 0 -> false
-                        controller.kind == DocumentKind.Txt -> bulkRemoveMode || bulkMoveMode || bulkDeleteMode
+                        controller.kind == DocumentKind.Txt -> {
+                            bulkRemoveMode || bulkMoveMode || bulkDeleteMode || bulkEditTitleMode
+                        }
                         controller.kind == DocumentKind.Epub -> {
-                            (bulkMoveMode || bulkDeleteMode) &&
+                            (bulkMoveMode || bulkDeleteMode || bulkEditTitleMode) &&
                                 controller.epub?.chapters?.getOrNull(chapter.index - 1)?.isCoverSection0001Or0002() != true
                         }
                         else -> false
@@ -292,7 +296,8 @@ internal fun ChapterDirectoryList(
                         bulkSelected = chapter.index > 0 && (
                             (chapter.index - 1) in bulkRemoveSelectedChapterIndexes ||
                                 (chapter.index - 1) in bulkMoveSelectedChapterIndexes ||
-                                (chapter.index - 1) in bulkDeleteSelectedChapterIndexes
+                                (chapter.index - 1) in bulkDeleteSelectedChapterIndexes ||
+                                (chapter.index - 1) in bulkEditTitleSelectedChapterIndexes
                             ),
                         hasChildren = chapter.index > 0 && hasChildrenByIndex[chapter.index] == true,
                         expanded = chapter.index !in collapsedChapterIndexes,
@@ -314,6 +319,7 @@ internal fun ChapterDirectoryList(
                             !bulkRemoveMode &&
                             !bulkMoveMode &&
                             !bulkDeleteMode &&
+                            !bulkEditTitleMode &&
                             (controller.kind == DocumentKind.Epub || controller.kind == DocumentKind.Txt) &&
                             chapter.index > 0 &&
                             longPressHandler != null

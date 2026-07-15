@@ -27,3 +27,52 @@ private fun EditorController.updateTxtChapterItem(chapterIndex: Int, chapterTitl
     selectPreviewChapter(chapterIndex)
     return true
 }
+
+/** Applies bulk directory title edits. Indexes are 0-based chapter positions. */
+internal fun EditorController.applyDirectoryBulkTitleEdits(newTitles: List<Pair<Int, String>>): Int {
+    val cleaned = newTitles
+        .mapNotNull { (index, title) ->
+            val next = title.trim()
+            if (next.isBlank()) null else index to next
+        }
+        .distinctBy { it.first }
+    if (cleaned.isEmpty()) {
+        statusMessage = "没有可写入的标题"
+        return 0
+    }
+    return when (kind) {
+        DocumentKind.Epub -> {
+            val source = epub ?: return 0
+            val book = source.mutableStructureCopy()
+            val result = applyRenamedTitlesToEpub(book, cleaned)
+            if (!result.attempted) return 0
+            if (result.count > 0) {
+                epub = book
+                markDocumentChanged()
+            }
+            refreshChapters()
+            statusMessage = if (result.count > 0) {
+                "批量编辑标题：修改 ${result.count} 项"
+            } else {
+                "批量编辑标题：无需修改"
+            }
+            result.count
+        }
+        DocumentKind.Txt -> {
+            if (warnTxtMoveChapterSyncPending("批量编辑标题")) return 0
+            val document = txt ?: return 0
+            val result = applyRenamedTitlesToTxt(document, cleaned, ::detectCurrentTxtChapters)
+            if (!result.attempted) return 0
+            applyTxtCatalogPurifyRulesAfterCatalogChange()
+            if (result.count > 0) markDocumentChanged()
+            refreshChapters()
+            statusMessage = if (result.count > 0) {
+                "批量编辑标题：修改 ${result.count} 项"
+            } else {
+                "批量编辑标题：无需修改"
+            }
+            result.count
+        }
+        DocumentKind.None -> 0
+    }
+}
