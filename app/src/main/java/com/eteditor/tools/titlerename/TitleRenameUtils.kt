@@ -218,11 +218,16 @@ internal fun applyRenamedTitlesToEpub(
 ): TitleRenameApplyResult {
     val cleaned = cleanTitleRenamePairs(newTitles)
     if (cleaned.isEmpty()) return TitleRenameApplyResult(count = 0, attempted = false)
+    val hadVolumeChapters = book.chapters.any { it.isVolumeChapter() }
     var count = 0
     cleaned.forEach { (index, title) ->
         if (applyRenamedTitleToEpubChapter(book, index, title)) {
             count += 1
         }
+    }
+    // 与目录单条改标题一致：有卷结构时重算目录层级（卷顶格、卷下章缩进）。
+    if (hadVolumeChapters || book.chapters.any { it.isVolumeChapter() }) {
+        applyVolumeTocLevels(book)
     }
     return TitleRenameApplyResult(count = count, attempted = true)
 }
@@ -234,6 +239,7 @@ internal suspend fun applyRenamedTitlesToEpubWithProgress(
 ): Int {
     val cleaned = cleanTitleRenamePairs(newTitles)
     if (cleaned.isEmpty()) return 0
+    val hadVolumeChapters = book.chapters.any { it.isVolumeChapter() }
     var count = 0
     cleaned.forEachIndexed { index, (chapterIndex, title) ->
         if (applyRenamedTitleToEpubChapter(book, chapterIndex, title)) {
@@ -241,6 +247,9 @@ internal suspend fun applyRenamedTitlesToEpubWithProgress(
         }
         onProgress(index + 1, cleaned.size)
         yield()
+    }
+    if (hadVolumeChapters || book.chapters.any { it.isVolumeChapter() }) {
+        applyVolumeTocLevels(book)
     }
     return count
 }

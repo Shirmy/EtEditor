@@ -307,6 +307,33 @@ class TitleRenameUtilsTest {
     }
 
     @Test
+    fun applyRenamedTitlesToEpubRefreshesVolumeTocLevelsLikeDirectoryEdit() {
+        // 故意弄乱层级：批量改卷名后应与单条编辑一样重算为 卷0 / 章1 / 章1 / 卷0 / 章1
+        val book = multiVolumeBook(
+            paths = listOf(
+                "OEBPS/Text/Vol01.xhtml",
+                "OEBPS/Text/Chapter0001.xhtml",
+                "OEBPS/Text/Chapter0002.xhtml",
+                "OEBPS/Text/Vol02.xhtml",
+                "OEBPS/Text/Chapter0003.xhtml"
+            ),
+            titles = listOf("第一卷", "第1章 开始", "第2章 中间", "第二卷", "第3章 后续"),
+            tocLevels = listOf(1, 0, 0, 1, 0)
+        )
+
+        val result = applyRenamedTitlesToEpub(
+            book,
+            listOf(0 to "卷一 开端", 3 to "卷二 后续")
+        )
+
+        assertTrue(result.attempted)
+        assertEquals(2, result.count)
+        assertEquals("卷一 开端", book.chapters[0].title)
+        assertEquals("卷二 后续", book.chapters[3].title)
+        assertEquals(listOf(0, 1, 1, 0, 1), book.chapters.map { it.tocLevel })
+    }
+
+    @Test
     fun applyRenamedTitlesToTxtDropsBlankTitlesAndRedetectsChapters() {
         val text = "第1章 旧标题\n正文\n第2章 第二章\n正文"
         val document = TxtDocument(
@@ -432,6 +459,43 @@ class TitleRenameUtilsTest {
             ),
             spineIds = mutableListOf("c1"),
             chapters = mutableListOf(chapter)
+        )
+    }
+
+    private fun multiVolumeBook(
+        paths: List<String>,
+        titles: List<String>,
+        tocLevels: List<Int>
+    ): EpubBook {
+        val chapters = paths.mapIndexed { index, path ->
+            val title = titles[index]
+            val html = "<html><head><title>$title</title></head><body><h1>$title</h1><p>正文</p></body></html>"
+            epubChapter(
+                id = "c$index",
+                path = path,
+                title = title,
+                html = html
+            ).also { it.tocLevel = tocLevels[index] }
+        }
+        return EpubBook(
+            originalName = "book.epub",
+            metadataTitle = "Book",
+            metadataAuthor = "",
+            entries = linkedMapOf(
+                *chapters.map { it.path to it.html.toByteArray(StandardCharsets.UTF_8) }.toTypedArray()
+            ),
+            opfPath = "OEBPS/content.opf",
+            tocPath = "OEBPS/toc.ncx",
+            manifest = chapters.associate { chapter ->
+                chapter.id to ManifestItem(
+                    id = chapter.id,
+                    href = chapter.href,
+                    mediaType = "application/xhtml+xml",
+                    path = chapter.path
+                )
+            }.toMutableMap(),
+            spineIds = chapters.map { it.id }.toMutableList(),
+            chapters = chapters.toMutableList()
         )
     }
 
