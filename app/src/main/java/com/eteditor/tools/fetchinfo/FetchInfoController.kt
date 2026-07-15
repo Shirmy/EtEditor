@@ -146,18 +146,6 @@ fun EditorController.fetchInfoCatalogPreviewRows(
     )
 }
 
-internal fun EditorController.preferredSearchChoiceByMetadata(
-    choices: List<FetchInfoSearchChoice>,
-    query: String
-): FetchInfoSearchChoice? {
-    return preferredSearchChoiceByMetadata(
-        choices = choices,
-        query = query,
-        metadataTitle = epub?.metadataTitle.orEmpty(),
-        metadataAuthor = epub?.metadataAuthor.orEmpty()
-    )
-}
-
 private fun EditorController.resolveFetchInfoSearchChoiceByMetadata(
     choices: List<FetchInfoSearchChoice>,
     query: String
