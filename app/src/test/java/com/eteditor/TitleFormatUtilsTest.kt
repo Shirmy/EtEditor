@@ -106,6 +106,26 @@ class TitleFormatUtilsTest {
     }
 
     @Test
+    fun renderTitleFormatKeepsSuffixForNoneStyle() {
+        val withSuffix = renderTitleFormat(
+            prefix = "第1章",
+            suffix = "章节名",
+            style = TITLE_FORMAT_STYLE_NONE
+        )
+        val withoutSuffix = renderTitleFormat(
+            prefix = "第1章",
+            suffix = "",
+            style = TITLE_FORMAT_STYLE_NONE
+        )
+
+        assertEquals("第1章 章节名", withSuffix.plainTitle)
+        assertEquals("第1章 章节名", withSuffix.headingHtml)
+        assertEquals(TITLE_FORMAT_STYLE_NONE, withSuffix.styleCode)
+        assertEquals("第1章", withoutSuffix.plainTitle)
+        assertEquals("第1章", withoutSuffix.headingHtml)
+    }
+
+    @Test
     fun buildTitleFormatPlanModelFiltersSelectedEpubChapters() {
         val book = sampleBook()
         val result = buildTitleFormatPlanModel(
@@ -122,7 +142,7 @@ class TitleFormatUtilsTest {
         )
 
         assertEquals(listOf(1), result.plan.map { it.chapterIndex })
-        assertEquals("第9章", result.plan.single().newTitle)
+        assertEquals("第9章 旧标题", result.plan.single().newTitle)
         assertEquals("统一：无横线", result.plan.single().reason)
     }
 
@@ -152,7 +172,7 @@ class TitleFormatUtilsTest {
         assertEquals("", result.message)
         assertEquals(listOf(1), result.plan.map { it.chapterIndex })
         assertEquals("第2章 第二章", result.plan.single().oldTitle)
-        assertEquals("第2章", result.plan.single().newTitle)
+        assertEquals("第2章 第二章", result.plan.single().newTitle)
         assertEquals("统一：无横线", result.plan.single().reason)
     }
 

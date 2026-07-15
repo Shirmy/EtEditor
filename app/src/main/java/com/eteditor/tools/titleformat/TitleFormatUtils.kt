@@ -166,7 +166,7 @@ internal fun renderTitleFormat(
     val cleanPrefix = ChapterDetector.cleanTitle(prefix).ifBlank { prefix.trim() }
     val cleanSuffix = suffix.trim()
     val plainTitle = when {
-        style == TITLE_FORMAT_STYLE_NONE || cleanSuffix.isBlank() -> cleanPrefix
+        cleanSuffix.isBlank() -> cleanPrefix
         else -> "$cleanPrefix $cleanSuffix"
     }
     val headingHtml = when {

@@ -94,13 +94,7 @@ internal fun insertChaptersIntoEpubBook(
         } else {
             sourceChapter.title
         }
-        val effectiveParts = if (shouldRenumber) parseTitleFormatParts(numberedTitle) else sourceParts
-        val renderStyle = if (effectiveParts.suffix.isNotBlank() && referenceStyle == TITLE_FORMAT_STYLE_NONE) {
-            TITLE_FORMAT_STYLE_DOUBLE
-        } else {
-            referenceStyle
-        }
-        val renderedTitle = if (shouldRenumber) renderInsertedChapterTitle(numberedTitle, renderStyle) else null
+        val renderedTitle = if (shouldRenumber) renderInsertedChapterTitle(numberedTitle, referenceStyle) else null
         val title = renderedTitle?.plainTitle ?: numberedTitle
         val path = if (source.sourceType == INSERT_CHAPTER_SOURCE_EPUB && sourceChapter.sourcePath.isNotBlank()) {
             uniqueEpubEntryPath(book, sourceChapter.sourcePath)
