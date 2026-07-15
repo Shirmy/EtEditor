@@ -136,6 +136,41 @@ class EpubStructureUtilsTest {
     }
 
     @Test
+    fun directoryBulkTitleEditPublishGateMatchesBusyAndStaleRules() = runBlocking {
+        // 忙时：互斥直接走 onBusy，不进入写回。
+        var busy = true
+        var actionRan = false
+        val busyResult = withExclusiveOperation(
+            isBusy = { busy },
+            setBusy = { busy = it },
+            onBusy = { DIRECTORY_BULK_TITLE_EDIT_BUSY_MESSAGE }
+        ) {
+            actionRan = true
+            "should-not-run"
+        }
+        assertEquals(DIRECTORY_BULK_TITLE_EDIT_BUSY_MESSAGE, busyResult)
+        assertFalse(actionRan)
+        assertTrue(busy)
+
+        // 版本变了：准备结果不得发布。
+        val source = sampleBook(
+            listOf(chapter("c1", "OEBPS/Text/Chapter0001.xhtml", "第1章"))
+        )
+        val prepared = prepareEpubMutationModel(source, sourceContentVersion = 3) { book ->
+            applyRenamedTitlesToEpub(book, listOf(0 to "新标题")).count
+        }
+        assertTrue(canPublishDirectoryBulkTitleEdit(source, activeContentVersion = 3, prepared = prepared))
+        assertFalse(canPublishDirectoryBulkTitleEdit(source, activeContentVersion = 4, prepared = prepared))
+        assertFalse(
+            canPublishDirectoryBulkTitleEdit(
+                activeBook = source.mutableStructureCopy(),
+                activeContentVersion = 3,
+                prepared = prepared
+            )
+        )
+    }
+
+    @Test
     fun preparedStructuralMutationsDoNotChangeSourceChapterOrder() {
         val source = sampleBook(
             listOf(

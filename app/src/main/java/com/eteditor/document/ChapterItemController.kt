@@ -1,9 +1,9 @@
 package com.eteditor
 
 import com.eteditor.core.DocumentKind
+import com.eteditor.core.EpubBook
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.yield
 
 fun EditorController.updateChapterItem(chapterIndex: Int, fileName: String, chapterTitle: String): Boolean {
     return when (kind) {
@@ -75,7 +75,7 @@ private suspend fun EditorController.applyDirectoryBulkTitleEditsToEpub(
         isBusy = { busy },
         setBusy = { busy = it },
         onBusy = {
-            statusMessage = "正在处理，请稍后重试"
+            statusMessage = DIRECTORY_BULK_TITLE_EDIT_BUSY_MESSAGE
             0
         }
     ) {
@@ -83,12 +83,8 @@ private suspend fun EditorController.applyDirectoryBulkTitleEditsToEpub(
         val sourceContentVersion = documentContentVersion
         val prepared = withContext(Dispatchers.Default) {
             val book = source.mutableStructureCopy()
-            var count = 0
-            cleaned.forEachIndexed { index, pair ->
-                val result = applyRenamedTitlesToEpub(book, listOf(pair))
-                count += result.count
-                if (index % 8 == 7) yield()
-            }
+            // 一次整表写回；进度路径内会按章 yield，大书更顺。
+            val count = applyRenamedTitlesToEpubWithProgress(book, cleaned) { _, _ -> }
             PreparedEpubMutation(
                 source = source,
                 sourceContentVersion = sourceContentVersion,
@@ -96,8 +92,8 @@ private suspend fun EditorController.applyDirectoryBulkTitleEditsToEpub(
                 result = count
             )
         }
-        if (!preparedEpubMutationMatchesSource(epub, documentContentVersion, prepared)) {
-            statusMessage = "文档内容已变化，请重试"
+        if (!canPublishDirectoryBulkTitleEdit(epub, documentContentVersion, prepared)) {
+            statusMessage = DIRECTORY_BULK_TITLE_EDIT_STALE_MESSAGE
             return@withExclusiveOperation 0
         }
         val count = prepared.result
@@ -115,3 +111,13 @@ private suspend fun EditorController.applyDirectoryBulkTitleEditsToEpub(
         count
     }
 }
+
+internal const val DIRECTORY_BULK_TITLE_EDIT_BUSY_MESSAGE = "正在处理，请稍后重试"
+internal const val DIRECTORY_BULK_TITLE_EDIT_STALE_MESSAGE = "文档内容已变化，请重试"
+
+/** 批量改标题写回前：书本引用与内容版本须与准备时一致。 */
+internal fun canPublishDirectoryBulkTitleEdit(
+    activeBook: EpubBook?,
+    activeContentVersion: Int,
+    prepared: PreparedEpubMutation<*>
+): Boolean = preparedEpubMutationMatchesSource(activeBook, activeContentVersion, prepared)

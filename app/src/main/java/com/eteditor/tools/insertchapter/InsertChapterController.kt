@@ -192,6 +192,8 @@ suspend fun EditorController.selectInsertChapterSosadSearchChoice(toolId: String
         statusMessage = "搜索结果已失效"
         return false
     }
+    // 与抓取信息选书一致：校验通过后先收掉选书框，再抓目录；失败也不再挂着候选列表。
+    fetchInfoSearchChoiceRequest = null
     val parameters = InsertChapterParameters(
         sourceType = INSERT_CHAPTER_SOURCE_SOSAD,
         sosadQuery = request.parameters.query,
@@ -230,7 +232,6 @@ private suspend fun EditorController.prepareInsertChapterSosadPreviewWithQuery(
             sourceUri = sourceUri
         )
         setInsertChapterSourceData(data)
-        clearFetchInfoSearchChoiceRequest(toolId)
         statusMessage = "废文目录已读取：${data.chapters.size} 章，执行时抓正文"
         true
     } catch (error: Throwable) {
