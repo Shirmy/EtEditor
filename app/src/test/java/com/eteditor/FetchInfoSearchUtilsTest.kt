@@ -84,15 +84,15 @@ class FetchInfoSearchUtilsTest {
                 metadataAuthor = "作者B"
             ).choice?.detailUrl
         )
-        assertEquals(
-            "书名匹配但作者不匹配",
-            resolveFetchInfoSearchChoiceByMetadata(
-                choices = choices,
-                query = "书名",
-                metadataTitle = "",
-                metadataAuthor = "作者C"
-            ).skipReason
+        val authorMismatch = resolveFetchInfoSearchChoiceByMetadata(
+            choices = choices,
+            query = "书名",
+            metadataTitle = "",
+            metadataAuthor = "作者C"
         )
+        assertNull(authorMismatch.choice)
+        assertNull(authorMismatch.skipReason)
+        assertEquals(listOf("a", "b"), authorMismatch.promptChoices.map { it.detailUrl })
     }
 
     @Test
@@ -105,7 +105,8 @@ class FetchInfoSearchUtilsTest {
         )
 
         assertNull(resolution.choice)
-        assertEquals("没有匹配书名", resolution.skipReason)
+        assertNull(resolution.skipReason)
+        assertEquals(listOf("a"), resolution.promptChoices.map { it.detailUrl })
     }
 
     @Test
@@ -198,17 +199,20 @@ class FetchInfoSearchUtilsTest {
     }
 
     @Test
-    fun searchChoiceResolutionSkipsWhenNoNormalizedTitleMatches() {
+    fun searchChoiceResolutionPromptsWhenNoNormalizedTitleMatches() {
         val resolution = resolveFetchInfoSearchChoiceByMetadata(
-            choices = listOf(choice(title = "别的书", author = "作者A", detailUrl = "a")),
+            choices = listOf(
+                choice(title = "别的书", author = "作者A", detailUrl = "a"),
+                choice(title = "近似书名", author = "作者B", detailUrl = "b")
+            ),
             query = "书名",
             metadataTitle = "",
             metadataAuthor = ""
         )
 
         assertNull(resolution.choice)
-        assertEquals(emptyList<FetchInfoSearchChoice>(), resolution.promptChoices)
-        assertEquals("没有匹配书名", resolution.skipReason)
+        assertNull(resolution.skipReason)
+        assertEquals(listOf("a", "b"), resolution.promptChoices.map { it.detailUrl })
     }
 
     @Test

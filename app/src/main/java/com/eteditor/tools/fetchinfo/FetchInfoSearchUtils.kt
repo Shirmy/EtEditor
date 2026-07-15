@@ -55,8 +55,9 @@ internal fun resolveFetchInfoSearchChoiceByMetadata(
     val titleMatches = choices.filter { choice ->
         choice.title.normalizeSearchText() == normalizedQuery
     }
+    // 书名对不上：不再跳过本源，把本次搜索结果交给用户选（选书框仍可改填详情页）。
     if (titleMatches.isEmpty()) {
-        return SearchChoiceResolution(skipReason = "没有匹配书名")
+        return SearchChoiceResolution(promptChoices = choices)
     }
     val normalizedAuthor = metadataAuthor.normalizeSearchText()
     if (normalizedAuthor.isBlank()) {
@@ -72,7 +73,8 @@ internal fun resolveFetchInfoSearchChoiceByMetadata(
     return when {
         authorMatches.size == 1 -> SearchChoiceResolution(choice = authorMatches.first())
         authorMatches.size > 1 -> SearchChoiceResolution(promptChoices = authorMatches)
-        else -> SearchChoiceResolution(skipReason = "书名匹配但作者不匹配")
+        // 书名对了作者不对：弹书名命中的候选，而不是直接换源/失败。
+        else -> SearchChoiceResolution(promptChoices = titleMatches)
     }
 }
 
