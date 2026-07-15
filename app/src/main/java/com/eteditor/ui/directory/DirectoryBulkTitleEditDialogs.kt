@@ -209,15 +209,22 @@ internal fun DirectoryBulkTitleEditDialog(
                             val changed = controller.applyDirectoryBulkTitleEdits(
                                 plan.items.filter { it.changed }.map { it.chapterIndex to it.newTitle }
                             )
-                            if (changed > 0) {
+                            val outcome = resolveBulkTitleEditApplyUiOutcome(
+                                changedCount = changed,
+                                statusMessage = controller.statusMessage
+                            )
+                            if (outcome.dismissDialog) {
                                 onApplied()
                             } else {
-                                // 失败或无需修改：保留弹窗，展示原因，便于重试或取消。
-                                message = controller.statusMessage.ifBlank { "没有修改任何标题" }
+                                message = outcome.message
                             }
                         } catch (error: Throwable) {
-                            message = error.message?.takeIf { it.isNotBlank() }
-                                ?: controller.statusMessage.ifBlank { "修改失败，请重试" }
+                            val outcome = resolveBulkTitleEditApplyUiOutcome(
+                                changedCount = 0,
+                                statusMessage = controller.statusMessage,
+                                errorMessage = error.message
+                            )
+                            message = outcome.message
                         } finally {
                             applying = false
                         }

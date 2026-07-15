@@ -176,24 +176,20 @@ private suspend fun EditorController.prepareInsertChapterSosadCatalog(
 }
 
 suspend fun EditorController.selectInsertChapterSosadSearchChoice(toolId: String, choice: FetchInfoSearchChoice): Boolean {
-    val request = fetchInfoSearchChoiceRequest ?: run {
-        statusMessage = "没有可选择的搜索结果"
-        return false
-    }
-    if (request.toolId != toolId) {
-        statusMessage = "搜索结果已变化"
-        return false
-    }
-    if (request.parameters.source != FetchInfoSources.SOSAD) {
-        statusMessage = "搜索结果来源不匹配"
-        return false
-    }
-    if (request.choices.none { it.detailUrl == choice.detailUrl }) {
-        statusMessage = "搜索结果已失效"
+    val request = fetchInfoSearchChoiceRequest
+    val validation = validateInsertSosadSearchChoiceSelection(
+        request = request,
+        toolId = toolId,
+        choice = choice
+    )
+    if (!validation.ok || request == null) {
+        statusMessage = validation.errorMessage
         return false
     }
     // 与抓取信息选书一致：校验通过后先收掉选书框，再抓目录；失败也不再挂着候选列表。
-    fetchInfoSearchChoiceRequest = null
+    if (validation.clearChoiceRequestBeforeFetch) {
+        fetchInfoSearchChoiceRequest = null
+    }
     val parameters = InsertChapterParameters(
         sourceType = INSERT_CHAPTER_SOURCE_SOSAD,
         sosadQuery = request.parameters.query,

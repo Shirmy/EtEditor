@@ -147,6 +147,52 @@ class DirectoryBulkTitleEditUtilsTest {
         assertEquals(listOf(2, 3, 5), writePairs.map { it.first })
     }
 
+    @Test
+    fun applyUiOutcomeDismissesOnlyWhenChangedAndKeepsDialogOnFailure() {
+        val success = resolveBulkTitleEditApplyUiOutcome(
+            changedCount = 2,
+            statusMessage = "批量编辑标题：修改 2 项"
+        )
+        assertTrue(success.dismissDialog)
+
+        val busy = resolveBulkTitleEditApplyUiOutcome(
+            changedCount = 0,
+            statusMessage = DIRECTORY_BULK_TITLE_EDIT_BUSY_MESSAGE
+        )
+        assertFalse(busy.dismissDialog)
+        assertEquals(DIRECTORY_BULK_TITLE_EDIT_BUSY_MESSAGE, busy.message)
+
+        val stale = resolveBulkTitleEditApplyUiOutcome(
+            changedCount = 0,
+            statusMessage = DIRECTORY_BULK_TITLE_EDIT_STALE_MESSAGE
+        )
+        assertFalse(stale.dismissDialog)
+        assertEquals(DIRECTORY_BULK_TITLE_EDIT_STALE_MESSAGE, stale.message)
+
+        val blankStatus = resolveBulkTitleEditApplyUiOutcome(
+            changedCount = 0,
+            statusMessage = ""
+        )
+        assertFalse(blankStatus.dismissDialog)
+        assertEquals("没有修改任何标题", blankStatus.message)
+
+        val thrown = resolveBulkTitleEditApplyUiOutcome(
+            changedCount = 0,
+            statusMessage = "",
+            errorMessage = "boom"
+        )
+        assertFalse(thrown.dismissDialog)
+        assertEquals("boom", thrown.message)
+
+        val thrownBlank = resolveBulkTitleEditApplyUiOutcome(
+            changedCount = 0,
+            statusMessage = "状态提示",
+            errorMessage = "  "
+        )
+        assertFalse(thrownBlank.dismissDialog)
+        assertEquals("状态提示", thrownBlank.message)
+    }
+
     private fun info(index: Int, title: String, isVolume: Boolean): ChapterInfo {
         return ChapterInfo(
             index = index,

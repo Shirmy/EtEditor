@@ -221,3 +221,34 @@ internal fun buildBulkTitleEditPlan(
         message = message
     )
 }
+
+/**
+ * Dialog outcome after a bulk apply attempt finishes (success, zero-change, or thrown error).
+ * applying is always cleared by the caller in finally; this only decides dismiss vs keep + message.
+ */
+internal data class BulkTitleEditApplyUiOutcome(
+    val dismissDialog: Boolean,
+    val message: String
+)
+
+internal fun resolveBulkTitleEditApplyUiOutcome(
+    changedCount: Int,
+    statusMessage: String,
+    errorMessage: String? = null
+): BulkTitleEditApplyUiOutcome {
+    if (errorMessage != null) {
+        return BulkTitleEditApplyUiOutcome(
+            dismissDialog = false,
+            message = errorMessage.ifBlank {
+                statusMessage.ifBlank { "修改失败，请重试" }
+            }
+        )
+    }
+    if (changedCount > 0) {
+        return BulkTitleEditApplyUiOutcome(dismissDialog = true, message = statusMessage)
+    }
+    return BulkTitleEditApplyUiOutcome(
+        dismissDialog = false,
+        message = statusMessage.ifBlank { "没有修改任何标题" }
+    )
+}
