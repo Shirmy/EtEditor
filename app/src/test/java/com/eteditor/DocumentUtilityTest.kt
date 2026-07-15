@@ -7,6 +7,7 @@ import com.eteditor.core.EpubChapter
 import com.eteditor.core.ManifestItem
 import com.eteditor.core.TxtChapter
 import com.eteditor.core.TxtDocument
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -80,6 +81,47 @@ class DocumentUtilityTest {
             "已保存，但重命名失败：不支持",
             txtRenameAfterSaveMessage(renamed = false, failureReason = "不支持")
         )
+    }
+
+    @Test
+    fun consecutiveTxtSavesUseRenamedLocationAfterFirstSave() = runBlocking {
+        val writes = mutableListOf<String>()
+        var activeSource: String? = "content://old.txt"
+        val target = resolveTxtSaveRenameTarget("new", "old.txt")
+
+        repeat(2) {
+            writeAndMaybeRenameTxt(
+                currentSource = { activeSource },
+                currentFileName = { source ->
+                    if (source == "content://old.txt") "old.txt" else "new.txt"
+                },
+                target = target,
+                write = { source -> writes += source },
+                rename = { _, _ -> Result.success("content://new.txt") },
+                publishRenamedSource = { source -> activeSource = source }
+            )
+        }
+
+        assertEquals(listOf("content://old.txt", "content://new.txt"), writes)
+        assertEquals("content://new.txt", activeSource)
+    }
+
+    @Test
+    fun txtSaveKeepsCurrentLocationWhenRenameReturnsNoLocation() = runBlocking {
+        var activeSource: String? = "content://old.txt"
+        val result = writeAndMaybeRenameTxt(
+            currentSource = { activeSource },
+            currentFileName = { "old.txt" },
+            target = resolveTxtSaveRenameTarget("new", "old.txt"),
+            write = {},
+            rename = { _, _ -> Result.success<String?>(null) },
+            publishRenamedSource = { source -> activeSource = source }
+        )
+
+        assertEquals("content://old.txt", result.activeSource)
+        assertEquals("content://old.txt", activeSource)
+        assertFalse(result.renamed)
+        assertEquals("当前文件位置不支持重命名", result.failureReason)
     }
 
     @Test

@@ -46,11 +46,10 @@ suspend fun EditorController.saveToOriginal() {
                 return@runBusy
             }
             setSaveProgress(0.12f, "保存中：准备文件")
-            writeCurrentDocument(uri, ::setSaveProgress)
             val renameMessage = if (kind == DocumentKind.Txt) {
-                setSaveProgress(0.94f, "保存中：写回文件名")
-                renameTxtSourceToDisplayedTitle(uri)
+                saveTxtToOriginalLocation(::setSaveProgress)
             } else {
+                writeCurrentDocument(uri, ::setSaveProgress)
                 null
             }
             setSaveProgress(1f, "保存完成")
@@ -68,29 +67,35 @@ suspend fun EditorController.saveToOriginal() {
     }
 }
 
-private suspend fun EditorController.renameTxtSourceToDisplayedTitle(uri: Uri): String? {
+private suspend fun EditorController.saveTxtToOriginalLocation(onProgress: (Float, String) -> Unit): String? {
     val document = txt ?: return null
     val target = resolveTxtSaveRenameTarget(
         displayedTitle = title,
         originalName = document.originalName
     )
-    val currentFileName = documentDisplayName(appContext, uri)
-    if (!shouldRenameTxtAfterSave(currentFileName, target.fileName)) {
-        return txtRenameAfterSaveMessage(renamed = false)
-    }
-
-    val renameResult = renameDocumentFile(appContext, uri, target.fileName)
-    val renamedUri = renameResult.getOrNull()
-    if (renamedUri == null) {
-        val reason = renameResult.exceptionOrNull()?.let { error ->
-            error.message ?: error.javaClass.simpleName
-        } ?: "当前文件位置不支持重命名"
+    val result = writeAndMaybeRenameTxt(
+        currentSource = { sourceUri },
+        currentFileName = { activeUri -> documentDisplayName(appContext, activeUri) },
+        target = target,
+        write = { activeUri ->
+            writeCurrentDocument(activeUri, onProgress)
+            setSaveProgress(0.94f, "保存中：写回文件名")
+        },
+        rename = { activeUri, targetFileName ->
+            renameDocumentFile(appContext, activeUri, targetFileName)
+        },
+        publishRenamedSource = { renamedUri ->
+            rememberWritableDocumentUri(appContext, renamedUri)
+            sourceUri = renamedUri
+        }
+    )
+    result.failureReason?.let { reason ->
         log("TXT 重命名失败：$reason")
         return txtRenameAfterSaveMessage(renamed = false, failureReason = reason)
     }
+    if (!result.renamed) return txtRenameAfterSaveMessage(renamed = false)
 
-    rememberWritableDocumentUri(appContext, renamedUri)
-    sourceUri = renamedUri
+    val renamedUri = result.activeSource
     txt = document.copy(originalName = target.baseName)
     documentContentVersion++
     title = target.baseName

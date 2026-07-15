@@ -60,6 +60,41 @@ internal fun shouldRenameTxtAfterSave(
     targetFileName: String
 ): Boolean = currentFileName != targetFileName
 
+internal data class TxtWriteRenameResult<T>(
+    val activeSource: T,
+    val renamed: Boolean,
+    val failureReason: String? = null
+)
+
+internal suspend fun <T> writeAndMaybeRenameTxt(
+    currentSource: () -> T?,
+    currentFileName: (T) -> String?,
+    target: TxtSaveRenameTarget,
+    write: suspend (T) -> Unit,
+    rename: suspend (T, String) -> Result<T?>,
+    publishRenamedSource: (T) -> Unit
+): TxtWriteRenameResult<T> {
+    val source = currentSource() ?: error("没有可保存的文件位置")
+    write(source)
+    if (!shouldRenameTxtAfterSave(currentFileName(source), target.fileName)) {
+        return TxtWriteRenameResult(activeSource = source, renamed = false)
+    }
+    val renameResult = rename(source, target.fileName)
+    val renamedSource = renameResult.getOrNull()
+    if (renamedSource != null) {
+        publishRenamedSource(renamedSource)
+        return TxtWriteRenameResult(activeSource = renamedSource, renamed = true)
+    }
+    val reason = renameResult.exceptionOrNull()?.let { error ->
+        error.message ?: error.javaClass.simpleName
+    } ?: "当前文件位置不支持重命名"
+    return TxtWriteRenameResult(
+        activeSource = source,
+        renamed = false,
+        failureReason = reason
+    )
+}
+
 /**
  * User-facing status after content write. null means keep the generic "已保存" path.
  * failureReason non-null means rename failed after a successful content write.
