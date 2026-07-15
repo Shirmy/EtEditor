@@ -33,9 +33,13 @@ private fun EditorController.updateTxtChapterItem(chapterIndex: Int, chapterTitl
 
 /**
  * Applies bulk directory title edits. Indexes are 0-based chapter positions.
- * EPUB path uses exclusive busy lock, background mutation, and source version check.
+ * Product scope: EPUB only. Uses exclusive busy lock, background mutation, and source version check.
  */
 internal suspend fun EditorController.applyDirectoryBulkTitleEdits(newTitles: List<Pair<Int, String>>): Int {
+    if (kind != DocumentKind.Epub) {
+        statusMessage = "批量编辑标题仅支持 EPUB"
+        return 0
+    }
     val cleaned = newTitles
         .mapNotNull { (index, title) ->
             val next = title.trim()
@@ -46,26 +50,7 @@ internal suspend fun EditorController.applyDirectoryBulkTitleEdits(newTitles: Li
         statusMessage = "没有可写入的标题"
         return 0
     }
-    return when (kind) {
-        DocumentKind.Epub -> applyDirectoryBulkTitleEditsToEpub(cleaned)
-        DocumentKind.Txt -> {
-            // 产品当前只接 EPUB 批量改标题；TXT 写回保留以防误调，但不走 UI 入口。
-            if (warnTxtMoveChapterSyncPending("批量编辑标题")) return 0
-            val document = txt ?: return 0
-            val result = applyRenamedTitlesToTxt(document, cleaned, ::detectCurrentTxtChapters)
-            if (!result.attempted) return 0
-            if (result.count > 0) {
-                applyTxtCatalogPurifyRulesAfterCatalogChange()
-                markDocumentChanged()
-                refreshChapters()
-                statusMessage = "批量编辑标题：修改 ${result.count} 项"
-            } else {
-                statusMessage = "批量编辑标题：无需修改"
-            }
-            result.count
-        }
-        DocumentKind.None -> 0
-    }
+    return applyDirectoryBulkTitleEditsToEpub(cleaned)
 }
 
 private suspend fun EditorController.applyDirectoryBulkTitleEditsToEpub(

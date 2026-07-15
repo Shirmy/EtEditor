@@ -124,6 +124,10 @@ internal fun DirectoryPanel(
         bulkDeleteChapterIndexes = setOf(chapterIndex)
     }
     fun startBulkEditTitle(chapterIndex: Int) {
+        if (controller.kind != DocumentKind.Epub) {
+            controller.showStatusMessage("批量编辑标题仅支持 EPUB")
+            return
+        }
         if (!canBulkSelectChapter(chapterIndex)) return
         actionMode = null
         moveTargetsByChapter = emptyMap()
@@ -135,6 +139,7 @@ internal fun DirectoryPanel(
         bulkEditTitleRequest = null
     }
     fun toggleBulkEditTitle(chapterIndex: Int) {
+        if (controller.kind != DocumentKind.Epub) return
         if (!canBulkSelectChapter(chapterIndex)) return
         if (chapterIndex in bulkEditTitleIndexes) {
             bulkEditTitleIndexes = bulkEditTitleIndexes - chapterIndex
@@ -361,7 +366,7 @@ internal fun DirectoryPanel(
                     }
                 },
                 onPickChapter = { index ->
-                    if (bulkEditTitleMode && (controller.kind == DocumentKind.Txt || controller.kind == DocumentKind.Epub)) {
+                    if (bulkEditTitleMode && controller.kind == DocumentKind.Epub) {
                         toggleBulkEditTitle(index)
                     } else if (bulkMoveChapterMode && (controller.kind == DocumentKind.Txt || controller.kind == DocumentKind.Epub)) {
                         toggleBulkMoveChapter(index)

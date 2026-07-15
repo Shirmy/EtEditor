@@ -260,7 +260,8 @@ internal fun ChapterDirectoryList(
                     val bulkSelectable = when {
                         chapter.index <= 0 -> false
                         controller.kind == DocumentKind.Txt -> {
-                            bulkRemoveMode || bulkMoveMode || bulkDeleteMode || bulkEditTitleMode
+                            // 批量改标题仅 EPUB；TXT 仍支持移除/移动/删除多选。
+                            bulkRemoveMode || bulkMoveMode || bulkDeleteMode
                         }
                         controller.kind == DocumentKind.Epub -> {
                             (bulkMoveMode || bulkDeleteMode || bulkEditTitleMode) &&
