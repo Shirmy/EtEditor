@@ -446,7 +446,8 @@ fun EditorController.wrapEpubBodySelectionWithParagraphs(
 private fun EditorController.finishSyncEpubTextSearchAfterChange(
     preserveTextSearch: Boolean
 ): Boolean {
-    val shouldPreserveTextSearch = preserveTextSearch && shouldPreserveEpubTextSearchAfterBodyChange(
+    val shouldPreserveTextSearch = shouldPreserveEpubTextSearchAfterStructureChange(
+        preserveTextSearch = preserveTextSearch,
         textSearchToolId = textSearchToolId,
         replacementPreviewPresent = replacementFilePreview != null
     )

@@ -15,20 +15,53 @@ internal fun EditorController.clearTextSearchState() {
     clearPreviewHighlight()
 }
 
+internal data class TextSearchStateAfterBodyTextChange(
+    val replacementFilePreview: ReplacementFilePreview?,
+    val textSearchToolId: String?
+)
+
 internal fun EditorController.clearTextSearchStateAfterBodyTextChange() {
     val previousReplacementPreview = replacementFilePreview
     val previousTextSearchToolId = textSearchToolId
     clearTextSearchState()
-    replacementFilePreview = replacementPreviewAfterBodyTextChange(
-        previousReplacementPreview,
-        ::rebuildReplacementFilePreviewAfterBodyTextChange
-    )
-    if (replacementFilePreview == null) {
-        textSearchToolId = textSearchPreviewToolIdAfterBodyTextChange(previousTextSearchToolId) { toolId ->
+    val restored = textSearchStateAfterBodyTextChange(
+        previousReplacementPreview = previousReplacementPreview,
+        previousTextSearchToolId = previousTextSearchToolId,
+        rebuildReplacementPreview = ::rebuildReplacementFilePreviewAfterBodyTextChange,
+        rebuildTextSearchPreview = { toolId ->
             textSearchToolId = toolId
             rebuildCurrentTextSearchPreviewAfterDocumentChange()
         }
+    )
+    replacementFilePreview = restored.replacementFilePreview
+    textSearchToolId = restored.textSearchToolId
+}
+
+// 改正文后恢复预览：有替换预览优先重建；否则再重建静读。
+internal fun textSearchStateAfterBodyTextChange(
+    previousReplacementPreview: ReplacementFilePreview?,
+    previousTextSearchToolId: String?,
+    rebuildReplacementPreview: (ReplacementFilePreview) -> ReplacementFilePreview?,
+    rebuildTextSearchPreview: (String) -> Boolean
+): TextSearchStateAfterBodyTextChange {
+    val nextReplacementPreview = replacementPreviewAfterBodyTextChange(
+        previousReplacementPreview,
+        rebuildReplacementPreview
+    )
+    if (nextReplacementPreview != null) {
+        return TextSearchStateAfterBodyTextChange(
+            replacementFilePreview = nextReplacementPreview,
+            textSearchToolId = null
+        )
     }
+    val nextTextSearchToolId = textSearchPreviewToolIdAfterBodyTextChange(
+        previousTextSearchToolId,
+        rebuildTextSearchPreview
+    )
+    return TextSearchStateAfterBodyTextChange(
+        replacementFilePreview = null,
+        textSearchToolId = nextTextSearchToolId
+    )
 }
 
 internal fun replacementPreviewAfterBodyTextChange(

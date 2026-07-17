@@ -23,6 +23,41 @@ class EpubStructureUtilsTest {
     }
 
     @Test
+    fun structureChangePreservesTextSearchOnlyWhenAllowedAndPreviewPresent() {
+        // 分章/设为卷等：显式允许保留，且当前有静读或替换预览
+        assertTrue(
+            shouldPreserveEpubTextSearchAfterStructureChange(
+                preserveTextSearch = true,
+                textSearchToolId = "search",
+                replacementPreviewPresent = false
+            )
+        )
+        assertTrue(
+            shouldPreserveEpubTextSearchAfterStructureChange(
+                preserveTextSearch = true,
+                textSearchToolId = null,
+                replacementPreviewPresent = true
+            )
+        )
+        // 删章/移章等：默认不允许保留，即使当前有预览
+        assertFalse(
+            shouldPreserveEpubTextSearchAfterStructureChange(
+                preserveTextSearch = false,
+                textSearchToolId = "search",
+                replacementPreviewPresent = true
+            )
+        )
+        // 允许保留，但当前没有任何预览
+        assertFalse(
+            shouldPreserveEpubTextSearchAfterStructureChange(
+                preserveTextSearch = true,
+                textSearchToolId = null,
+                replacementPreviewPresent = false
+            )
+        )
+    }
+
+    @Test
     fun exclusiveOperationRejectsDuplicateWork() = runBlocking {
         var busy = true
         var actionRan = false

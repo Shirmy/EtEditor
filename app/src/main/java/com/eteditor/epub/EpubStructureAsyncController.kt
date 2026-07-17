@@ -8,6 +8,16 @@ internal fun shouldPreserveEpubTextSearchAfterBodyChange(
     replacementPreviewPresent: Boolean
 ): Boolean = textSearchToolId != null || replacementPreviewPresent
 
+// 结构类变更：仅在明确允许保留，且当前确有静读/替换预览时走保留路径。
+internal fun shouldPreserveEpubTextSearchAfterStructureChange(
+    preserveTextSearch: Boolean,
+    textSearchToolId: String?,
+    replacementPreviewPresent: Boolean
+): Boolean = preserveTextSearch && shouldPreserveEpubTextSearchAfterBodyChange(
+    textSearchToolId = textSearchToolId,
+    replacementPreviewPresent = replacementPreviewPresent
+)
+
 private suspend fun <R> EditorController.prepareCurrentEpubMutation(
     missingMessage: String,
     mutation: (EpubBook) -> R
@@ -31,7 +41,8 @@ private fun EditorController.finishPreparedEpubStructureChange(
     checkReport = null
     markDocumentChanged()
     clearFileRenamePlan()
-    val shouldPreserveTextSearch = preserveTextSearch && shouldPreserveEpubTextSearchAfterBodyChange(
+    val shouldPreserveTextSearch = shouldPreserveEpubTextSearchAfterStructureChange(
+        preserveTextSearch = preserveTextSearch,
         textSearchToolId = textSearchToolId,
         replacementPreviewPresent = replacementFilePreview != null
     )

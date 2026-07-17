@@ -110,6 +110,102 @@ class TextSearchStateControllerTest {
         assertEquals(null, result)
     }
 
+    @Test
+    fun bodyTextChangeRestoresReplacementPreviewAndSkipsTextSearch() {
+        val previous = replacementPreview(toolId = "replace-tool")
+        val rebuilt = replacementPreview(
+            toolId = "replace-tool",
+            singleRules = listOf(previewRule("after", lineNo = 1))
+        )
+        var textSearchRebuildCalls = 0
+
+        val result = textSearchStateAfterBodyTextChange(
+            previousReplacementPreview = previous,
+            previousTextSearchToolId = "search-tool",
+            rebuildReplacementPreview = { preview ->
+                assertSame(previous, preview)
+                rebuilt
+            },
+            rebuildTextSearchPreview = {
+                textSearchRebuildCalls += 1
+                true
+            }
+        )
+
+        assertSame(rebuilt, result.replacementFilePreview)
+        assertEquals(null, result.textSearchToolId)
+        assertEquals(0, textSearchRebuildCalls)
+    }
+
+    @Test
+    fun bodyTextChangeRestoresTextSearchWhenNoReplacementPreview() {
+        var textSearchRebuildCalls = 0
+
+        val result = textSearchStateAfterBodyTextChange(
+            previousReplacementPreview = null,
+            previousTextSearchToolId = "search-tool",
+            rebuildReplacementPreview = { error("should not rebuild replacement preview") },
+            rebuildTextSearchPreview = { toolId ->
+                assertEquals("search-tool", toolId)
+                textSearchRebuildCalls += 1
+                true
+            }
+        )
+
+        assertEquals(null, result.replacementFilePreview)
+        assertEquals("search-tool", result.textSearchToolId)
+        assertEquals(1, textSearchRebuildCalls)
+    }
+
+    @Test
+    fun bodyTextChangeFallsBackToTextSearchWhenReplacementRebuildFails() {
+        val previous = replacementPreview(toolId = "replace-tool")
+        var textSearchRebuildCalls = 0
+
+        val result = textSearchStateAfterBodyTextChange(
+            previousReplacementPreview = previous,
+            previousTextSearchToolId = "search-tool",
+            rebuildReplacementPreview = { null },
+            rebuildTextSearchPreview = { toolId ->
+                assertEquals("search-tool", toolId)
+                textSearchRebuildCalls += 1
+                true
+            }
+        )
+
+        assertEquals(null, result.replacementFilePreview)
+        assertEquals("search-tool", result.textSearchToolId)
+        assertEquals(1, textSearchRebuildCalls)
+    }
+
+    @Test
+    fun bodyTextChangeClearsBothWhenNothingCanBeRebuilt() {
+        val previous = replacementPreview(toolId = "replace-tool")
+
+        val result = textSearchStateAfterBodyTextChange(
+            previousReplacementPreview = previous,
+            previousTextSearchToolId = "search-tool",
+            rebuildReplacementPreview = { null },
+            rebuildTextSearchPreview = { false }
+        )
+
+        assertEquals(null, result.replacementFilePreview)
+        assertEquals(null, result.textSearchToolId)
+    }
+
+    @Test
+    fun bodyTextChangeWithNoPreviousStateStaysEmpty() {
+        val result = textSearchStateAfterBodyTextChange(
+            previousReplacementPreview = null,
+            previousTextSearchToolId = null,
+            rebuildReplacementPreview = { error("should not rebuild replacement preview") },
+            rebuildTextSearchPreview = { error("should not rebuild text search") }
+        )
+
+        assertEquals(null, result.replacementFilePreview)
+        assertEquals(null, result.textSearchToolId)
+    }
+
     private fun replacementPreview(
         toolId: String,
         multiRules: List<ReplacementPreviewRule> = emptyList(),
