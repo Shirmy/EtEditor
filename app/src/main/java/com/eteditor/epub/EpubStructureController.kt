@@ -169,7 +169,7 @@ fun EditorController.splitEpubChapterAtLine(
     checkReport = null
     markDocumentChanged()
     clearFileRenamePlan()
-    clearTextSearchState()
+    finishSyncEpubTextSearchAfterChange(preserveTextSearch = true)
     refreshChapters()
     statusMessage = buildEpubStructureChangeMessage(
         prefix = "已分章：${result.sourceDisplayTitle} -> ${result.newTitle}",
@@ -324,8 +324,8 @@ fun EditorController.deleteEpubBodyLine(chapterIndex: Int, lineIndex: Int): Bool
     checkReport = null
     markDocumentChanged()
     clearFileRenamePlan()
-    clearTextSearchState()
-    refreshChapters()
+    val shouldRebuildTextSearchPreview = finishSyncEpubTextSearchAfterChange(preserveTextSearch = true)
+    refreshEpubChapterInfoAt(chapterIndex, refreshPreview = !shouldRebuildTextSearchPreview)
     statusMessage = "已删除正文行"
     return true
 }
@@ -356,7 +356,7 @@ fun EditorController.setEpubVolumeAtBodyLine(
     checkReport = null
     markDocumentChanged()
     clearFileRenamePlan()
-    clearTextSearchState()
+    finishSyncEpubTextSearchAfterChange(preserveTextSearch = true)
     refreshChapters()
     statusMessage = "已设为卷：${result.volumeDisplayTitle}"
     return true
@@ -386,16 +386,8 @@ fun EditorController.setEpubVolumeFromBodySelection(
     checkReport = null
     markDocumentChanged()
     clearFileRenamePlan()
-    val shouldRebuildTextSearchPreview = textSearchToolId != null && replacementFilePreview == null
-    if (shouldRebuildTextSearchPreview) {
-        clearPreviewHighlight()
-    } else {
-        clearTextSearchState()
-    }
+    finishSyncEpubTextSearchAfterChange(preserveTextSearch = true)
     refreshChapters()
-    if (shouldRebuildTextSearchPreview) {
-        rebuildCurrentTextSearchPreviewAfterDocumentChange()
-    }
     statusMessage = "已设为卷：${result.volumeDisplayTitle}"
     return true
 }
@@ -419,16 +411,8 @@ fun EditorController.deleteEpubBodySelection(
     checkReport = null
     markDocumentChanged()
     clearFileRenamePlan()
-    val shouldRebuildTextSearchPreview = textSearchToolId != null && replacementFilePreview == null
-    if (shouldRebuildTextSearchPreview) {
-        clearPreviewHighlight()
-    } else {
-        clearTextSearchState()
-    }
-    refreshChapters()
-    if (shouldRebuildTextSearchPreview) {
-        rebuildCurrentTextSearchPreviewAfterDocumentChange()
-    }
+    val shouldRebuildTextSearchPreview = finishSyncEpubTextSearchAfterChange(preserveTextSearch = true)
+    refreshEpubChapterInfoAt(chapterIndex, refreshPreview = !shouldRebuildTextSearchPreview)
     statusMessage = "已删除所选文字"
     return true
 }
@@ -452,16 +436,24 @@ fun EditorController.wrapEpubBodySelectionWithParagraphs(
     checkReport = null
     markDocumentChanged()
     clearFileRenamePlan()
-    val shouldRebuildTextSearchPreview = textSearchToolId != null && replacementFilePreview == null
+    val shouldRebuildTextSearchPreview = finishSyncEpubTextSearchAfterChange(preserveTextSearch = true)
+    refreshEpubChapterInfoAt(chapterIndex, refreshPreview = !shouldRebuildTextSearchPreview)
+    statusMessage = "已加标签"
+    return true
+}
+
+// 与异步 EPUB 收尾一致：需要保留时重建静读/替换预览，否则整段清空。返回是否走了保留路径。
+private fun EditorController.finishSyncEpubTextSearchAfterChange(
+    preserveTextSearch: Boolean
+): Boolean {
+    val shouldRebuildTextSearchPreview = preserveTextSearch && shouldRebuildEpubTextSearchPreview(
+        textSearchToolId = textSearchToolId,
+        replacementPreviewPresent = replacementFilePreview != null
+    )
     if (shouldRebuildTextSearchPreview) {
-        clearPreviewHighlight()
+        clearTextSearchStateAfterBodyTextChange()
     } else {
         clearTextSearchState()
     }
-    refreshChapters()
-    if (shouldRebuildTextSearchPreview) {
-        rebuildCurrentTextSearchPreviewAfterDocumentChange()
-    }
-    statusMessage = "已加标签"
-    return true
+    return shouldRebuildTextSearchPreview
 }
