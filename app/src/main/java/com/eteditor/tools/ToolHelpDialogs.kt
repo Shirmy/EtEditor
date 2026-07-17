@@ -61,7 +61,7 @@ fun TitleFormatHelpDialog(onDismiss: () -> Unit) {
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(
-                text = "后缀超过短标题阈值（默认 6 字）的章节占比达到 60%：左竖线；否则用双横线。",
+                text = "后缀超过短标题阈值（默认 6 字）的章节占比达到 30%：左竖线；否则用双横线。",
                 style = MaterialTheme.typography.bodyMedium
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))

@@ -143,7 +143,7 @@ internal fun titleFormatAutoDecision(
             style = TITLE_FORMAT_STYLE_NONE,
             reason = "自动：判断为无横线"
         )
-        longCount * 100 >= total * 60 -> TitleFormatAutoDecision(
+        longCount * 100 >= total * 30 -> TitleFormatAutoDecision(
             style = TITLE_FORMAT_STYLE_LEFT,
             reason = "自动：判断为左竖线"
         )

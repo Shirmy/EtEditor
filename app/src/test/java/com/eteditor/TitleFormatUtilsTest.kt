@@ -58,6 +58,19 @@ class TitleFormatUtilsTest {
     }
 
     @Test
+    fun autoDecisionChoosesLeftWhenThirtyPercentOfSuffixesAreLong() {
+        val parts = (1..10).map { index ->
+            val suffix = if (index <= 3) "超过六个字的副标题" else "短标题"
+            TitleFormatParts("第${index}章", suffix)
+        }
+
+        assertEquals(
+            TITLE_FORMAT_STYLE_LEFT,
+            titleFormatAutoDecision(parts, shortThreshold = 6).style
+        )
+    }
+
+    @Test
     fun titleFormatMessagesUsePlanReasonOrUniformStyle() {
         val autoParameters = TitleFormatParameters(
             mode = TITLE_FORMAT_MODE_PER_CHAPTER,
