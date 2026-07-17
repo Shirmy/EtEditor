@@ -171,10 +171,12 @@ private fun EditorController.finishPreparedEpubPackageTextMutation(
     checkReport = null
     markDocumentChanged()
     clearFileRenamePlan()
-    val shouldRebuildTextSearchPreview = textSearchToolId != null && replacementFilePreview == null
+    val shouldRebuildTextSearchPreview = shouldRebuildEpubTextSearchPreview(
+        textSearchToolId = textSearchToolId,
+        replacementPreviewPresent = replacementFilePreview != null
+    )
     if (shouldRebuildTextSearchPreview) {
-        selectedTextSearchResultId = null
-        selectedReplacementPreviewMatchId = null
+        clearTextSearchStateAfterBodyTextChange()
     } else {
         clearTextSearchState()
     }
@@ -186,9 +188,6 @@ private fun EditorController.finishPreparedEpubPackageTextMutation(
     previewHighlightSourceStart = -1
     previewHighlightSourceEnd = -1
     setPreviewTextFromSource(result.nextBody, target.sourceIndex)
-    if (shouldRebuildTextSearchPreview) {
-        rebuildCurrentTextSearchPreviewAfterDocumentChange()
-    }
     statusMessage = successMessage
     return true
 }

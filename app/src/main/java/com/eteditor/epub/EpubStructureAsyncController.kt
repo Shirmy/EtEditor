@@ -5,7 +5,7 @@ import com.eteditor.core.EpubBook
 internal fun shouldRebuildEpubTextSearchPreview(
     textSearchToolId: String?,
     replacementPreviewPresent: Boolean
-): Boolean = textSearchToolId != null && !replacementPreviewPresent
+): Boolean = textSearchToolId != null || replacementPreviewPresent
 
 private suspend fun <R> EditorController.prepareCurrentEpubMutation(
     missingMessage: String,
@@ -34,9 +34,8 @@ private fun EditorController.finishPreparedEpubStructureChange(
         textSearchToolId = textSearchToolId,
         replacementPreviewPresent = replacementFilePreview != null
     )
-    if (shouldRebuildTextSearchPreview) clearPreviewHighlight() else clearTextSearchState()
+    if (shouldRebuildTextSearchPreview) clearTextSearchStateAfterBodyTextChange() else clearTextSearchState()
     refreshChapters()
-    if (shouldRebuildTextSearchPreview) rebuildCurrentTextSearchPreviewAfterDocumentChange()
     statusMessage = message
     return true
 }
@@ -55,9 +54,8 @@ private fun EditorController.finishPreparedEpubBodyChange(
         textSearchToolId = textSearchToolId,
         replacementPreviewPresent = replacementFilePreview != null
     )
-    if (shouldRebuildTextSearchPreview) clearPreviewHighlight() else clearTextSearchState()
+    if (shouldRebuildTextSearchPreview) clearTextSearchStateAfterBodyTextChange() else clearTextSearchState()
     refreshEpubChapterInfoAt(chapterIndex, refreshPreview = !shouldRebuildTextSearchPreview)
-    if (shouldRebuildTextSearchPreview) rebuildCurrentTextSearchPreviewAfterDocumentChange()
     statusMessage = message
     return true
 }
@@ -125,7 +123,8 @@ internal suspend fun EditorController.splitEpubChapterAtBodyLineAsync(
         buildEpubStructureChangeMessage(
             prefix = "已分章：${result.sourceDisplayTitle} -> ${result.newTitle}",
             resequence = result.resequence
-        )
+        ),
+        preserveTextSearch = true
     )
 }
 
@@ -237,7 +236,8 @@ internal suspend fun EditorController.setEpubVolumeAtBodyLineAsync(
     return finishPreparedEpubStructureChange(
         prepared,
         result.nextPreviewIndex,
-        "已设为卷：${result.volumeDisplayTitle}"
+        "已设为卷：${result.volumeDisplayTitle}",
+        preserveTextSearch = true
     )
 }
 
