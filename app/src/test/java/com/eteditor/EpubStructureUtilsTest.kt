@@ -15,11 +15,11 @@ import org.junit.Test
 
 class EpubStructureUtilsTest {
     @Test
-    fun textSearchPreviewRebuildSupportsSearchAndReplacementPreviews() {
-        assertTrue(shouldRebuildEpubTextSearchPreview("search", replacementPreviewPresent = false))
-        assertFalse(shouldRebuildEpubTextSearchPreview(null, replacementPreviewPresent = false))
-        assertTrue(shouldRebuildEpubTextSearchPreview(null, replacementPreviewPresent = true))
-        assertTrue(shouldRebuildEpubTextSearchPreview("search", replacementPreviewPresent = true))
+    fun textSearchPreserveAfterBodyChangeSupportsSearchAndReplacementPreviews() {
+        assertTrue(shouldPreserveEpubTextSearchAfterBodyChange("search", replacementPreviewPresent = false))
+        assertFalse(shouldPreserveEpubTextSearchAfterBodyChange(null, replacementPreviewPresent = false))
+        assertTrue(shouldPreserveEpubTextSearchAfterBodyChange(null, replacementPreviewPresent = true))
+        assertTrue(shouldPreserveEpubTextSearchAfterBodyChange("search", replacementPreviewPresent = true))
     }
 
     @Test

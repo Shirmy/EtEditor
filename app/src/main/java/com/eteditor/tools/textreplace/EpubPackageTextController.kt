@@ -171,11 +171,11 @@ private fun EditorController.finishPreparedEpubPackageTextMutation(
     checkReport = null
     markDocumentChanged()
     clearFileRenamePlan()
-    val shouldRebuildTextSearchPreview = shouldRebuildEpubTextSearchPreview(
+    val shouldPreserveTextSearch = shouldPreserveEpubTextSearchAfterBodyChange(
         textSearchToolId = textSearchToolId,
         replacementPreviewPresent = replacementFilePreview != null
     )
-    if (shouldRebuildTextSearchPreview) {
+    if (shouldPreserveTextSearch) {
         clearTextSearchStateAfterBodyTextChange()
     } else {
         clearTextSearchState()

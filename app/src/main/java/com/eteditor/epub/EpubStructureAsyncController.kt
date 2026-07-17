@@ -2,7 +2,8 @@ package com.eteditor
 
 import com.eteditor.core.EpubBook
 
-internal fun shouldRebuildEpubTextSearchPreview(
+// 改正文后是否走「保留并重建静读/替换预览」路径（而非整段清空）。
+internal fun shouldPreserveEpubTextSearchAfterBodyChange(
     textSearchToolId: String?,
     replacementPreviewPresent: Boolean
 ): Boolean = textSearchToolId != null || replacementPreviewPresent
@@ -30,11 +31,11 @@ private fun EditorController.finishPreparedEpubStructureChange(
     checkReport = null
     markDocumentChanged()
     clearFileRenamePlan()
-    val shouldRebuildTextSearchPreview = preserveTextSearch && shouldRebuildEpubTextSearchPreview(
+    val shouldPreserveTextSearch = preserveTextSearch && shouldPreserveEpubTextSearchAfterBodyChange(
         textSearchToolId = textSearchToolId,
         replacementPreviewPresent = replacementFilePreview != null
     )
-    if (shouldRebuildTextSearchPreview) clearTextSearchStateAfterBodyTextChange() else clearTextSearchState()
+    if (shouldPreserveTextSearch) clearTextSearchStateAfterBodyTextChange() else clearTextSearchState()
     refreshChapters()
     statusMessage = message
     return true
@@ -50,12 +51,12 @@ private fun EditorController.finishPreparedEpubBodyChange(
     checkReport = null
     markDocumentChanged()
     clearFileRenamePlan()
-    val shouldRebuildTextSearchPreview = shouldRebuildEpubTextSearchPreview(
+    val shouldPreserveTextSearch = shouldPreserveEpubTextSearchAfterBodyChange(
         textSearchToolId = textSearchToolId,
         replacementPreviewPresent = replacementFilePreview != null
     )
-    if (shouldRebuildTextSearchPreview) clearTextSearchStateAfterBodyTextChange() else clearTextSearchState()
-    refreshEpubChapterInfoAt(chapterIndex, refreshPreview = !shouldRebuildTextSearchPreview)
+    if (shouldPreserveTextSearch) clearTextSearchStateAfterBodyTextChange() else clearTextSearchState()
+    refreshEpubChapterInfoAt(chapterIndex, refreshPreview = !shouldPreserveTextSearch)
     statusMessage = message
     return true
 }

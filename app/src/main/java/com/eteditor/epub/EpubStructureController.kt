@@ -324,8 +324,8 @@ fun EditorController.deleteEpubBodyLine(chapterIndex: Int, lineIndex: Int): Bool
     checkReport = null
     markDocumentChanged()
     clearFileRenamePlan()
-    val shouldRebuildTextSearchPreview = finishSyncEpubTextSearchAfterChange(preserveTextSearch = true)
-    refreshEpubChapterInfoAt(chapterIndex, refreshPreview = !shouldRebuildTextSearchPreview)
+    val shouldPreserveTextSearch = finishSyncEpubTextSearchAfterChange(preserveTextSearch = true)
+    refreshEpubChapterInfoAt(chapterIndex, refreshPreview = !shouldPreserveTextSearch)
     statusMessage = "已删除正文行"
     return true
 }
@@ -411,8 +411,8 @@ fun EditorController.deleteEpubBodySelection(
     checkReport = null
     markDocumentChanged()
     clearFileRenamePlan()
-    val shouldRebuildTextSearchPreview = finishSyncEpubTextSearchAfterChange(preserveTextSearch = true)
-    refreshEpubChapterInfoAt(chapterIndex, refreshPreview = !shouldRebuildTextSearchPreview)
+    val shouldPreserveTextSearch = finishSyncEpubTextSearchAfterChange(preserveTextSearch = true)
+    refreshEpubChapterInfoAt(chapterIndex, refreshPreview = !shouldPreserveTextSearch)
     statusMessage = "已删除所选文字"
     return true
 }
@@ -436,8 +436,8 @@ fun EditorController.wrapEpubBodySelectionWithParagraphs(
     checkReport = null
     markDocumentChanged()
     clearFileRenamePlan()
-    val shouldRebuildTextSearchPreview = finishSyncEpubTextSearchAfterChange(preserveTextSearch = true)
-    refreshEpubChapterInfoAt(chapterIndex, refreshPreview = !shouldRebuildTextSearchPreview)
+    val shouldPreserveTextSearch = finishSyncEpubTextSearchAfterChange(preserveTextSearch = true)
+    refreshEpubChapterInfoAt(chapterIndex, refreshPreview = !shouldPreserveTextSearch)
     statusMessage = "已加标签"
     return true
 }
@@ -446,14 +446,14 @@ fun EditorController.wrapEpubBodySelectionWithParagraphs(
 private fun EditorController.finishSyncEpubTextSearchAfterChange(
     preserveTextSearch: Boolean
 ): Boolean {
-    val shouldRebuildTextSearchPreview = preserveTextSearch && shouldRebuildEpubTextSearchPreview(
+    val shouldPreserveTextSearch = preserveTextSearch && shouldPreserveEpubTextSearchAfterBodyChange(
         textSearchToolId = textSearchToolId,
         replacementPreviewPresent = replacementFilePreview != null
     )
-    if (shouldRebuildTextSearchPreview) {
+    if (shouldPreserveTextSearch) {
         clearTextSearchStateAfterBodyTextChange()
     } else {
         clearTextSearchState()
     }
-    return shouldRebuildTextSearchPreview
+    return shouldPreserveTextSearch
 }
