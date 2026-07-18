@@ -17,6 +17,7 @@ class EpubTextReplaceTargetUtilsTest {
                 "OEBPS/Text/chapter1.xhtml" to html("第一章", "正文").toByteArray(StandardCharsets.UTF_8),
                 "OEBPS/Text/cover.xhtml" to html("封面", "封面").toByteArray(StandardCharsets.UTF_8),
                 "OEBPS/Text/section0001.xhtml" to html("封面目录", "目录").toByteArray(StandardCharsets.UTF_8),
+                "OEBPS/Text/section0002.xhtml" to html("简介标题", "简介正文").toByteArray(StandardCharsets.UTF_8),
                 "OEBPS/Text/extra.html" to html("附加", "附加").toByteArray(StandardCharsets.UTF_8)
             ),
             chapterPath = "OEBPS/Text/chapter1.xhtml",
@@ -26,6 +27,86 @@ class EpubTextReplaceTargetUtilsTest {
         val targets = epubHtmlTextReplaceTargets(book)
 
         assertEquals(listOf("OEBPS/Text/chapter1.xhtml", "OEBPS/Text/extra.html"), targets.map { it.path })
+    }
+
+    @Test
+    fun epubPackageTextReplaceTargetsIncludeIntroOnlyWhenRequestedForAllScope() {
+        val introPath = "OEBPS/Text/section0002.xhtml"
+        val book = sampleBook(
+            entries = linkedMapOf(
+                "OEBPS/Text/chapter1.xhtml" to html("第一章", "正文").toByteArray(StandardCharsets.UTF_8),
+                "OEBPS/Text/cover.xhtml" to html("封面", "封面").toByteArray(StandardCharsets.UTF_8),
+                "OEBPS/Text/section0001.xhtml" to html("封面目录", "目录").toByteArray(StandardCharsets.UTF_8),
+                introPath to html("简介标题", "简介正文").toByteArray(StandardCharsets.UTF_8)
+            )
+        )
+
+        val withoutIntro = epubPackageTextReplaceTargets(
+            book = book,
+            scope = TOOL_SCOPE_ALL,
+            currentPath = null,
+            introPath = introPath,
+            includeIntro = false
+        )
+        val withIntro = epubPackageTextReplaceTargets(
+            book = book,
+            scope = TOOL_SCOPE_ALL,
+            currentPath = null,
+            introPath = introPath,
+            includeIntro = true
+        )
+        val withIntroCurrentScope = epubPackageTextReplaceTargets(
+            book = book,
+            scope = TOOL_SCOPE_CURRENT,
+            currentPath = "OEBPS/Text/chapter1.xhtml",
+            introPath = introPath,
+            includeIntro = true
+        )
+        val sources = epubPackageTextSearchSources(
+            book = book,
+            parameters = parameters(scope = TOOL_SCOPE_ALL),
+            currentPath = null,
+            introPath = introPath,
+            includeIntro = true
+        )
+
+        assertEquals(listOf("OEBPS/Text/chapter1.xhtml"), withoutIntro.map { it.path })
+        assertEquals(listOf("OEBPS/Text/chapter1.xhtml", introPath), withIntro.map { it.path })
+        assertEquals(listOf("简介"), withIntro.map { it.title }.filter { it == "简介" })
+        assertEquals(listOf("OEBPS/Text/chapter1.xhtml"), withIntroCurrentScope.map { it.path })
+        assertEquals(listOf("第一章", "简介"), sources.map { it.title })
+        assertTrue(sources.last().text.contains("简介正文"))
+    }
+
+    @Test
+    fun replaceInEpubPackageTextCanReplaceIntroWhenIncludeIntroEnabled() {
+        val introPath = "OEBPS/Text/section0002.xhtml"
+        val book = sampleBook(
+            entries = linkedMapOf(
+                "OEBPS/Text/chapter1.xhtml" to html("第一章", "正文 foo").toByteArray(StandardCharsets.UTF_8),
+                introPath to html("简介标题", "简介 foo").toByteArray(StandardCharsets.UTF_8)
+            )
+        )
+
+        val result = replaceInEpubPackageText(
+            book = book,
+            parameters = parameters(scope = TOOL_SCOPE_ALL),
+            currentPath = null,
+            introPath = introPath,
+            rules = listOf(
+                TextReplaceRule(
+                    find = "foo",
+                    replacement = "bar",
+                    regex = false
+                )
+            ),
+            includeIntro = true
+        )
+
+        assertEquals(2, result.filesChanged)
+        assertEquals(2, result.replacements)
+        assertTrue(String(book.entries.getValue("OEBPS/Text/chapter1.xhtml"), StandardCharsets.UTF_8).contains("正文 bar"))
+        assertTrue(String(book.entries.getValue(introPath), StandardCharsets.UTF_8).contains("简介 bar"))
     }
 
     @Test

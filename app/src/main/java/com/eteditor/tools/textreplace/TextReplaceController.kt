@@ -1275,7 +1275,8 @@ private fun EditorController.epubPackageTextReplaceTargets(parameters: TextRepla
         book = book,
         scope = parameters.scope,
         currentPath = book.chapters.getOrNull(previewChapterIndex)?.path,
-        introPath = defaultFetchInfoIntroTarget(book)
+        introPath = defaultFetchInfoIntroTarget(book),
+        includeIntro = parameters.isReplacementMode()
     )
 }
 
@@ -1285,7 +1286,8 @@ private fun EditorController.epubPackageTextSearchSources(parameters: TextReplac
         book = book,
         parameters = parameters,
         currentPath = book.chapters.getOrNull(previewChapterIndex)?.path,
-        introPath = defaultFetchInfoIntroTarget(book)
+        introPath = defaultFetchInfoIntroTarget(book),
+        includeIntro = parameters.isReplacementMode()
     )
 }
 
@@ -1389,7 +1391,8 @@ private fun EditorController.replaceInEpub(parameters: TextReplaceParameters, ru
         parameters = parameters,
         currentPath = book.chapters.getOrNull(previewChapterIndex)?.path,
         introPath = defaultFetchInfoIntroTarget(book),
-        rules = rules
+        rules = rules,
+        includeIntro = parameters.isReplacementMode()
     )
 }
 
@@ -1401,6 +1404,7 @@ private suspend fun EditorController.replaceInEpubAsync(
     val sourceContentVersion = documentContentVersion
     val currentPath = sourceBook.chapters.getOrNull(previewChapterIndex)?.path
     val introPath = defaultFetchInfoIntroTarget(sourceBook)
+    val includeIntro = parameters.isReplacementMode()
     val prepared = withContext(Dispatchers.Default) {
         val context = currentCoroutineContext()
         prepareEpubMutationModel(sourceBook, sourceContentVersion) { nextBook ->
@@ -1410,7 +1414,8 @@ private suspend fun EditorController.replaceInEpubAsync(
                 currentPath = currentPath,
                 introPath = introPath,
                 rules = rules,
-                ensureActive = { context.ensureActive() }
+                ensureActive = { context.ensureActive() },
+                includeIntro = includeIntro
             )
         }
     }

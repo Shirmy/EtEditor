@@ -29,9 +29,11 @@ internal fun epubPackageTextReplaceTargets(
     book: EpubBook,
     scope: String,
     currentPath: String?,
-    introPath: String
+    introPath: String,
+    // 静读专用：全文扫描时额外纳入简介页（默认 section0002，平时从 HTML 列表排除）
+    includeIntro: Boolean = false
 ): List<EpubPackageTextTarget> {
-    return when (scope) {
+    val targets = when (scope) {
         TOOL_SCOPE_ALL -> epubHtmlTextReplaceTargets(book)
         TOOL_SCOPE_CURRENT -> {
             val normalizedCurrentPath = currentPath
@@ -44,6 +46,7 @@ internal fun epubPackageTextReplaceTargets(
         TEXT_REPLACE_SCOPE_INTRO -> listOfNotNull(epubIntroTextReplaceTarget(book, introPath))
         else -> emptyList()
     }
+    return appendIntroTextReplaceTargetIfNeeded(book, targets, scope, introPath, includeIntro)
 }
 
 internal fun epubPackageTextReplaceTarget(
@@ -74,14 +77,16 @@ internal fun epubPackageTextSearchSources(
     book: EpubBook,
     parameters: TextReplaceParameters,
     currentPath: String?,
-    introPath: String
+    introPath: String,
+    includeIntro: Boolean = false
 ): List<SearchSource> {
     if (!isEpubHtmlTextReplaceScope(parameters.scope)) return emptyList()
     return epubPackageTextReplaceTargets(
         book = book,
         scope = parameters.scope,
         currentPath = currentPath,
-        introPath = introPath
+        introPath = introPath,
+        includeIntro = includeIntro
     ).mapNotNull { target -> epubHtmlBodySearchSource(book, target) }
 }
 
@@ -91,7 +96,8 @@ internal fun replaceInEpubPackageText(
     currentPath: String?,
     introPath: String,
     rules: List<TextReplaceRule>,
-    ensureActive: (() -> Unit)? = null
+    ensureActive: (() -> Unit)? = null,
+    includeIntro: Boolean = false
 ): ReplaceResult {
     var files = 0
     var total = 0
@@ -104,7 +110,8 @@ internal fun replaceInEpubPackageText(
         book = book,
         scope = parameters.scope,
         currentPath = currentPath,
-        introPath = introPath
+        introPath = introPath,
+        includeIntro = includeIntro
     ).forEach { target ->
         ensureActive?.invoke()
         val original = epubPackageText(book, target.path) ?: return@forEach
@@ -254,6 +261,20 @@ private fun epubIntroTextReplaceTarget(
         title = "简介",
         path = path
     )
+}
+
+private fun appendIntroTextReplaceTargetIfNeeded(
+    book: EpubBook,
+    targets: List<EpubPackageTextTarget>,
+    scope: String,
+    introPath: String,
+    includeIntro: Boolean
+): List<EpubPackageTextTarget> {
+    if (!includeIntro || scope != TOOL_SCOPE_ALL) return targets
+    val intro = epubIntroTextReplaceTarget(book, introPath) ?: return targets
+    val introKey = normalizeEpubPath(intro.path).lowercase()
+    if (targets.any { normalizeEpubPath(it.path).lowercase() == introKey }) return targets
+    return targets + intro
 }
 
 private fun isExcludedEpubTextReplaceHtmlPath(path: String): Boolean {
