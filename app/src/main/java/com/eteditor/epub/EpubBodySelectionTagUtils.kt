@@ -214,7 +214,7 @@ internal fun wrapEpubBodySelectionAsWarning(
             append("\r\n")
             append(line)
         }
-        append("</div>")
+        append("\r\n</div>")
     }
     val spanStart = selectedLines.first().sourceStart
     val spanEnd = selectedLines.last().sourceEnd

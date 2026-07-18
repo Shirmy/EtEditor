@@ -14,10 +14,30 @@ class EpubBodySelectionTagUtilsTest {
         val result = wrapEpubBodySelectionAsWarning(body, start, end)
 
         assertTrue(result.success)
-        assertTrue(result.nextBody.contains("<div class=\"sys\">"))
-        assertTrue(result.nextBody.contains("<p>刚开学没多久的孩</p>"))
-        assertTrue(result.nextBody.contains("<p>韩煜城放学后</p>"))
-        assertTrue(result.nextBody.contains("</div>"))
+        assertTrue(
+            result.nextBody.contains(
+                "<div class=\"sys\">\r\n" +
+                    "<p>刚开学没多久的孩</p>\r\n" +
+                    "<p>韩煜城放学后</p>\r\n" +
+                    "</div>"
+            )
+        )
+    }
+
+    @Test
+    fun wrapWarningPutsClosingDivOnItsOwnLine() {
+        val body = """<p class="post">书名：漂亮皮囊</p>"""
+        val start = body.indexOf("书名")
+        val end = start + 2
+        val result = wrapEpubBodySelectionAsWarning(body, start, end)
+
+        assertTrue(result.success)
+        assertEquals(
+            "<div class=\"sys\">\r\n" +
+                """<p class="post">书名：漂亮皮囊</p>""" +
+                "\r\n</div>",
+            result.nextBody
+        )
     }
 
     @Test
