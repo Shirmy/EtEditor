@@ -531,9 +531,16 @@ private class BodyReadOnlyTextActionWindow(
         actionButtons.clear()
         actions.forEachIndexed { index, action ->
             val button = when (action.icon) {
-                BodyReadOnlyActionIcon.Delete -> ImageButton(targetEditor.context).apply {
+                BodyReadOnlyActionIcon.Delete,
+                BodyReadOnlyActionIcon.Edit -> ImageButton(targetEditor.context).apply {
                     contentDescription = action.title
-                    setImageResource(R.drawable.ic_delete_outline_20)
+                    setImageResource(
+                        if (action.icon == BodyReadOnlyActionIcon.Edit) {
+                            R.drawable.ic_edit_outline_20
+                        } else {
+                            R.drawable.ic_delete_outline_20
+                        }
+                    )
                     val color = targetEditor.getColorScheme()
                         .getColor(io.github.rosemoe.sora.widget.schemes.EditorColorScheme.TEXT_ACTION_WINDOW_ICON_COLOR)
                     setColorFilter(color)

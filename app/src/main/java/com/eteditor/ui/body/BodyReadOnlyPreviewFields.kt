@@ -27,6 +27,7 @@ internal fun BodyReadOnlyPreviewContent(
     onOpenSupplementChapterDialog: (Int) -> Unit,
     onOpenEpubSplitDialog: (Int) -> Unit,
     onSetEpubVolumeFromSelection: (Int, Int) -> Unit,
+    onEditEpubSelection: (Int, Int) -> Unit,
     onWrapEpubSelection: (Int, Int) -> Unit,
     onWarningEpubSelection: (Int, Int) -> Unit,
     onAuthorNoteEpubSelection: (Int, Int) -> Unit,
@@ -72,6 +73,7 @@ internal fun BodyReadOnlyPreviewContent(
                 onOpenSupplementChapterDialog = onOpenSupplementChapterDialog,
                 onOpenEpubSplitDialog = onOpenEpubSplitDialog,
                 onSetEpubVolumeFromSelection = onSetEpubVolumeFromSelection,
+                onEditEpubSelection = onEditEpubSelection,
                 onWrapEpubSelection = onWrapEpubSelection,
                 onWarningEpubSelection = onWarningEpubSelection,
                 onAuthorNoteEpubSelection = onAuthorNoteEpubSelection,
@@ -223,6 +225,7 @@ private fun BodyPlainReadOnlyPreviewContent(
     onOpenSupplementChapterDialog: (Int) -> Unit,
     onOpenEpubSplitDialog: (Int) -> Unit,
     onSetEpubVolumeFromSelection: (Int, Int) -> Unit,
+    onEditEpubSelection: (Int, Int) -> Unit,
     onWrapEpubSelection: (Int, Int) -> Unit,
     onWarningEpubSelection: (Int, Int) -> Unit,
     onAuthorNoteEpubSelection: (Int, Int) -> Unit,
@@ -299,6 +302,10 @@ private fun BodyPlainReadOnlyPreviewContent(
                                 selectionEnd.coerceIn(0, previewText.length)
                             when (kind) {
                                 BodyReadOnlyActionKind.Delete -> onDeleteEpubSelection(
+                                    sourceStart.coerceAtMost(sourceEnd),
+                                    sourceStart.coerceAtLeast(sourceEnd)
+                                )
+                                BodyReadOnlyActionKind.Edit -> onEditEpubSelection(
                                     sourceStart.coerceAtMost(sourceEnd),
                                     sourceStart.coerceAtLeast(sourceEnd)
                                 )

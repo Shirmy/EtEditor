@@ -411,4 +411,15 @@ class EpubHtmlUtilsTest {
         // 越界返回最后一段
         assertEquals(2, findParagraphIndexAtOffset(ranges, 999))
     }
+
+    @Test
+    fun bodyParagraphRangeCoveringSelectionExpandsPartialLinesToWholeParagraphs() {
+        val body = "<p>刚开学没多久的孩</p>\n<p>韩煜城放学后</p>\n<p>第三段</p>"
+        val start = body.indexOf("没多久")
+        val end = body.indexOf("韩煜城") + 2
+        val range = bodyParagraphRangeCoveringSelection(body, start, end)
+
+        assertEquals(0 to body.indexOf("<p>第三段</p>"), range)
+        assertEquals(null, bodyParagraphRangeCoveringSelection(body, 3, 3))
+    }
 }

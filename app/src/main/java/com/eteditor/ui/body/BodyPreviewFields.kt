@@ -127,6 +127,9 @@ internal fun BodyPreview(
     var supplementDialogLineIndex by remember(controller.documentSessionKey) { mutableStateOf<Int?>(null) }
     var epubSplitDialogRequest by remember(controller.documentSessionKey) { mutableStateOf<Pair<Int, Int>?>(null) }
     var epubParagraphEditRequest by remember(controller.documentSessionKey) { mutableStateOf<Pair<Int, Int>?>(null) }
+    var epubSelectionEditRequest by remember(controller.documentSessionKey) {
+        mutableStateOf<Triple<Int, Int, Int>?>(null)
+    }
     fun runBodyStructureOperation(label: String, action: suspend () -> Boolean) {
         if (controller.busy) return
         scope.launch {
@@ -280,6 +283,22 @@ internal fun BodyPreview(
                 )
             }
         }
+    }
+    fun editEpubSelection(sourceStart: Int, sourceEnd: Int) {
+        if (controller.kind != DocumentKind.Epub || controller.busy) return
+        if (controller.isEpubPackageTextPreviewSource()) {
+            controller.statusMessage = "选区编辑仅支持章节正文"
+            return
+        }
+        if (sourceEnd <= sourceStart) {
+            controller.statusMessage = "请先选中文字"
+            return
+        }
+        epubSelectionEditRequest = Triple(
+            controller.previewDisplayChapterIndex(),
+            sourceStart,
+            sourceEnd
+        )
     }
     fun wrapEpubSelection(sourceStart: Int, sourceEnd: Int) {
         if (controller.kind != DocumentKind.Epub || controller.busy) return
@@ -775,6 +794,9 @@ internal fun BodyPreview(
                     onSetEpubVolumeFromSelection = { sourceStart, sourceEnd ->
                         setEpubVolumeFromSelection(sourceStart, sourceEnd)
                     },
+                    onEditEpubSelection = { sourceStart, sourceEnd ->
+                        editEpubSelection(sourceStart, sourceEnd)
+                    },
                     onWrapEpubSelection = { sourceStart, sourceEnd -> wrapEpubSelection(sourceStart, sourceEnd) },
                     onWarningEpubSelection = { sourceStart, sourceEnd ->
                         warningEpubSelection(sourceStart, sourceEnd)
@@ -829,6 +851,25 @@ internal fun BodyPreview(
             onConfirm = { newBodyText, restoreBodyOffset ->
                 epubParagraphEditRequest = null
                 runBodyStructureOperation("EPUB 段落编辑") {
+                    val saved = controller.applyEpubParagraphEdit(chapterIndex, newBodyText)
+                    restoreOffsetIfSaved(saved, restoreBodyOffset)?.let { restoreOffset ->
+                        controller.locateEpubPreviewAtBodyOffset(chapterIndex, restoreOffset)
+                    }
+                    saved
+                }
+            }
+        )
+    }
+    epubSelectionEditRequest?.let { (chapterIndex, sourceStart, sourceEnd) ->
+        EpubSelectionParagraphEditDialog(
+            controller = controller,
+            chapterIndex = chapterIndex,
+            sourceStart = sourceStart,
+            sourceEnd = sourceEnd,
+            onDismiss = { epubSelectionEditRequest = null },
+            onConfirm = { newBodyText, restoreBodyOffset ->
+                epubSelectionEditRequest = null
+                runBodyStructureOperation("EPUB 选区编辑") {
                     val saved = controller.applyEpubParagraphEdit(chapterIndex, newBodyText)
                     restoreOffsetIfSaved(saved, restoreBodyOffset)?.let { restoreOffset ->
                         controller.locateEpubPreviewAtBodyOffset(chapterIndex, restoreOffset)

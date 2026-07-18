@@ -10,6 +10,7 @@ class BodyReadOnlyActionUtilsTest {
         assertEquals(
             listOf(
                 BodyReadOnlyActionKind.Delete,
+                BodyReadOnlyActionKind.Edit,
                 BodyReadOnlyActionKind.Volume,
                 BodyReadOnlyActionKind.Split,
                 BodyReadOnlyActionKind.Wrap,
@@ -23,11 +24,13 @@ class BodyReadOnlyActionUtilsTest {
         assertEquals("预警", BodyReadOnlyActionKind.Warning.title)
         assertEquals("作者有话说", BodyReadOnlyActionKind.AuthorNote.title)
         assertEquals("注解", BodyReadOnlyActionKind.Annotation.title)
+        assertEquals("编辑", BodyReadOnlyActionKind.Edit.title)
         assertEquals(
             listOf(BodyReadOnlyActionKind.Delete, BodyReadOnlyActionKind.Split),
             bodyReadOnlyCustomActionKinds(DocumentKind.Txt, splitAvailable = true)
         )
         assertEquals(BodyReadOnlyActionIcon.Delete, BodyReadOnlyActionKind.Delete.icon)
+        assertEquals(BodyReadOnlyActionIcon.Edit, BodyReadOnlyActionKind.Edit.icon)
     }
 
     @Test

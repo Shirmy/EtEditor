@@ -107,6 +107,23 @@ internal fun splitBodyIntoParagraphRanges(bodyText: String): List<Pair<Int, Int>
     return ranges
 }
 
+// 选区覆盖到的段落整体范围（半行也算整段；跨多段取首尾）。
+// 与双击单段、长按多段编辑共用同一套分段。
+internal fun bodyParagraphRangeCoveringSelection(
+    bodyText: String,
+    sourceStart: Int,
+    sourceEnd: Int
+): Pair<Int, Int>? {
+    val start = sourceStart.coerceIn(0, bodyText.length)
+    val end = sourceEnd.coerceIn(start, bodyText.length)
+    if (end <= start) return null
+    val ranges = splitBodyIntoParagraphRanges(bodyText)
+    if (ranges.isEmpty()) return null
+    val selected = ranges.filter { range -> range.first < end && range.second > start }
+    if (selected.isEmpty()) return null
+    return selected.first().first to selected.last().second
+}
+
 // 找 bodyOffset 落在第几段，返回段索引；越界返回最后一段或 0。
 internal fun findParagraphIndexAtOffset(ranges: List<Pair<Int, Int>>, bodyOffset: Int): Int {
     if (ranges.isEmpty()) return 0

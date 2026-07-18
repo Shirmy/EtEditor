@@ -196,8 +196,60 @@ internal fun EpubParagraphEditDialog(
         val idx = findParagraphIndexAtOffset(ranges, bodyOffset)
         ranges[idx]
     }
-    val paragraphText = remember(bodyText, paragraphRange) {
-        bodyText.substring(paragraphRange.first.coerceIn(0, bodyText.length), paragraphRange.second.coerceIn(0, bodyText.length))
+    EpubBodyRangeEditDialog(
+        bodyText = bodyText,
+        editRange = paragraphRange,
+        restoreBodyOffset = bodyOffset,
+        dialogTitle = "编辑段落",
+        contentKey = listOf(chapterIndex, bodyOffset, paragraphRange),
+        onDismiss = onDismiss,
+        onConfirm = onConfirm
+    )
+}
+
+@Composable
+internal fun EpubSelectionParagraphEditDialog(
+    controller: EditorController,
+    chapterIndex: Int,
+    sourceStart: Int,
+    sourceEnd: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (String, Int) -> Unit
+) {
+    val book = controller.epub
+    val chapter = book?.chapters?.getOrNull(chapterIndex)
+    val bodyText = remember(chapterIndex, controller.documentContentVersion) {
+        chapter?.let { htmlVisibleBodyContent(it.html) } ?: ""
+    }
+    val editRange = remember(bodyText, sourceStart, sourceEnd) {
+        bodyParagraphRangeCoveringSelection(bodyText, sourceStart, sourceEnd) ?: (0 to 0)
+    }
+    EpubBodyRangeEditDialog(
+        bodyText = bodyText,
+        editRange = editRange,
+        restoreBodyOffset = sourceStart.coerceIn(0, bodyText.length),
+        dialogTitle = "编辑选中段落",
+        contentKey = listOf(chapterIndex, sourceStart, sourceEnd, editRange),
+        onDismiss = onDismiss,
+        onConfirm = onConfirm
+    )
+}
+
+@Composable
+private fun EpubBodyRangeEditDialog(
+    bodyText: String,
+    editRange: Pair<Int, Int>,
+    restoreBodyOffset: Int,
+    dialogTitle: String,
+    contentKey: Any,
+    onDismiss: () -> Unit,
+    onConfirm: (String, Int) -> Unit
+) {
+    val paragraphText = remember(bodyText, editRange) {
+        bodyText.substring(
+            editRange.first.coerceIn(0, bodyText.length),
+            editRange.second.coerceIn(0, bodyText.length)
+        )
     }
     val editableParagraph = remember(paragraphText) { editableParagraphContent(paragraphText) }
     var editValue by remember(editableParagraph) { mutableStateOf(editableParagraph.text) }
@@ -216,20 +268,20 @@ internal fun EpubParagraphEditDialog(
     val focusRequester = remember { FocusRequester() }
     val hostView = LocalView.current
     fun confirmEdit() {
-        val start = paragraphRange.first.coerceIn(0, bodyText.length)
-        val end = paragraphRange.second.coerceIn(0, bodyText.length)
+        val start = editRange.first.coerceIn(0, bodyText.length)
+        val end = editRange.second.coerceIn(0, bodyText.length)
         val editedParagraphText = editableParagraph.withEditedText(editValue)
         val newBody = bodyText.substring(0, start) +
             editedParagraphText +
             bodyText.substring(end)
         val restoreOffset = paragraphEditRestoreOffset(
             paragraphRange = start to end,
-            bodyOffset = bodyOffset,
+            bodyOffset = restoreBodyOffset,
             editedTextLength = editValue.length
         )
         onConfirm(newBody, restoreOffset)
     }
-    LaunchedEffect(chapterIndex, bodyOffset, editableParagraph) {
+    LaunchedEffect(contentKey, editableParagraph) {
         delay(120)
         runCatching { focusRequester.requestFocus() }
         runCatching { hostView.showSoftKeyboard() }
@@ -260,7 +312,7 @@ internal fun EpubParagraphEditDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "编辑段落",
+                        text = dialogTitle,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
