@@ -205,25 +205,26 @@ class FetchInfoFilterTest {
     }
 
     @Test
-    fun structuredRulesApplyChapterCategoryBeforePurifyAndRespectEnabled() {
+    fun structuredRulesApplyPurifyCategoryBeforeChapterAndRespectEnabled() {
         val filter = """
             [
-              {"name":"去序号","search":"^\\d+\\s+","replacement":"","regex":true,"category":"净化"},
-              {"name":"章节改写","search":"番外","replacement":"特别篇","regex":false,"category":"章节"},
+              {"name":"章节改写","search":"特别","replacement":"XX","regex":false,"category":"章节"},
+              {"name":"净化改写","search":"番外","replacement":"特别篇","regex":false,"category":"净化"},
               {"name":"停用","search":"aa","replacement":"ZZ","regex":false,"category":"净化","enabled":false}
             ]
         """.trimIndent()
         val raw = fetchedInfo(
             catalog = listOf(
-                FetchedCatalogItem(1, "01 aa"),
-                FetchedCatalogItem(2, "02 番外")
+                FetchedCatalogItem(1, "aa"),
+                FetchedCatalogItem(2, "番外")
             )
         )
 
         val (filtered, issues) = FetchInfoFilter.apply(raw, fetchParameters(catalogFilter = filter))
 
-        // 章节类(番外→特别篇)先生效，净化类(去前导序号)把"01"/"02"清掉；停用规则(aa→ZZ)不生效。
-        assertEquals(listOf("aa", "特别篇"), filtered.catalog.map { it.title })
+        // 净化类(番外→特别篇)先生效，章节类(特别→XX)再生效得到"XX篇"；停用规则(aa→ZZ)不生效。
+        // 若顺序反了，章节类先跑时还没有"特别"，结果会是"特别篇"。
+        assertEquals(listOf("aa", "XX篇"), filtered.catalog.map { it.title })
         assertTrue(issues.isEmpty())
     }
 

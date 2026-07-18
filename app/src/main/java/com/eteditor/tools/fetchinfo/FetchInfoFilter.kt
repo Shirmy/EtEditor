@@ -32,7 +32,7 @@ object FetchInfoFilter {
         parseStructuredReplacementFilters(filterText, issues)?.let { rules ->
             val ordered = rules
                 .filter { it.enabled }
-                .sortedBy { if (it.category == FETCH_CATALOG_RULE_CATEGORY_CHAPTER) 0 else 1 } // 稳定排序：章节在前、净化在后
+                .sortedBy { if (it.category == FETCH_CATALOG_RULE_CATEGORY_PURIFY) 0 else 1 } // 稳定排序：净化在前、章节在后
             ordered.forEach { rule ->
                 items = when {
                     rule.regex -> {

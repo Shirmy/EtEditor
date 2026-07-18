@@ -174,24 +174,6 @@ internal fun FetchInfoCatalogRulePanel(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         FetchCatalogRuleGroup(
-            title = "章节",
-            groupRules = chapterRules,
-            sortMode = sortMode,
-            openSwipeRowKey = openSwipeRowKey,
-            onOpenSwipeRowChange = { openSwipeRowKey = it },
-            onEnabledChange = { rule, enabled -> controller.setFetchInfoCatalogRuleEnabled(rule.index, enabled) },
-            onEdit = { editRule = it },
-            onDelete = { rule ->
-                deleteConfirm = DeleteConfirmRequest(
-                    title = "确认删除规则",
-                    message = "确定删除规则“${rule.name.ifBlank { "未命名" }}”吗？",
-                    onConfirm = { controller.deleteFetchInfoCatalogRule(rule.index) }
-                )
-            },
-            onMove = { from, to -> controller.moveFetchInfoCatalogRule(from, to) },
-            onAdd = { createCategory = FETCH_CATALOG_RULE_CATEGORY_CHAPTER }
-        )
-        FetchCatalogRuleGroup(
             title = "净化",
             groupRules = purifyRules,
             sortMode = sortMode,
@@ -208,6 +190,24 @@ internal fun FetchInfoCatalogRulePanel(
             },
             onMove = { from, to -> controller.moveFetchInfoCatalogRule(from, to) },
             onAdd = { createCategory = FETCH_CATALOG_RULE_CATEGORY_PURIFY }
+        )
+        FetchCatalogRuleGroup(
+            title = "章节",
+            groupRules = chapterRules,
+            sortMode = sortMode,
+            openSwipeRowKey = openSwipeRowKey,
+            onOpenSwipeRowChange = { openSwipeRowKey = it },
+            onEnabledChange = { rule, enabled -> controller.setFetchInfoCatalogRuleEnabled(rule.index, enabled) },
+            onEdit = { editRule = it },
+            onDelete = { rule ->
+                deleteConfirm = DeleteConfirmRequest(
+                    title = "确认删除规则",
+                    message = "确定删除规则“${rule.name.ifBlank { "未命名" }}”吗？",
+                    onConfirm = { controller.deleteFetchInfoCatalogRule(rule.index) }
+                )
+            },
+            onMove = { from, to -> controller.moveFetchInfoCatalogRule(from, to) },
+            onAdd = { createCategory = FETCH_CATALOG_RULE_CATEGORY_CHAPTER }
         )
     }
 
