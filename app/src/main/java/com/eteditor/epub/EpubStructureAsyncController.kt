@@ -295,7 +295,7 @@ internal suspend fun EditorController.wrapEpubBodySelectionWithParagraphsAsync(
     sourceStart: Int,
     sourceEnd: Int
 ): Boolean {
-    val prepared = prepareCurrentEpubMutation("加标签仅支持 EPUB") { book ->
+    val prepared = prepareCurrentEpubMutation("补标签仅支持 EPUB") { book ->
         wrapEpubBodySelectionParagraphsInBook(book, chapterIndex, sourceStart, sourceEnd)
     } ?: return false
     val result = prepared.result
@@ -303,5 +303,77 @@ internal suspend fun EditorController.wrapEpubBodySelectionWithParagraphsAsync(
         statusMessage = result.message
         return false
     }
-    return finishPreparedEpubBodyChange(prepared, chapterIndex, "已加标签")
+    return finishPreparedEpubBodyChange(prepared, chapterIndex, "已补标签")
+}
+
+internal suspend fun EditorController.wrapEpubBodySelectionAsWarningAsync(
+    chapterIndex: Int,
+    sourceStart: Int,
+    sourceEnd: Int
+): Boolean {
+    val warningBytes = runCatching {
+        appContext.assets.open(insertImageWarningAssetPath()).use { it.readBytes() }
+    }.getOrElse {
+        statusMessage = "读取预警图片失败"
+        return false
+    }
+    val prepared = prepareCurrentEpubMutation("预警仅支持 EPUB") { book ->
+        wrapEpubBodySelectionAsWarningInBook(
+            book = book,
+            chapterIndex = chapterIndex,
+            sourceStart = sourceStart,
+            sourceEnd = sourceEnd,
+            warningImageBytes = warningBytes
+        )
+    } ?: return false
+    val result = prepared.result
+    if (!result.success) {
+        statusMessage = result.message
+        return false
+    }
+    return finishPreparedEpubBodyChange(prepared, chapterIndex, "已加预警")
+}
+
+internal suspend fun EditorController.insertEpubBodyAuthorNoteSeparatorAsync(
+    chapterIndex: Int,
+    sourceStart: Int,
+    sourceEnd: Int
+): Boolean {
+    val prepared = prepareCurrentEpubMutation("作者有话说仅支持 EPUB") { book ->
+        insertEpubBodyAuthorNoteSeparatorInBook(book, chapterIndex, sourceStart, sourceEnd)
+    } ?: return false
+    val result = prepared.result
+    if (!result.success) {
+        statusMessage = result.message
+        return false
+    }
+    return finishPreparedEpubBodyChange(prepared, chapterIndex, "已加作者有话说分隔")
+}
+
+internal suspend fun EditorController.insertEpubBodyAnnotationAsync(
+    chapterIndex: Int,
+    sourceStart: Int,
+    sourceEnd: Int
+): Boolean {
+    val noteBytes = runCatching {
+        appContext.assets.open(insertImageNoteAssetPath()).use { it.readBytes() }
+    }.getOrElse {
+        statusMessage = "读取注解图片失败"
+        return false
+    }
+    val prepared = prepareCurrentEpubMutation("注解仅支持 EPUB") { book ->
+        insertEpubBodyAnnotationInBook(
+            book = book,
+            chapterIndex = chapterIndex,
+            sourceStart = sourceStart,
+            sourceEnd = sourceEnd,
+            noteImageBytes = noteBytes
+        )
+    } ?: return false
+    val result = prepared.result
+    if (!result.success) {
+        statusMessage = result.message
+        return false
+    }
+    return finishPreparedEpubBodyChange(prepared, chapterIndex, "已加注解")
 }

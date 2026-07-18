@@ -12,10 +12,17 @@ class BodyReadOnlyActionUtilsTest {
                 BodyReadOnlyActionKind.Delete,
                 BodyReadOnlyActionKind.Volume,
                 BodyReadOnlyActionKind.Split,
-                BodyReadOnlyActionKind.Wrap
+                BodyReadOnlyActionKind.Wrap,
+                BodyReadOnlyActionKind.Warning,
+                BodyReadOnlyActionKind.AuthorNote,
+                BodyReadOnlyActionKind.Annotation
             ),
             bodyReadOnlyCustomActionKinds(DocumentKind.Epub, splitAvailable = true)
         )
+        assertEquals("补标签", BodyReadOnlyActionKind.Wrap.title)
+        assertEquals("预警", BodyReadOnlyActionKind.Warning.title)
+        assertEquals("作者有话说", BodyReadOnlyActionKind.AuthorNote.title)
+        assertEquals("注解", BodyReadOnlyActionKind.Annotation.title)
         assertEquals(
             listOf(BodyReadOnlyActionKind.Delete, BodyReadOnlyActionKind.Split),
             bodyReadOnlyCustomActionKinds(DocumentKind.Txt, splitAvailable = true)

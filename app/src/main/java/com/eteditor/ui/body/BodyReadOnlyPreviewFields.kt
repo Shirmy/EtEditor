@@ -28,6 +28,9 @@ internal fun BodyReadOnlyPreviewContent(
     onOpenEpubSplitDialog: (Int) -> Unit,
     onSetEpubVolumeFromSelection: (Int, Int) -> Unit,
     onWrapEpubSelection: (Int, Int) -> Unit,
+    onWarningEpubSelection: (Int, Int) -> Unit,
+    onAuthorNoteEpubSelection: (Int, Int) -> Unit,
+    onAnnotationEpubSelection: (Int, Int) -> Unit,
     onDeleteEpubSelection: (Int, Int) -> Unit,
     onDeleteTxtSelection: (Int, Int) -> Unit,
     modifier: Modifier = Modifier
@@ -70,6 +73,9 @@ internal fun BodyReadOnlyPreviewContent(
                 onOpenEpubSplitDialog = onOpenEpubSplitDialog,
                 onSetEpubVolumeFromSelection = onSetEpubVolumeFromSelection,
                 onWrapEpubSelection = onWrapEpubSelection,
+                onWarningEpubSelection = onWarningEpubSelection,
+                onAuthorNoteEpubSelection = onAuthorNoteEpubSelection,
+                onAnnotationEpubSelection = onAnnotationEpubSelection,
                 onDeleteEpubSelection = onDeleteEpubSelection,
                 onDeleteTxtSelection = onDeleteTxtSelection,
                 modifier = Modifier.fillMaxSize()
@@ -218,6 +224,9 @@ private fun BodyPlainReadOnlyPreviewContent(
     onOpenEpubSplitDialog: (Int) -> Unit,
     onSetEpubVolumeFromSelection: (Int, Int) -> Unit,
     onWrapEpubSelection: (Int, Int) -> Unit,
+    onWarningEpubSelection: (Int, Int) -> Unit,
+    onAuthorNoteEpubSelection: (Int, Int) -> Unit,
+    onAnnotationEpubSelection: (Int, Int) -> Unit,
     onDeleteEpubSelection: (Int, Int) -> Unit,
     onDeleteTxtSelection: (Int, Int) -> Unit,
     modifier: Modifier = Modifier
@@ -306,6 +315,18 @@ private fun BodyPlainReadOnlyPreviewContent(
                                     )
                                 )
                                 BodyReadOnlyActionKind.Wrap -> onWrapEpubSelection(
+                                    sourceStart.coerceAtMost(sourceEnd),
+                                    sourceStart.coerceAtLeast(sourceEnd)
+                                )
+                                BodyReadOnlyActionKind.Warning -> onWarningEpubSelection(
+                                    sourceStart.coerceAtMost(sourceEnd),
+                                    sourceStart.coerceAtLeast(sourceEnd)
+                                )
+                                BodyReadOnlyActionKind.AuthorNote -> onAuthorNoteEpubSelection(
+                                    sourceStart.coerceAtMost(sourceEnd),
+                                    sourceStart.coerceAtLeast(sourceEnd)
+                                )
+                                BodyReadOnlyActionKind.Annotation -> onAnnotationEpubSelection(
                                     sourceStart.coerceAtMost(sourceEnd),
                                     sourceStart.coerceAtLeast(sourceEnd)
                                 )

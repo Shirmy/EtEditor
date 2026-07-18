@@ -13,7 +13,10 @@ internal enum class BodyReadOnlyActionKind(
     Delete("删除", BodyReadOnlyActionIcon.Delete),
     Volume("分卷"),
     Split("分章"),
-    Wrap("加标签")
+    Wrap("补标签"),
+    Warning("预警"),
+    AuthorNote("作者有话说"),
+    Annotation("注解")
 }
 
 internal fun bodyReadOnlyCustomActionKinds(
@@ -26,6 +29,9 @@ internal fun bodyReadOnlyCustomActionKinds(
             add(BodyReadOnlyActionKind.Volume)
             if (splitAvailable) add(BodyReadOnlyActionKind.Split)
             add(BodyReadOnlyActionKind.Wrap)
+            add(BodyReadOnlyActionKind.Warning)
+            add(BodyReadOnlyActionKind.AuthorNote)
+            add(BodyReadOnlyActionKind.Annotation)
         }
         DocumentKind.Txt -> buildList {
             add(BodyReadOnlyActionKind.Delete)

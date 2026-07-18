@@ -283,11 +283,53 @@ internal fun BodyPreview(
     }
     fun wrapEpubSelection(sourceStart: Int, sourceEnd: Int) {
         if (controller.kind != DocumentKind.Epub || controller.busy) return
-        runBodyStructureOperation("EPUB 加标签") {
+        runBodyStructureOperation("EPUB 补标签") {
             if (controller.isEpubPackageTextPreviewSource()) {
                 controller.wrapEpubPackageTextBodySelectionAsync(sourceStart, sourceEnd)
             } else {
                 controller.wrapEpubBodySelectionWithParagraphsAsync(
+                    controller.previewDisplayChapterIndex(),
+                    sourceStart,
+                    sourceEnd
+                )
+            }
+        }
+    }
+    fun warningEpubSelection(sourceStart: Int, sourceEnd: Int) {
+        if (controller.kind != DocumentKind.Epub || controller.busy) return
+        runBodyStructureOperation("EPUB 预警") {
+            if (controller.isEpubPackageTextPreviewSource()) {
+                controller.wrapEpubPackageTextBodySelectionAsWarningAsync(sourceStart, sourceEnd)
+            } else {
+                controller.wrapEpubBodySelectionAsWarningAsync(
+                    controller.previewDisplayChapterIndex(),
+                    sourceStart,
+                    sourceEnd
+                )
+            }
+        }
+    }
+    fun authorNoteEpubSelection(sourceStart: Int, sourceEnd: Int) {
+        if (controller.kind != DocumentKind.Epub || controller.busy) return
+        runBodyStructureOperation("EPUB 作者有话说") {
+            if (controller.isEpubPackageTextPreviewSource()) {
+                controller.insertEpubPackageTextAuthorNoteSeparatorAsync(sourceStart, sourceEnd)
+            } else {
+                controller.insertEpubBodyAuthorNoteSeparatorAsync(
+                    controller.previewDisplayChapterIndex(),
+                    sourceStart,
+                    sourceEnd
+                )
+            }
+        }
+    }
+    fun annotationEpubSelection(sourceStart: Int, sourceEnd: Int) {
+        if (controller.kind != DocumentKind.Epub || controller.busy) return
+        runBodyStructureOperation("EPUB 注解") {
+            if (controller.isEpubPackageTextPreviewSource()) {
+                controller.insertEpubPackageTextAnnotationAsync(sourceStart, sourceEnd)
+            } else {
+                controller.insertEpubBodyAnnotationAsync(
                     controller.previewDisplayChapterIndex(),
                     sourceStart,
                     sourceEnd
@@ -734,6 +776,15 @@ internal fun BodyPreview(
                         setEpubVolumeFromSelection(sourceStart, sourceEnd)
                     },
                     onWrapEpubSelection = { sourceStart, sourceEnd -> wrapEpubSelection(sourceStart, sourceEnd) },
+                    onWarningEpubSelection = { sourceStart, sourceEnd ->
+                        warningEpubSelection(sourceStart, sourceEnd)
+                    },
+                    onAuthorNoteEpubSelection = { sourceStart, sourceEnd ->
+                        authorNoteEpubSelection(sourceStart, sourceEnd)
+                    },
+                    onAnnotationEpubSelection = { sourceStart, sourceEnd ->
+                        annotationEpubSelection(sourceStart, sourceEnd)
+                    },
                     onDeleteEpubSelection = { sourceStart, sourceEnd -> deleteEpubSelection(sourceStart, sourceEnd) },
                     onDeleteTxtSelection = { sourceStart, sourceEnd -> deleteTxtSelection(sourceStart, sourceEnd) },
                     modifier = Modifier.fillMaxSize()

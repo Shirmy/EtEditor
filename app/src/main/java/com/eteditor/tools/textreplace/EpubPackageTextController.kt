@@ -275,7 +275,7 @@ internal suspend fun EditorController.wrapEpubPackageTextBodySelectionAsync(
     sourceEnd: Int
 ): Boolean {
     val source = epub ?: run {
-        statusMessage = "加标签仅支持 EPUB"
+        statusMessage = "补标签仅支持 EPUB"
         return false
     }
     val sourceIndex = currentEpubPackageTextPreviewSourceIndex() ?: run {
@@ -297,6 +297,123 @@ internal suspend fun EditorController.wrapEpubPackageTextBodySelectionAsync(
         prepared = prepared,
         target = target,
         refreshDirectory = false,
-        successMessage = "已加标签"
+        successMessage = "已补标签"
+    )
+}
+
+internal suspend fun EditorController.wrapEpubPackageTextBodySelectionAsWarningAsync(
+    sourceStart: Int,
+    sourceEnd: Int
+): Boolean {
+    val source = epub ?: run {
+        statusMessage = "预警仅支持 EPUB"
+        return false
+    }
+    val sourceIndex = currentEpubPackageTextPreviewSourceIndex() ?: run {
+        statusMessage = "请先定位包内 HTML 正文"
+        return false
+    }
+    val target = currentEpubPackageTextMutationTarget(source, sourceIndex) ?: run {
+        statusMessage = "未找到包内 HTML"
+        return false
+    }
+    val warningBytes = runCatching {
+        appContext.assets.open(insertImageWarningAssetPath()).use { it.readBytes() }
+    }.getOrElse {
+        statusMessage = "读取预警图片失败"
+        return false
+    }
+    val prepared = prepareEpubMutation(source, documentContentVersion) { book ->
+        wrapEpubPackageTextBodySelectionAsWarningInBook(
+            book = book,
+            path = target.path,
+            sourceStart = sourceStart,
+            sourceEnd = sourceEnd,
+            warningImageBytes = warningBytes
+        )
+    }
+    if (!prepared.result.success) {
+        statusMessage = prepared.result.message
+        return false
+    }
+    return finishPreparedEpubPackageTextMutation(
+        prepared = prepared,
+        target = target,
+        refreshDirectory = false,
+        successMessage = "已加预警"
+    )
+}
+
+internal suspend fun EditorController.insertEpubPackageTextAuthorNoteSeparatorAsync(
+    sourceStart: Int,
+    sourceEnd: Int
+): Boolean {
+    val source = epub ?: run {
+        statusMessage = "作者有话说仅支持 EPUB"
+        return false
+    }
+    val sourceIndex = currentEpubPackageTextPreviewSourceIndex() ?: run {
+        statusMessage = "请先定位包内 HTML 正文"
+        return false
+    }
+    val target = currentEpubPackageTextMutationTarget(source, sourceIndex) ?: run {
+        statusMessage = "未找到包内 HTML"
+        return false
+    }
+    val prepared = prepareEpubMutation(source, documentContentVersion) { book ->
+        insertEpubPackageTextAuthorNoteSeparatorInBook(book, target.path, sourceStart, sourceEnd)
+    }
+    if (!prepared.result.success) {
+        statusMessage = prepared.result.message
+        return false
+    }
+    return finishPreparedEpubPackageTextMutation(
+        prepared = prepared,
+        target = target,
+        refreshDirectory = false,
+        successMessage = "已加作者有话说分隔"
+    )
+}
+
+internal suspend fun EditorController.insertEpubPackageTextAnnotationAsync(
+    sourceStart: Int,
+    sourceEnd: Int
+): Boolean {
+    val source = epub ?: run {
+        statusMessage = "注解仅支持 EPUB"
+        return false
+    }
+    val sourceIndex = currentEpubPackageTextPreviewSourceIndex() ?: run {
+        statusMessage = "请先定位包内 HTML 正文"
+        return false
+    }
+    val target = currentEpubPackageTextMutationTarget(source, sourceIndex) ?: run {
+        statusMessage = "未找到包内 HTML"
+        return false
+    }
+    val noteBytes = runCatching {
+        appContext.assets.open(insertImageNoteAssetPath()).use { it.readBytes() }
+    }.getOrElse {
+        statusMessage = "读取注解图片失败"
+        return false
+    }
+    val prepared = prepareEpubMutation(source, documentContentVersion) { book ->
+        insertEpubPackageTextAnnotationInBook(
+            book = book,
+            path = target.path,
+            sourceStart = sourceStart,
+            sourceEnd = sourceEnd,
+            noteImageBytes = noteBytes
+        )
+    }
+    if (!prepared.result.success) {
+        statusMessage = prepared.result.message
+        return false
+    }
+    return finishPreparedEpubPackageTextMutation(
+        prepared = prepared,
+        target = target,
+        refreshDirectory = false,
+        successMessage = "已加注解"
     )
 }

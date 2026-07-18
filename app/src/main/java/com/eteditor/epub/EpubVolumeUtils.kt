@@ -274,11 +274,11 @@ internal fun wrapEpubBodySelectionParagraphs(
     val start = sourceStart.coerceIn(0, body.length)
     val end = sourceEnd.coerceIn(start, body.length)
     if (end <= start) {
-        return EpubBodyParagraphWrapResult(success = false, message = "请先选择要加标签的文字")
+        return EpubBodyParagraphWrapResult(success = false, message = "请先选中文字")
     }
     val selectedLines = epubBodyLineSlices(body).filter { it.overlaps(start, end) }
     if (selectedLines.isEmpty()) {
-        return EpubBodyParagraphWrapResult(success = false, message = "请先选择要加标签的文字")
+        return EpubBodyParagraphWrapResult(success = false, message = "请先选中文字")
     }
     if (selectedLines.any { it.text.containsEpubHtmlTag() }) {
         return EpubBodyParagraphWrapResult(success = false, message = "所选内容已包含标签，未加标签")
@@ -326,16 +326,6 @@ internal data class EpubBodyWholeLineSelection(
     val nextBody: String
 )
 
-private data class EpubBodyLineSlice(
-    val text: String,
-    val sourceStart: Int,
-    val sourceEnd: Int
-) {
-    fun overlaps(start: Int, end: Int): Boolean {
-        return sourceStart < end && sourceEnd > start
-    }
-}
-
 internal fun epubBodyWholeLineSelection(
     body: String,
     start: Int,
@@ -353,29 +343,6 @@ internal fun epubBodyWholeLineSelection(
         .joinToString("\r\n") { it.text }
         .trim()
     return EpubBodyWholeLineSelection(selectedLines, nextBody)
-}
-
-private fun epubBodyLineSlices(body: String): List<EpubBodyLineSlice> {
-    if (body.isEmpty()) return emptyList()
-    val lines = mutableListOf<EpubBodyLineSlice>()
-    var lineStart = 0
-    while (lineStart < body.length) {
-        val lineFeed = body.indexOf('\n', lineStart)
-        val rawLineEnd = if (lineFeed < 0) body.length else lineFeed
-        val lineEnd = if (rawLineEnd > lineStart && body[rawLineEnd - 1] == '\r') {
-            rawLineEnd - 1
-        } else {
-            rawLineEnd
-        }
-        lines += EpubBodyLineSlice(
-            text = body.substring(lineStart, lineEnd),
-            sourceStart = lineStart,
-            sourceEnd = lineEnd
-        )
-        if (lineFeed < 0) break
-        lineStart = lineFeed + 1
-    }
-    return lines
 }
 
 private fun cleanEpubSelectionPlainTextLine(line: String): String {

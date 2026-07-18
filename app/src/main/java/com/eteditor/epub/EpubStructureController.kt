@@ -423,7 +423,7 @@ fun EditorController.wrapEpubBodySelectionWithParagraphs(
     sourceEnd: Int
 ): Boolean {
     val book = (epub ?: run {
-        statusMessage = "加标签仅支持 EPUB"
+        statusMessage = "补标签仅支持 EPUB"
         return false
     }).mutableDeepCopy()
     val result = wrapEpubBodySelectionParagraphsInBook(book, chapterIndex, sourceStart, sourceEnd)
@@ -438,7 +438,7 @@ fun EditorController.wrapEpubBodySelectionWithParagraphs(
     clearFileRenamePlan()
     val shouldPreserveTextSearch = finishSyncEpubTextSearchAfterChange(preserveTextSearch = true)
     refreshEpubChapterInfoAt(chapterIndex, refreshPreview = !shouldPreserveTextSearch)
-    statusMessage = "已加标签"
+    statusMessage = "已补标签"
     return true
 }
 
