@@ -61,7 +61,7 @@ fun EditorController.coverImageInsertOptions(): List<Pair<String, String>> {
 }
 
 fun EditorController.fetchInfoContentOptions(source: String): List<Pair<String, String>> {
-    return FETCH_INFO_CONTENT_OPTIONS
+    return fetchInfoContentOptionsForSource(source)
 }
 
 fun EditorController.toolLabel(toolId: String): String {

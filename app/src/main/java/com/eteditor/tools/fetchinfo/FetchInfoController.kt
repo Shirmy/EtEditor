@@ -201,8 +201,7 @@ private fun EditorController.fetchInfoProgressForAutoSource(
 private fun EditorController.fetchInfoInitialProgressText(tool: EditorTool): String {
     if (tool.toolId != "fetch_info") return ""
     val parameters = fetchInfoParameters(tool)
-    val source = fetchInfoAutoSources(parameters.content).firstOrNull() ?: parameters.source
-    return "【${FetchInfoSources.label(source)}】搜索中..."
+    return "【${FetchInfoSources.label(parameters.source)}】搜索中..."
 }
 
 private fun EditorController.fetchInfoParametersForSource(base: FetchInfoParameters, source: String): FetchInfoParameters {
@@ -264,7 +263,7 @@ private suspend fun EditorController.prepareFetchInfoPreviewFromParameters(
     fetchInfoPreview = null
     fetchInfoSearchChoiceRequest = null
     if (clearRetryRequestOnStart) fetchInfoRetryRequest = null
-    val sources = fetchInfoAutoSources(baseParameters.content)
+    val sources = fetchInfoSourceSequence(baseParameters.source)
     val contentLabel = fetchInfoContentLabel(baseParameters.content)
     var lastFailure = ""
     for (sourceIndex in sources.indices) {

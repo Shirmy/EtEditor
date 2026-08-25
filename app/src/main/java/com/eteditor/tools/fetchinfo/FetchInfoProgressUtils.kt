@@ -23,20 +23,8 @@ internal fun fetchInfoProgressPhase(message: String): Float {
     }
 }
 
-internal fun fetchInfoAutoSources(content: String): List<String> {
-    return when (content) {
-        FETCH_INFO_CONTENT_COVER,
-        FETCH_INFO_CONTENT_INTRO -> listOf(
-            FETCH_INFO_SOURCE_JJWXC,
-            FETCH_INFO_SOURCE_GONGZICP,
-            FETCH_INFO_SOURCE_SOSAD
-        )
-        FETCH_INFO_CONTENT_CATALOG -> listOf(
-            FETCH_INFO_SOURCE_JJWXC,
-            FETCH_INFO_SOURCE_SOSAD
-        )
-        else -> listOf(FETCH_INFO_SOURCE_JJWXC)
-    }
+internal fun fetchInfoSourceSequence(source: String): List<String> {
+    return listOf(source)
 }
 
 internal fun fetchInfoContentLabel(content: String): String {

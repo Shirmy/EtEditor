@@ -1,9 +1,11 @@
 ﻿package com.eteditor
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,24 +32,63 @@ fun FetchInfoParameterFields(
         return value.ifBlank { parameter.defaultValue }
     }
 
+    val sourceParameter = parameterByKey[FETCH_INFO_PARAM_SOURCE]
     val contentParameter = parameterByKey[FETCH_INFO_PARAM_CONTENT]
     val authCookieParameter = parameterByKey[FETCH_INFO_PARAM_AUTH_COOKIE]
-    val contentOptions = controller.fetchInfoContentOptions(FETCH_INFO_SOURCE_JJWXC)
+    val sourceOptions = sourceParameter
+        ?.options
+        ?.takeIf { it.isNotEmpty() }
+        ?: FetchInfoSources.options
+    val selectedSource = sourceParameter
+        ?.let(::effective)
+        ?.takeIf { value -> sourceOptions.any { it.first == value } }
+        ?: sourceOptions.firstOrNull()?.first
+        ?: FETCH_INFO_SOURCE_JJWXC
+    val contentOptions = controller.fetchInfoContentOptions(selectedSource)
     val selectedContent = contentParameter
         ?.let(::effective)
         ?.takeIf { value -> contentOptions.any { it.first == value } }
         ?: contentOptions.firstOrNull()?.first
         ?: FETCH_INFO_CONTENT_CATALOG
 
-    var showSosadLoginDialog by remember(toolId, selectedContent) { mutableStateOf(false) }
+    var showSosadLoginDialog by remember(toolId, selectedSource, selectedContent) { mutableStateOf(false) }
 
-    if (contentParameter != null) {
-        FetchInfoContentSelector(
-            options = contentOptions,
-            selected = selectedContent,
-            onSelect = { value -> onValueChange(contentParameter, value) },
-            modifier = Modifier.fillMaxWidth()
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+        if (sourceParameter != null) {
+            Text(
+                text = "来源",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            FetchInfoContentSelector(
+                options = sourceOptions,
+                selected = selectedSource,
+                onSelect = { value ->
+                    onValueChange(sourceParameter, value)
+                    val nextContentOptions = controller.fetchInfoContentOptions(value)
+                    if (contentParameter != null && nextContentOptions.none { it.first == selectedContent }) {
+                        nextContentOptions.firstOrNull()
+                            ?.first
+                            ?.let { nextContent -> onValueChange(contentParameter, nextContent) }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        if (contentParameter != null) {
+            Text(
+                text = "抓取内容",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            FetchInfoContentSelector(
+                options = contentOptions,
+                selected = selectedContent,
+                onSelect = { value -> onValueChange(contentParameter, value) },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 
     if (authCookieParameter != null) {

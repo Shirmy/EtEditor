@@ -36,20 +36,15 @@ class FetchInfoTargetUtilsTest {
     }
 
     @Test
-    fun fetchInfoAutoSourcesAndLabelsFollowContentType() {
+    fun fetchInfoSourceSequenceAndLabelsFollowSelectedSource() {
         assertEquals(
-            listOf(FETCH_INFO_SOURCE_JJWXC, FETCH_INFO_SOURCE_GONGZICP, FETCH_INFO_SOURCE_SOSAD),
-            fetchInfoAutoSources(FETCH_INFO_CONTENT_INTRO)
+            listOf(FETCH_INFO_SOURCE_GONGZICP),
+            fetchInfoSourceSequence(FETCH_INFO_SOURCE_GONGZICP)
         )
         assertEquals(
-            listOf(FETCH_INFO_SOURCE_JJWXC, FETCH_INFO_SOURCE_SOSAD),
-            fetchInfoAutoSources(FETCH_INFO_CONTENT_CATALOG)
+            listOf(FETCH_INFO_SOURCE_JJWXC),
+            fetchInfoSourceSequence(FETCH_INFO_SOURCE_JJWXC)
         )
-        assertEquals(
-            listOf(FETCH_INFO_SOURCE_JJWXC, FETCH_INFO_SOURCE_GONGZICP, FETCH_INFO_SOURCE_SOSAD),
-            fetchInfoAutoSources(FETCH_INFO_CONTENT_COVER)
-        )
-        assertEquals(listOf(FETCH_INFO_SOURCE_JJWXC), fetchInfoAutoSources("unknown"))
         assertEquals("封面", fetchInfoContentLabel(FETCH_INFO_CONTENT_COVER))
         assertEquals("简介", fetchInfoContentLabel(FETCH_INFO_CONTENT_INTRO))
         assertEquals("目录", fetchInfoContentLabel(FETCH_INFO_CONTENT_CATALOG))

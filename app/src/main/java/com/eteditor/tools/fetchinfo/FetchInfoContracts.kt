@@ -36,6 +36,16 @@ object FetchInfoSources {
     }
 }
 
+internal fun fetchInfoContentOptionsForSource(source: String): List<Pair<String, String>> {
+    return when (source) {
+        FetchInfoSources.GONGZICP -> listOf(
+            FETCH_INFO_CONTENT_COVER to "封面",
+            FETCH_INFO_CONTENT_INTRO to "简介"
+        )
+        else -> FETCH_INFO_CONTENT_OPTIONS
+    }
+}
+
 interface FetchInfoFetcher {
     val source: String
     suspend fun searchChoices(

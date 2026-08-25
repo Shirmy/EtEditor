@@ -16,4 +16,28 @@ class FetchInfoSourceUtilsTest {
         assertEquals(FETCH_INFO_SOURCE_SOSAD, FetchInfoFetcherFactory.create(FETCH_INFO_SOURCE_SOSAD).source)
         assertEquals(FETCH_INFO_SOURCE_JJWXC, FetchInfoFetcherFactory.create("unknown").source)
     }
+
+    @Test
+    fun fetchInfoContentOptionsMatchSourceCapabilities() {
+        assertEquals(
+            listOf(
+                FETCH_INFO_CONTENT_COVER,
+                FETCH_INFO_CONTENT_INTRO,
+                FETCH_INFO_CONTENT_CATALOG
+            ),
+            fetchInfoContentOptionsForSource(FETCH_INFO_SOURCE_JJWXC).map { it.first }
+        )
+        assertEquals(
+            listOf(FETCH_INFO_CONTENT_COVER, FETCH_INFO_CONTENT_INTRO),
+            fetchInfoContentOptionsForSource(FETCH_INFO_SOURCE_GONGZICP).map { it.first }
+        )
+        assertEquals(
+            listOf(
+                FETCH_INFO_CONTENT_COVER,
+                FETCH_INFO_CONTENT_INTRO,
+                FETCH_INFO_CONTENT_CATALOG
+            ),
+            fetchInfoContentOptionsForSource(FETCH_INFO_SOURCE_SOSAD).map { it.first }
+        )
+    }
 }
