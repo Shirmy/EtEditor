@@ -3,6 +3,7 @@ package com.eteditor
 import com.eteditor.core.DocumentKind
 
 internal enum class BodyReadOnlyActionIcon {
+    Cut,
     Delete,
     Edit
 }
@@ -11,6 +12,7 @@ internal enum class BodyReadOnlyActionKind(
     val title: String,
     val icon: BodyReadOnlyActionIcon? = null
 ) {
+    Cut("剪切", BodyReadOnlyActionIcon.Cut),
     Delete("删除", BodyReadOnlyActionIcon.Delete),
     Edit("编辑", BodyReadOnlyActionIcon.Edit),
     Volume("分卷"),
@@ -27,6 +29,7 @@ internal fun bodyReadOnlyCustomActionKinds(
 ): List<BodyReadOnlyActionKind> {
     return when (kind) {
         DocumentKind.Epub -> buildList {
+            add(BodyReadOnlyActionKind.Cut)
             add(BodyReadOnlyActionKind.Delete)
             add(BodyReadOnlyActionKind.Edit)
             add(BodyReadOnlyActionKind.Volume)

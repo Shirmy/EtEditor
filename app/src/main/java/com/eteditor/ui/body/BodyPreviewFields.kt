@@ -1,5 +1,8 @@
 ﻿package com.eteditor
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -268,6 +271,31 @@ internal fun BodyPreview(
             } else {
                 controller.setEpubVolumeFromBodySelectionAsync(chapterIndex, sourceStart, sourceEnd)
             }
+        }
+    }
+    fun cutEpubSelection(selectedText: String, sourceStart: Int, sourceEnd: Int) {
+        if (controller.kind != DocumentKind.Epub || controller.busy || sourceEnd <= sourceStart) return
+        val clipboardManager = hostView.context
+            .getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        if (clipboardManager == null) {
+            controller.statusMessage = "无法使用剪贴板，未执行剪切"
+            return
+        }
+        runBodyStructureOperation("EPUB 剪切正文") {
+            clipboardManager.setPrimaryClip(ClipData.newPlainText("剪切内容", selectedText))
+            val success = if (controller.isEpubPackageTextPreviewSource()) {
+                controller.deleteEpubPackageTextBodySelectionAsync(sourceStart, sourceEnd)
+            } else {
+                controller.deleteEpubBodySelectionAsync(
+                    controller.previewDisplayChapterIndex(),
+                    sourceStart,
+                    sourceEnd
+                )
+            }
+            if (success) {
+                controller.statusMessage = "已剪切所选文字"
+            }
+            success
         }
     }
     fun deleteEpubSelection(sourceStart: Int, sourceEnd: Int) {
@@ -806,6 +834,9 @@ internal fun BodyPreview(
                     },
                     onAnnotationEpubSelection = { sourceStart, sourceEnd ->
                         annotationEpubSelection(sourceStart, sourceEnd)
+                    },
+                    onCutEpubSelection = { selectedText, sourceStart, sourceEnd ->
+                        cutEpubSelection(selectedText, sourceStart, sourceEnd)
                     },
                     onDeleteEpubSelection = { sourceStart, sourceEnd -> deleteEpubSelection(sourceStart, sourceEnd) },
                     onDeleteTxtSelection = { sourceStart, sourceEnd -> deleteTxtSelection(sourceStart, sourceEnd) },

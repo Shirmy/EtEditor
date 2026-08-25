@@ -32,6 +32,7 @@ internal fun BodyReadOnlyPreviewContent(
     onWarningEpubSelection: (Int, Int) -> Unit,
     onAuthorNoteEpubSelection: (Int, Int) -> Unit,
     onAnnotationEpubSelection: (Int, Int) -> Unit,
+    onCutEpubSelection: (String, Int, Int) -> Unit,
     onDeleteEpubSelection: (Int, Int) -> Unit,
     onDeleteTxtSelection: (Int, Int) -> Unit,
     modifier: Modifier = Modifier
@@ -78,6 +79,7 @@ internal fun BodyReadOnlyPreviewContent(
                 onWarningEpubSelection = onWarningEpubSelection,
                 onAuthorNoteEpubSelection = onAuthorNoteEpubSelection,
                 onAnnotationEpubSelection = onAnnotationEpubSelection,
+                onCutEpubSelection = onCutEpubSelection,
                 onDeleteEpubSelection = onDeleteEpubSelection,
                 onDeleteTxtSelection = onDeleteTxtSelection,
                 modifier = Modifier.fillMaxSize()
@@ -230,6 +232,7 @@ private fun BodyPlainReadOnlyPreviewContent(
     onWarningEpubSelection: (Int, Int) -> Unit,
     onAuthorNoteEpubSelection: (Int, Int) -> Unit,
     onAnnotationEpubSelection: (Int, Int) -> Unit,
+    onCutEpubSelection: (String, Int, Int) -> Unit,
     onDeleteEpubSelection: (Int, Int) -> Unit,
     onDeleteTxtSelection: (Int, Int) -> Unit,
     modifier: Modifier = Modifier
@@ -297,21 +300,32 @@ private fun BodyPlainReadOnlyPreviewContent(
                         icon = kind.icon,
                         onClick = { selectionStart, selectionEnd ->
                             val sourceStart = controller.previewVisibleSourceOffsetValue() +
-                                selectionStart.coerceIn(0, previewText.length)
+                                selectionStart.coerceIn(0, previewText.length).coerceAtMost(
+                                    selectionEnd.coerceIn(0, previewText.length)
+                                )
                             val sourceEnd = controller.previewVisibleSourceOffsetValue() +
-                                selectionEnd.coerceIn(0, previewText.length)
+                                selectionStart.coerceIn(0, previewText.length).coerceAtLeast(
+                                    selectionEnd.coerceIn(0, previewText.length)
+                                )
+                            val visibleStart = sourceStart - controller.previewVisibleSourceOffsetValue()
+                            val visibleEnd = sourceEnd - controller.previewVisibleSourceOffsetValue()
                             when (kind) {
+                                BodyReadOnlyActionKind.Cut -> onCutEpubSelection(
+                                    previewText.substring(visibleStart, visibleEnd),
+                                    sourceStart,
+                                    sourceEnd
+                                )
                                 BodyReadOnlyActionKind.Delete -> onDeleteEpubSelection(
-                                    sourceStart.coerceAtMost(sourceEnd),
-                                    sourceStart.coerceAtLeast(sourceEnd)
+                                    sourceStart,
+                                    sourceEnd
                                 )
                                 BodyReadOnlyActionKind.Edit -> onEditEpubSelection(
-                                    sourceStart.coerceAtMost(sourceEnd),
-                                    sourceStart.coerceAtLeast(sourceEnd)
+                                    sourceStart,
+                                    sourceEnd
                                 )
                                 BodyReadOnlyActionKind.Volume -> onSetEpubVolumeFromSelection(
-                                    sourceStart.coerceAtMost(sourceEnd),
-                                    sourceStart.coerceAtLeast(sourceEnd)
+                                    sourceStart,
+                                    sourceEnd
                                 )
                                 BodyReadOnlyActionKind.Split -> onOpenEpubSplitDialog(
                                     bodySelectionSourceLineIndex(

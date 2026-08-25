@@ -531,14 +531,15 @@ private class BodyReadOnlyTextActionWindow(
         actionButtons.clear()
         actions.forEachIndexed { index, action ->
             val button = when (action.icon) {
+                BodyReadOnlyActionIcon.Cut,
                 BodyReadOnlyActionIcon.Delete,
                 BodyReadOnlyActionIcon.Edit -> ImageButton(targetEditor.context).apply {
                     contentDescription = action.title
                     setImageResource(
-                        if (action.icon == BodyReadOnlyActionIcon.Edit) {
-                            R.drawable.ic_edit_outline_20
-                        } else {
-                            R.drawable.ic_delete_outline_20
+                        when (action.icon) {
+                            BodyReadOnlyActionIcon.Cut -> R.drawable.ic_content_cut_outline_20
+                            BodyReadOnlyActionIcon.Edit -> R.drawable.ic_edit_outline_20
+                            else -> R.drawable.ic_delete_outline_20
                         }
                     )
                     val color = targetEditor.getColorScheme()

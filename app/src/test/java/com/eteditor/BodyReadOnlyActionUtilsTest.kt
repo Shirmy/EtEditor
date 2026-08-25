@@ -9,6 +9,7 @@ class BodyReadOnlyActionUtilsTest {
     fun customActionOrderMatchesEpubAndTxtMenus() {
         assertEquals(
             listOf(
+                BodyReadOnlyActionKind.Cut,
                 BodyReadOnlyActionKind.Delete,
                 BodyReadOnlyActionKind.Edit,
                 BodyReadOnlyActionKind.Volume,
@@ -30,6 +31,7 @@ class BodyReadOnlyActionUtilsTest {
             bodyReadOnlyCustomActionKinds(DocumentKind.Txt, splitAvailable = true)
         )
         assertEquals(BodyReadOnlyActionIcon.Delete, BodyReadOnlyActionKind.Delete.icon)
+        assertEquals(BodyReadOnlyActionIcon.Cut, BodyReadOnlyActionKind.Cut.icon)
         assertEquals(BodyReadOnlyActionIcon.Edit, BodyReadOnlyActionKind.Edit.icon)
     }
 
